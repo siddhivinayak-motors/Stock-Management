@@ -142,6 +142,8 @@ Deno.serve(async (req: Request) => {
       const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
       if (access.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Invalid department access" }, 400);
       patch.department_access = [...new Set(access)];
+      patch.department = access[0] || null;
+      if (!access.length) return json({error:"Select at least one department"},400);
     }
     if (body.status !== undefined) {
       const status = String(body.status);
