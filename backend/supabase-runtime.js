@@ -16,6 +16,29 @@
     'Retail Reports':'retail_reports'
   };
   let client, currentUser, currentProfile, permissions = new Map(), authReady = false, sessionLoginRecordedFor = null;
+  let selectedStockVehicle = null;
+
+  if(!document.getElementById('svmSelectedStockStyles')){
+    const style=document.createElement('style');style.id='svmSelectedStockStyles';
+    style.textContent=`
+      #stockTable tbody tr[data-stock-id]{cursor:pointer;transition:background .15s ease,box-shadow .15s ease}
+      #stockTable tbody tr[data-stock-id]:hover{background:#fff8f8}
+      #stockTable tbody tr.selected-stock-row{background:#fff0f1!important;box-shadow:inset 4px 0 0 #c92535,inset 0 0 0 1px #efb6bc}
+      #stockTable tbody tr.selected-stock-row td{border-top-color:#efc4c8;border-bottom-color:#efc4c8}
+      .selected-stock-context{margin:0 0 16px;padding:16px;border:1px solid #efb8bf;border-left:5px solid #c92535;border-radius:14px;background:linear-gradient(120deg,#fff1f2,#fff 75%);box-shadow:0 4px 16px rgba(180,35,48,.07)}
+      .selected-stock-context .ssc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+      .selected-stock-context .ssc-title{font-size:14px;font-weight:850;color:#a91f2c;letter-spacing:.35px}
+      .selected-stock-context .ssc-clear{border:0;background:transparent;color:#7b8794;font-size:12px;font-weight:700;padding:5px 7px}
+      .selected-stock-context .ssc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px}
+      .selected-stock-context .ssc-field{min-width:0}
+      .selected-stock-context .ssc-label{display:block;font-size:10px;font-weight:800;color:#8b6570;text-transform:uppercase;letter-spacing:.55px;margin-bottom:3px}
+      .selected-stock-context .ssc-value{display:block;font-size:13px;font-weight:750;color:#293442;overflow-wrap:anywhere}
+      .selected-stock-context .ssc-actions{display:flex;justify-content:flex-end;margin-top:12px}
+      .selected-stock-context .ssc-request{border:0;border-radius:9px;padding:10px 14px;background:#c92535;color:#fff;font-size:12px;font-weight:800}
+      @media(max-width:480px){.selected-stock-context{padding:13px}.selected-stock-context .ssc-grid{gap:8px}.selected-stock-context .ssc-value{font-size:12px}}
+    `;
+    document.head.appendChild(style);
+  }
   const $ = id => document.getElementById(id);
   const notify = msg => { if (typeof window.toast === 'function') window.toast(msg); else console.info(msg); };
   const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -649,7 +672,20 @@
       rows.sort((a,b)=>{const ta=a.oem_invoice_date?new Date(a.oem_invoice_date).getTime():NaN,tb=b.oem_invoice_date?new Date(b.oem_invoice_date).getTime():NaN;const va=Number.isFinite(ta),vb=Number.isFinite(tb);if(!va&&!vb)return 0;if(!va)return 1;if(!vb)return -1;return ageSort==='newest'?tb-ta:ta-tb;});
       const body=$('stockTable').querySelector('tbody');
       const canHold=!canManageStock()&&roleLevel()<=30&&has('stock_hold_management','create');
-      body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>':(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small" style="background:#dc2626;color:#fff;border-color:#dc2626" data-stock-hold="'+esc(v.id)+'">Hold</button>':''))+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
+      body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'" tabindex="0" aria-label="Select vehicle '+esc(v.chassis_number)+'" aria-selected="'+(selectedStockVehicle?.id===v.id?'true':'false')+'" class="'+(selectedStockVehicle?.id===v.id?'selected-stock-row':'')+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>':(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small" style="background:#dc2626;color:#fff;border-color:#dc2626" data-stock-hold="'+esc(v.id)+'">Hold</button>':''))+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
+      body.querySelectorAll('tr[data-stock-id]').forEach(row=>{
+        const selectRow=()=>{
+          const vehicle=rows.find(x=>String(x.id)===String(row.dataset.stockId));
+          if(!vehicle)return;
+          selectedStockVehicle=vehicle;
+          body.querySelectorAll('tr[data-stock-id]').forEach(r=>{
+            const active=r===row;r.classList.toggle('selected-stock-row',active);r.setAttribute('aria-selected',active?'true':'false');
+          });
+          notify('Selected vehicle: '+(vehicle.chassis_number||vehicle.model));
+        };
+        row.addEventListener('click',e=>{if(e.target.closest('button,a,input,select,label'))return;selectRow();});
+        row.addEventListener('keydown',e=>{if(e.target!==row)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();selectRow();}});
+      });
       body.querySelectorAll('[data-stock-edit]').forEach(b=>b.onclick=()=>editVehicleDialog(rows.find(x=>x.id===b.dataset.stockEdit)));
       body.querySelectorAll('[data-stock-hold]').forEach(b=>b.onclick=()=>openStockHoldDialog(rows.find(x=>x.id===b.dataset.stockHold)));
 
@@ -944,10 +980,22 @@
       let currentlyOnHold=0;
       if(permitted.length){const {count,error}=await db().from('vehicles').select('id',{count:'exact',head:true}).in('department',permitted).eq('stage','HOLD');if(error)throw error;currentlyOnHold=count||0;}
       $('holdOnCount').textContent=currentlyOnHold;
+      renderSelectedStockContext();
       $('holdRows').querySelectorAll('[data-hold-approve]').forEach(b=>b.onclick=()=>decideHold(b.dataset.holdApprove,'Approved').catch(e=>notify(e.message)));
       $('holdRows').querySelectorAll('[data-hold-reject]').forEach(b=>b.onclick=()=>decideHold(b.dataset.holdReject,'Rejected').catch(e=>notify(e.message)));
     }catch(e){console.error(e);notify(e.message);}
   };
+  function renderSelectedStockContext(){
+    const box=$('selectedStockHoldContext');if(!box)return;
+    const v=selectedStockVehicle;
+    if(!v){box.hidden=true;box.innerHTML='';return;}
+    const field=(label,value)=>'<div class="ssc-field"><span class="ssc-label">'+label+'</span><span class="ssc-value">'+esc(value||'—')+'</span></div>';
+    const canSubmit=!canManageStock()&&roleLevel()<=30&&has('stock_hold_management','create')&&String(v.stage||'').toUpperCase()==='OPEN';
+    box.hidden=false;
+    box.innerHTML='<div class="ssc-head"><span class="ssc-title">SELECTED VEHICLE FROM STOCK REGISTER</span><button type="button" class="ssc-clear" id="clearSelectedStockContext">Clear selection ×</button></div><div class="ssc-grid">'+field('Department',v.department)+field('Chassis Number',v.chassis_number)+field('Model',v.model)+field('Variant',v.variant)+field('Colour',v.colour)+field('Stock Stage',v.stage)+'</div>'+(canSubmit?'<div class="ssc-actions"><button type="button" class="ssc-request" id="requestSelectedStockHold">Create Hold Request →</button></div>':'');
+    $('clearSelectedStockContext').onclick=()=>{selectedStockVehicle=null;renderSelectedStockContext();document.querySelectorAll('#stockTable tbody tr.selected-stock-row').forEach(r=>{r.classList.remove('selected-stock-row');r.setAttribute('aria-selected','false');});};
+    $('requestSelectedStockHold')?.addEventListener('click',()=>openStockHoldDialog(v));
+  }
   window.holdDecision = (id,decision) => decideHold(id,decision).catch(e=>notify(e.message));
   window.openDepartmentStock = (department) => {
     currentStockDepartment=department||'Personal';
