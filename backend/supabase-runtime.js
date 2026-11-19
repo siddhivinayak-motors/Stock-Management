@@ -116,7 +116,7 @@
     document.querySelectorAll('.quick[data-go]').forEach(card=>{
       const module=quickModules[card.dataset.go];card.style.display=module&&has(module,'view')?'':'none';
     });
-    await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
+    await Promise.allSettled([loadHolds(),loadPriceLists(),loadPriceListStock(),loadEmployees(),loadAudit(),loadImportHistory()]);
     authReady=true;
   }
   async function signOut() { await db().auth.signOut(); location.reload(); }
@@ -146,6 +146,15 @@
     if(!data?.length)throw new Error('Hold request is no longer pending or was already processed.');
     // Database trigger synchronizes the linked stock vehicle stage atomically.
     await loadHolds();await audit('stock_hold_management','approve',decision+' hold','stock_hold',id);
+  }
+  async function loadPriceListStock() {
+    if(!has('stock_register','view')) { window.svPriceListStockRows=[]; return []; }
+    let rows=[],from=0,chunk=1000;
+    while(true) {
+      const part=await call(db().from('vehicles').select('model,variant,colour,department').order('model').range(from,from+chunk-1));
+      rows.push(...part); if(part.length<chunk)break; from+=chunk;
+    }
+    window.svPriceListStockRows=rows; return rows;
   }
   async function loadPriceLists() {
     if(!has('price_list_management','view')) return;
@@ -858,7 +867,8 @@
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdSubmit=()=>submitHold().catch(e=>notify(e.message));
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadPriceListStock,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,audit};
+    window.dispatchEvent(new Event('svm:ready'));
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
   else init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();});
