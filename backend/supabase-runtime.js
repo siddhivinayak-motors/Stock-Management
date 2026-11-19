@@ -110,8 +110,8 @@
         item.style.display=allowed&&(!module||has(module,'view'))?'':'none';
       });
       const group=document.querySelector('[data-group="'+sub.dataset.sub+'"]');
-       // Show assigned department headings; each child remains permission-gated.
-       if(group)group.style.display=allowed?'':'none';
+       // A department heading is visible only when at least one child module is granted.
+       if(group)group.style.display=allowed&&[...sub.querySelectorAll('[data-page]')].some(item=>item.style.display!=='none')?'':'none';
     });
     document.querySelectorAll('[data-page]').forEach(item=>{
       if(item.closest('[data-sub]'))return;
@@ -303,6 +303,10 @@
   }
   async function refreshDashboard(){
     const cards=[...document.querySelectorAll('#view-dashboard .department-kpi[data-department]')];
+    if(!has('stock_register','view')){
+      cards.forEach(card=>{card.style.display='none';});
+      return;
+    }
     const assigned=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
     cards.forEach(card=>{card.style.display=assigned.has(String(card.dataset.department||'').toLowerCase())?'':'none';});
     const visibleDepartments=['Personal','EV','Commercial','LLM'].filter(d=>assigned.has(d.toLowerCase()));
