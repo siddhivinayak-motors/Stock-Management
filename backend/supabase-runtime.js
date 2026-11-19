@@ -208,7 +208,12 @@
   }
   async function loadQuotations(department='Personal') {
     if(!has('quotation_management','view')) throw new Error('No quotation view permission.');
-    return call(db().from('quotations').select('*,quotation_items(*)').eq('department',department).order('created_at',{ascending:false}));
+    const out=[];let from=0,chunk=500;
+    while(true){
+      const part=await call(db().from('quotations').select('*,quotation_items(*)').eq('department',department).order('created_at',{ascending:false}).range(from,from+chunk-1));
+      out.push(...part);if(part.length<chunk)break;from+=chunk;
+    }
+    return out;
   }
 
 
