@@ -77,12 +77,13 @@ Deno.serve(async (req: Request) => {
 
   const { data: canManage, error: permError } = await callerClient
     .rpc("has_permission", { p_module: "employee_management", p_action: "manage_users" });
-  const allowed = profile.is_super_admin === true || canManage === true;
-  if (permError || !allowed) return json({ error: "You are not allowed to manage employees" }, 403);
-
+  const { data: canViewEmployees, error: viewError } = await callerClient
+    .rpc("has_permission", { p_module: "employee_management", p_action: "view" });
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON body" }, 400); }
   const action = String(body.action || "");
+  const allowed = profile.is_super_admin === true || canManage === true || (action === "save_employee_permissions" && canViewEmployees === true);
+  if (permError || viewError || !allowed) return json({ error: "You are not allowed to manage employees" }, 403);
   const ROLE_LEVEL: Record<string,number> = {
     "Super Admin":100,"Admin":90,"General Manager":80,"Manager":70,
     "Accountant":60,"HR":50,"DMS":40,"Executive":30,"Reception":20,"Driver":10
@@ -210,9 +211,13 @@ Deno.serve(async (req: Request) => {
     if(selected.some(m=>!ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
     const forbidden=selected.filter((m:string)=>!canGrantModule(m));
     if(forbidden.length) return json({error:"You cannot grant permissions you do not have: "+forbidden.join(", ")},403);
+    const {data:targetExisting,error:existingError}=await adminClient.from("employee_permissions").select("module,actions,granted_by").eq("user_id",userId);
+    if(existingError) return json({error:existingError.message},500);
+    // Preserve modules outside the caller's authority; a manager cannot revoke or grant a higher authority's modules.
+    const protectedRows=(targetExisting||[]).filter((r:any)=>!canGrantModule(r.module));
     const {error:clearError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId);
     if(clearError) return json({error:clearError.message},500);
-    const rows=rolePermissionRows(String(target.designation||""),userId,callerId,selected);
+    const rows=[...protectedRows,...rolePermissionRows(String(target.designation||""),userId,callerId,selected)];
     if(rows.length){
       const {error:saveError}=await adminClient.from("employee_permissions").upsert(rows,{onConflict:"user_id,module"});
       if(saveError) return json({error:saveError.message},500);
