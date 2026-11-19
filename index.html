@@ -880,7 +880,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
 
 </section>
 <section class="view" id="view-audit">
- <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Audit History</h1><div class="subtitle">Live operational workspace</div></div><button class="btn" onclick="toast('Audit records refreshed')">⟳ &nbsp;Refresh</button></div>
+ <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Audit History</h1><div class="subtitle">Live operational workspace</div></div><button class="btn" onclick="window.SVMBackend?.loadAudit?.().then(()=>toast('Audit history refreshed')).catch(e=>toast(e.message))">⟳ &nbsp;Refresh</button></div>
  <div class="toolbar"><div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input placeholder="Search employee, chassis, quotation, file, module..."></div><select><option>All actions</option><option>CREATE</option><option>UPDATE</option><option>DELETE</option><option>LOGIN</option><option>LOGOUT</option></select><button class="btn">Export CSV / Excel</button><button class="btn">Print / PDF</button></div>
  <div class="card"><div class="card-head"><div class="card-desc">0 activity records · Activity will appear after integration</div></div><div class="table-wrap"><table><thead><tr><th>Date &amp; Time</th><th>Employee</th><th>Designation</th><th>Module</th><th>Action</th><th>Reference</th><th>Status</th><th>Change Details</th></tr></thead><tbody><tr><td colspan="8" class="empty">No activity records yet.</td></tr></table></div></div>
 </section>
