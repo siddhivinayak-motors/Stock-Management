@@ -970,6 +970,7 @@
     // Observe navigation in the bubble phase only, then refresh the selected module.
     document.addEventListener('click',e=>{
       const quick=e.target?.closest?.('.quick[data-go]');
+      if(quick?.dataset.go==='stock-hold-central') setTimeout(()=>window.holdRender?.(),0);
       if(quick?.dataset.go==='stock'){
         currentStockDepartment='All';
         if($('stockPageTitle'))$('stockPageTitle').textContent='All Accessible Departments — Stock Register';
