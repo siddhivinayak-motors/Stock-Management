@@ -737,8 +737,6 @@
     document.addEventListener('click',e=>{
       const b=e.target?.closest?.('.sidebar [data-page]');
       if(!b) return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
       const page=b.dataset.page||'';
       const quoteRoute={
         'quotation':'Personal','quotation-management':'Personal',
@@ -749,6 +747,8 @@
       // Quotation routes keep their original handler because it updates the
       // page's lexical department state before rendering the quotation form.
       if(quoteRoute[page]) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
       try {
         if(page.startsWith('stock-hold-') || page==='stock-hold-central') {
           window.showPage('stock-hold-central');
