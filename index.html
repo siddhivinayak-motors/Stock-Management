@@ -1102,6 +1102,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
 
 <section class="view" id="view-stock-hold-central">
  <div class="page-head"><div><div class="eyebrow">STOCK CONTROL</div><h1>Central Stock Hold Management</h1><div class="subtitle">Requests across Personal, EV, Commercial and LLM</div></div><button class="btn" onclick="holdRender()">⟳ &nbsp;Refresh</button></div>
+ <div id="selectedStockHoldContext" class="selected-stock-context" hidden aria-live="polite"></div>
  <div class="stats-grid" style="margin-bottom:16px">
   <div class="stat-card"><span>Pending Requests</span><strong id="holdPendingCount">0</strong></div><div class="stat-card"><span>Approved</span><strong id="holdApprovedCount">0</strong></div><div class="stat-card"><span>Rejected</span><strong id="holdRejectedCount">0</strong></div><div class="stat-card"><span>Currently On Hold</span><strong id="holdOnCount">0</strong></div>
  </div>
