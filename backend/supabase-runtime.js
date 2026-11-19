@@ -444,6 +444,7 @@
   async function init() {
     if(!window.supabase?.createClient) throw new Error('Supabase JavaScript SDK failed to load.');
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    installScreenHooks();
     try { await refreshIdentity(); } catch(e){ console.error(e); }
     if(currentUser) await startApp(); else showLogin();
     db().auth.onAuthStateChange(async(_event,session)=>{
