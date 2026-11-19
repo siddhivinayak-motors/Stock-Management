@@ -560,6 +560,55 @@
       notify(imported+' vehicles imported; '+skipped+' duplicates or review rows skipped.');
     }catch(e){console.error(e);notify(e.message);}
   };
+  window.openStockPrintPreview = () => {
+    try {
+      const source=$('stockTable');
+      if(!source)throw new Error('Stock Register table is not available.');
+      const table=source.cloneNode(true);
+      table.querySelectorAll('tr').forEach(row=>{if(row.lastElementChild&&/^(ACTIONS|ACTION)$/i.test(row.lastElementChild.textContent.trim()))row.lastElementChild.remove();});
+      table.querySelectorAll('button').forEach(button=>button.remove());
+      const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
+      const selected=$('stockDepartmentFilter')?.value||'';
+      const department=dept==='All'?(selected==='All Accessible Departments'?'All Accessible Departments':selected):dept;
+      const status=$('stockStatusFilter')?.selectedOptions?.[0]?.textContent||'All Statuses';
+      const stage=$('stockStageFilter')?.selectedOptions?.[0]?.textContent||'All Stages';
+      const sort=$('stockAgeSort')?.selectedOptions?.[0]?.textContent||'Oldest Age First';
+      const search=$('stockSearch')?.value?.trim()||'';
+      const now=new Date();
+      const printed=now.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
+      const popup=window.open('','_blank','width=1200,height=850');
+      if(!popup)throw new Error('Print Preview popup was blocked. Allow popups for this site and try again.');
+      const safe=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      popup.document.open();
+      popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Siddhivinayak Mahindra - Stock Register</title><style>
+        *{box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#172033;margin:22px;background:#eef2f7}
+        .toolbar{display:flex;justify-content:flex-end;gap:10px;position:sticky;top:0;padding:10px 0;background:#eef2f7;z-index:5}
+        .toolbar button{border:0;border-radius:7px;padding:11px 18px;font-weight:700;cursor:pointer;background:#dc202b;color:white}.toolbar .pdf{background:#172033}
+        .sheet{background:#fff;padding:22px;border-radius:10px;box-shadow:0 3px 18px #17203318}
+        .brand{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #dc202b;padding-bottom:12px;margin-bottom:14px}
+        .brand h1{font-size:21px;margin:0 0 4px;letter-spacing:.3px}.brand .sub{font-size:11px;color:#5b6678}
+        .tag{font-size:10px;letter-spacing:1.6px;color:#d71927;font-weight:800;margin-bottom:7px}
+        .meta{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:10px;color:#344054;margin:12px 0 14px}
+        .meta b{color:#172033}.count{font-size:11px;font-weight:700;margin:0 0 8px}
+        table{width:100%;border-collapse:collapse;table-layout:auto;font-size:9px}
+        thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}
+        th{background:#edf1f6;color:#344054;text-transform:uppercase;font-size:8px;letter-spacing:.35px;text-align:left}
+        th,td{border:1px solid #dce2ea;padding:7px 6px;vertical-align:middle;overflow-wrap:anywhere}
+        tbody tr:nth-child(even){background:#fafbfd}
+        .foot{margin-top:14px;padding-top:8px;border-top:1px solid #dce2ea;font-size:9px;color:#667085;display:flex;justify-content:space-between}
+        @page{size:A4 landscape;margin:10mm}
+        @media print{body{margin:0;background:white}.toolbar{display:none}.sheet{padding:0;box-shadow:none;border-radius:0}.brand h1{font-size:18px}table{font-size:8px}th{font-size:7px}th,td{padding:5px 4px}.foot{margin-top:8px}}
+      </style></head><body>
+      <div class="toolbar"><button onclick="window.print()">🖨 Print</button><button class="pdf" onclick="window.print()">↓ Save as PDF</button></div>
+      <main class="sheet"><header class="brand"><div><div class="tag">SIDDHIVINAYAK MAHINDRA</div><h1>${safe(department)} — Stock Register</h1><div class="sub">Stock Management System · Vehicle Inventory Report</div></div><div class="sub" style="text-align:right">Generated<br>${safe(printed)}</div></header>
+      <div class="meta"><span><b>Department:</b> ${safe(department)}</span><span><b>Status:</b> ${safe(status)}</span><span><b>Stage:</b> ${safe(stage)}</span><span><b>Sorting:</b> ${safe(sort)}</span>${search?'<span><b>Search:</b> '+safe(search)+'</span>':''}</div>
+      <div class="count">${table.querySelectorAll('tbody tr').length===1&&table.querySelector('tbody td[colspan]')?'0':' '+table.querySelectorAll('tbody tr').length} records · Filtered Stock Register</div>
+      ${table.outerHTML}<footer class="foot"><span>Siddhivinayak Mahindra · Confidential Internal Stock Report</span><span>Page <span class="page"></span></span></footer></main>
+      </body></html>`);
+      popup.document.close();
+      popup.focus();
+    } catch(error) { notify(error.message||'Unable to prepare print preview.'); }
+  };
   async function renderStock(){
     if(!$('stockTable')) return;
     try{
