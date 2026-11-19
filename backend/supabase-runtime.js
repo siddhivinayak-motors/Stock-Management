@@ -116,8 +116,16 @@
     if(!has('price_list_management','view')) return;
     const versions=await call(db().from('price_list_versions').select('*').order('published_at',{ascending:false}));
     const by={Personal:[],EV:[],Commercial:[],LLM:[]};
-    for(const v of versions){ if(by[v.department]?.length) continue;
-      by[v.department]=(await call(db().from('price_list_items').select('*').eq('version_id',v.id).order('vehicle'))).map(x=>({...x,exShowroom:Number(x.ex_showroom||0),rto:Number(x.rto||0)}));
+    const loaded=new Set();
+    for(const v of versions){
+      if(loaded.has(v.department))continue;
+      loaded.add(v.department);
+      let items=[],from=0,chunk=1000;
+      while(true){
+        const part=await call(db().from('price_list_items').select('*').eq('version_id',v.id).order('vehicle').range(from,from+chunk-1));
+        items.push(...part);if(part.length<chunk)break;from+=chunk;
+      }
+      by[v.department]=items.map(x=>({...x,exShowroom:Number(x.ex_showroom||0),rto:Number(x.rto||0)}));
     }
     window.plData=by;window.plHistory=versions.map(v=>({version:v.version_label,dept:v.department,file:v.source_file||'',date:v.published_at,rows:v.row_count}));
     if(typeof window.plRender==='function') window.plRender();
