@@ -107,8 +107,22 @@ Deno.serve(async (req: Request) => {
       }
     }
     if (typeof patch.full_name === "string" && !patch.full_name) return json({ error: "Full name cannot be empty" }, 400);
+    if (typeof patch.phone === "string" && patch.phone && !/^\\d{10}$/.test(patch.phone)) return json({ error: "Mobile number must be exactly 10 digits" }, 400);
+    if (typeof patch.department === "string" && patch.department && !["Personal","EV","Commercial","LLM"].includes(patch.department)) return json({ error: "Invalid department" }, 400);
+    if (body.status !== undefined) {
+      const status = String(body.status);
+      if (!["active","inactive"].includes(status)) return json({ error: "Status must be active or inactive" }, 400);
+      patch.status = status;
+    }
     const { error: updateError } = await adminClient.from("profiles").update(patch).eq("user_id", userId);
     if (updateError) return json({ error: updateError.message }, 400);
+    if (patch.status === "inactive") {
+      const { error: banError } = await adminClient.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
+      if (banError) return json({ error: "Profile status updated but login deactivation failed: " + banError.message }, 500);
+    } else if (patch.status === "active") {
+      const { error: unbanError } = await adminClient.auth.admin.updateUserById(userId, { ban_duration: "none" });
+      if (unbanError) return json({ error: "Profile status updated but login activation failed: " + unbanError.message }, 500);
+    }
     if (typeof patch.full_name === "string") {
       const { error: authUpdateError } = await adminClient.auth.admin.updateUserById(userId, {
         user_metadata: { full_name: patch.full_name },
