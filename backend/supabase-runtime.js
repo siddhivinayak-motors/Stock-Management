@@ -577,11 +577,6 @@
       const gen=uploadView.querySelector('.card .card-body button.btn.primary');
       if(gen)gen.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();previewReconciliation().catch(x=>notify(x.message));},true);
     }
-    const uploadView=$('view-upload');
-    if(uploadView){
-      const gen=uploadView.querySelector('.card .card-body button.btn.primary');
-      if(gen)gen.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();previewReconciliation().catch(x=>notify(x.message));},true);
-    }
     $('saveQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(false);},true);
     $('savePrintQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(true);},true);
     const auditView=$('view-audit');
