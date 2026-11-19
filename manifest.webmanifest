@@ -1,19 +1,19 @@
 {
   "id": "./",
-  "name": "Siddhivinayak Mahindra Stock Management",
+  "name": "Siddhivinayak",
   "short_name": "Siddhivinayak",
-  "description": "Siddhivinayak Mahindra Stock Management System",
+  "description": "Siddhivinayak Stock Management",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "background_color": "#111827",
+  "theme_color": "#111827",
   "icons": [
     {
-      "src": "./icons/app-icon-v2.png",
-      "sizes": "1005x1005",
-      "type": "image/png",
+      "src": "./icons/siddhivinayak-premium.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
