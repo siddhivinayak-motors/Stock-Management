@@ -1998,11 +1998,9 @@ function resetAllExceptEmployees(){
  if(!first)return;
  const typed=prompt('Type RESET ALL to confirm. Employee Management will be preserved:');
  if(typed!=='RESET ALL'){toast('Reset cancelled');return}
- // Preserve employee-management permission configuration. Employee records/module are deliberately untouched.
- const old=appRead(),preserved={};
- if(old.permissionOverrides!==undefined)preserved.permissionOverrides=old.permissionOverrides;
+ // Employee accounts and role permissions are managed in Supabase and are not part of this local reset.
  try{
-  localStorage.setItem(APP_STORE_KEY,JSON.stringify(preserved));
+  localStorage.setItem(APP_STORE_KEY,JSON.stringify({}));
   holdItems=[];plData={};plHistory=[];plPending=null;stockPending=null;stockPreviewRows=[];
   quoteRecords=[];saveRecords();try{localStorage.removeItem(DEPT_QUOTE_KEY)}catch(e){}
   const stockFile=document.getElementById('stockReportFile');if(stockFile)stockFile.value='';
