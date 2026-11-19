@@ -68,7 +68,7 @@
   var hi=-1,col=-1;
   for(var i=0;i<rows.length;i++){var row=rows[i]||[];for(var j=0;j<row.length;j++)if(clean(row[j]).toLowerCase()==='particulars'){hi=i;col=j;break}if(hi>=0)break}
   if(hi<0)return {items:[],warning:'No Particulars header'};
-  var header=rows[hi]||[],variantRow=header.slice(),valid=variantRow.slice(col+1).filter(function(v){return !!clean(v)}).length,alt=rows[hi+1]||[],altCount=alt.slice(col+1,col+1+variantRow.length).filter(function(v){return !!clean(v)}).length;
+  var header=rows[hi]||[],variantRow=header.slice(),valid=variantRow.slice(col+1).filter(function(v){return !!clean(v)}).length,alt=rows[hi+1]||[],altCount=alt.slice(col+1,col+1+variantRow.length).filter(function(v){return !!clean(v)&&num(v)===null}).length;
   if(altCount>=Math.max(2,Math.ceil(valid*0.55)))variantRow=alt;
   var title=modelTitle(rows),eff=effectiveDate(rows),customer='';
   for(var r=0;r<Math.min(8,rows.length);r++)for(var c=0;c<(rows[r]||[]).length;c++)if(/customer\s*type/i.test(clean(rows[r][c])))customer=clean(rows[r][c+1]||'').replace(/^:/,'').trim();
