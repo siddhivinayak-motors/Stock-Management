@@ -808,7 +808,7 @@ td{padding:15px 16px;line-height:1.5}
   <label style="grid-column:1/-1">Reason<textarea id="holdReason" class="field" rows="2" placeholder="Reason for hold request"></textarea></label>
  </div><button class="btn primary" style="margin-top:12px" onclick="holdSubmit()">Submit Hold Request</button><small class="muted" style="display:block;margin-top:8px">A pending request does not change stock status. Approval places the linked vehicle on HOLD; rejection returns it to OPEN when no other approved hold remains.</small></div>
  <div class="card" style="padding:20px"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><h3 style="margin:0 auto 0 0">Hold Request Register</h3><select id="holdStatusFilter" class="field" onchange="holdRender()"><option>All</option><option>Pending</option><option>Approved</option><option>Rejected</option><option>On Hold</option></select><select id="holdDeptFilter" class="field" onchange="holdRender()"><option>All Departments</option><option>Personal</option><option>EV</option><option>Commercial</option><option>LLM</option></select></div>
- <div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Department</th><th>Vehicle</th><th>Variant / Colour</th><th>VIN / Chassis</th><th>Executive</th><th>Reason</th><th>Request Status</th><th>Approver / Date</th><th>Action</th></tr></thead><tbody id="holdRows"><tr><td colspan="10">No requests yet.</td></tr></tbody></table></div></div>
+ <div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Department</th><th>Vehicle</th><th>Variant / Colour</th><th>VIN / Chassis</th><th>Customer Name</th><th>Customer Mobile</th><th>Executive</th><th>Reason</th><th>Request Status</th><th>Approver / Date</th><th>Action</th></tr></thead><tbody id="holdRows"><tr><td colspan="12">No requests yet.</td></tr></tbody></table></div></div>
 </section>
 
 <section class="view" id="view-backup-restore">
@@ -1351,6 +1351,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=oldest-age-stock-sort-20261119"></script>
+<script src="./backend/supabase-runtime.js?v=customer-hold-requests-view-approval-20261119"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
