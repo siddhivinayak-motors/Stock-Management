@@ -2007,23 +2007,10 @@ function resetAllExceptEmployees(){
   quoteRecords=[];saveRecords();try{localStorage.removeItem(DEPT_QUOTE_KEY)}catch(e){}
   const stockFile=document.getElementById('stockReportFile');if(stockFile)stockFile.value='';
   const priceFiles=document.getElementById('plFiles');if(priceFiles)priceFiles.value='';
-  holdRender();plRender();permRender();renderQuoteManagement();updateQuoteNumber();
+  holdRender();plRender();renderQuoteManagement();updateQuoteNumber();
   toast('Reset complete — all operational data cleared; Employee Management preserved');
  }catch(e){toast('Reset failed: '+e.message)}
 }
-let permissionOverrides=appRead().permissionOverrides||[];
-function permSave(){
- const employee=document.getElementById('permEmployee').value,module=document.getElementById('permModule').value;
- const actions=[...document.querySelectorAll('#permChecks input:checked')].map(x=>x.value);
- permissionOverrides=permissionOverrides.filter(x=>!(x.employee===employee&&x.module===module));
- permissionOverrides.push({employee,module,actions});const d=appRead();d.permissionOverrides=permissionOverrides;appWrite(d);permRender();toast('Individual permission override saved in this browser');
-}
-function permRender(){
- const b=document.getElementById('permRows');if(!b)return;
- b.innerHTML=permissionOverrides.length?permissionOverrides.map(x=>`<tr><td>${esc(x.employee)}</td><td>${esc(x.module)}</td><td>${esc(x.actions.join(', ')||'No actions')}</td></tr>`).join(''):'<tr><td colspan="3">No individual overrides saved.</td></tr>';
-}
-permRender();
-
 // ===== Workbook-based quotation engine; same form, separate department registers =====
 const DEPT_QUOTE_KEY='sv_quotes_by_department_clean_v3';
 function deptQuoteStore(){try{return JSON.parse(localStorage.getItem(DEPT_QUOTE_KEY)||'{}')}catch(e){return {}}}
