@@ -864,21 +864,30 @@
     const employeeSection=$('view-employees');
     const employeeStats=employeeSection?.querySelector('.stat-grid');
     let newUser=$('svNewEmployee')||employeeStats?.querySelector('.btn.primary');
-    // Keep the Create User entry point present even if an older deployed HTML shell omitted it.
     if(!newUser&&employeeStats){
       const slot=document.createElement('div');
       slot.style.cssText='margin-left:auto;align-self:center';
-      slot.innerHTML='<button class="btn primary" type="button" id="svNewEmployee">＋ Create User</button>';
+      slot.innerHTML='<button class="btn primary" type="button" id="svNewEmployee">＋ Add User</button>';
       employeeStats.appendChild(slot);
       newUser=$('svNewEmployee');
     }
     if(newUser){
-      const canCreate=!!currentProfile?.is_super_admin||has('employee_management','create')||has('employee_management','manage_users');
+      const canCreate=!!currentProfile?.is_super_admin||has('employee_management','create');
+      newUser.hidden=!canCreate;
       newUser.style.display=canCreate?'':'none';
-      newUser.textContent='＋ Create User';
+      newUser.textContent='＋ Add User';
+      newUser.disabled=!canCreate;
       if(canCreate&&!newUser.dataset.createUserBound){
         newUser.dataset.createUserBound='1';
-        newUser.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();employeeDialog();},true);
+        newUser.addEventListener('click',e=>{
+          e.preventDefault();
+          e.stopPropagation();
+          if(!currentProfile?.is_super_admin&&!has('employee_management','create')){
+            notify('Employee Management → Create permission required.');
+            return;
+          }
+          employeeDialog();
+        },true);
       }
     }
     $('svChangePasswordForm')?.addEventListener('submit',async e=>{
