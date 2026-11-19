@@ -72,12 +72,12 @@
   var byCol={};
   for(var rr=hi+1;rr<rows.length;rr++){
    var dr=rows[rr]||[],label=clean(dr[col]);if(!label)continue;var vals=[];
-   for(var cc=col+1;cc<variantRow.length+col+1;cc++)vals.push(num(dr[cc]));
+   for(var cc=col+1;cc<variantRow.length;cc++)vals.push(num(dr[cc]));
    if(vals.some(function(x){return x!==null}))vals.forEach(function(value,index){if(value===null)return;var abs=col+1+index;if(!byCol[abs])byCol[abs]=[];byCol[abs].push({label:label,value:value})});
   }
   var items=[];
-  for(var vc=col+1;vc<variantRow.length+col+1;vc++){
-   var variant=clean(variantRow[vc-col-1]);if(!variant)continue;var components=byCol[vc]||[];if(!components.length)continue;
+  for(var vc=col+1;vc<variantRow.length;vc++){
+   var variant=clean(variantRow[vc]);if(!variant)continue;var components=byCol[vc]||[];if(!components.length)continue;
    var ex=0,rto=0,tcs=0,insurance=0,total=0;
    components.forEach(function(p){var l=p.label.toLowerCase();if(/ex[\s-]*showroom/.test(l))ex=p.value;else if(!ex&&/vehicle\s*price/.test(l))ex=p.value;if(/\btcs\b/.test(l))tcs=p.value;if(/insurance/.test(l)&&!/zero dep/.test(l))insurance=p.value;if(/road tax|registration/.test(l))rto=p.value;if(/total\s*on[\s-]*road/.test(l))total=p.value});
    var vehicle=modelFromSheet(title,variant),department=departmentFor(fileName,vehicle,stockRows);
@@ -113,7 +113,7 @@
  function render(){
   populateFilters();var rows=getRows(),stock=getStock(),model=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',colour=$('plStockColour')?.value||'',q=clean($('plSearch')?.value).toLowerCase(),out=rows;
   if(q)out=out.filter(function(x){return [x.vehicle,x.variant,x.source_file,x.sourceFile,x.sourceSheet].join(' ').toLowerCase().indexOf(q)>=0});
-  else{if(model)out=out.filter(function(x){return modelKey(x.vehicle)===modelKey(model)});if(variant)out=out.filter(function(x){return variantMatch(variant,x.variant)});if(colour)out=out.filter(function(x){return !x.colour||norm(x.colour)===norm(colour)})}
+  else{if(model)out=out.filter(function(x){return modelKey(x.vehicle)===modelKey(model)});if(variant)out=out.filter(function(x){return variantMatch(variant,x.variant)});if(colour){var stockVariants=unique(stock.filter(function(r){return modelKey(r.model)===modelKey(model)&&norm(r.colour)===norm(colour)&&(!variant||variantMatch(variant,r.variant))}).map(function(r){return r.variant}));if(stockVariants.length)out=out.filter(function(x){return !x.colour||norm(x.colour)===norm(colour)||stockVariants.some(function(v){return variantMatch(v,x.variant)})})}}
   out.sort(function(a,b){return String(a.vehicle).localeCompare(String(b.vehicle))||String(a.variant).localeCompare(String(b.variant))});
   var body=$('plRows');if(body)body.innerHTML=out.length?out.map(function(x){var d=x.other_data||x,ex=Number(x.exShowroom!=null?x.exShowroom:x.ex_showroom||d.exShowroom||0),rto=Number(x.rto||d.rto||0),total=Number(d.onRoadTotal||d.totalOnRoad||0);return '<tr><td>'+esc(x.vehicle)+'</td><td>'+esc(x.variant)+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>'}).join(''):'<tr><td colspan="8" class="empty">'+(rows.length?'No uploaded price list matches these filters. Try another model or use direct search.':'No price lists have been uploaded yet. Use Upload Price Lists to add the Excel files.')+'</td></tr>';
   if($('plResultsSummary'))$('plResultsSummary').textContent=out.length+' variant price(s)'+(rows.length?' · '+rows.length+' total uploaded':'');
