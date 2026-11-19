@@ -26,6 +26,11 @@
     if(currentProfile?.is_super_admin) return true;
     return (permissions.get(module)||[]).includes(action);
   }
+  function allowedDepartmentList(){
+    if(currentProfile?.is_super_admin || ['Admin','General Manager'].includes(currentProfile?.designation)) return ['Personal','EV','Commercial','LLM'];
+    if(currentProfile?.designation==='Manager') return [currentProfile?.department].filter(Boolean);
+    return currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean);
+  }
   async function refreshIdentity() {
     const {data:{user},error}=await db().auth.getUser();
     if(error) throw error;
@@ -77,7 +82,7 @@
       'view-price-list':'price_list_management','view-employees':'employee_management',
       'view-audit':'audit_history','view-reports':'retail_reports','view-backup-restore':'backup_restore'
     };
-    const allowedDepartments=new Set((currentProfile?.is_super_admin?['Personal','EV','Commercial','LLM']:(currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean))).map(x=>String(x).toLowerCase()));
+    const allowedDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
     const departmentKeys={personal:'Personal',ev:'EV',commercial:'Commercial',llm:'LLM'};
     const pageModule=page=>{
       if(page.startsWith('stock-hold'))return 'stock_hold_management';
@@ -240,7 +245,7 @@
   }
   async function refreshDashboard(){
     const cards=[...document.querySelectorAll('#view-dashboard .department-kpi[data-department]')];
-    const assigned=new Set((currentProfile?.is_super_admin?['Personal','EV','Commercial','LLM']:(currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean))).map(x=>String(x).toLowerCase()));
+    const assigned=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
     cards.forEach(card=>{card.style.display=assigned.has(String(card.dataset.department||'').toLowerCase())?'':'none';});
     const visibleDepartments=['Personal','EV','Commercial','LLM'].filter(d=>assigned.has(d.toLowerCase()));
     if(!visibleDepartments.length)return;
@@ -411,6 +416,7 @@
       for(let from=0;;from+=1000){const part=await call(db().from('vehicles').select('chassis_number,excel_number').range(from,from+999));existing.push(...part);if(part.length<1000)break;}
       const seenChassis=new Set(existing.map(x=>String(x.chassis_number||'').trim().toUpperCase()).filter(Boolean));
       const seenVin=new Set(existing.map(x=>String(x.excel_number||'').trim().toUpperCase()).filter(Boolean));
+      const allowedDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
       const mapSegment=segment=>{
         if(segment==='PERSONAL'||segment.startsWith('PERSONAL'))return 'Personal';
         if(segment==='BEV'||segment==='EV'||segment.includes('ELECTRIC'))return 'EV';
@@ -433,6 +439,7 @@
         const invoiceDate=toDateValue(date);
         let decision='Import';
         if(!department)decision='Review: Unknown Segment';
+        else if(!allowedDepartments.has(String(department).toLowerCase()))decision='Review: Outside your department';
         else if(!chassis)decision='Review: Missing Chassis Number';
         else if(!invoiceDate)decision='Review: Missing Invoice Date';
         else if(invoiceDate.getFullYear()<2025)decision='Skip: Before 2025';
@@ -618,12 +625,16 @@
     const wrap=document.createElement('div');wrap.id='svEmployeeDialog';
     wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
     const roles=['Super Admin','Admin','General Manager','Manager','Accountant','HR','DMS','Executive','Reception','Driver'];
-    const depts=['Personal','EV','Commercial','LLM'];
+    const depts=allowedDepartmentList();
     wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:20px;font-weight:850;margin-bottom:16px">Create Employee Login</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label>Full Name<input required name="full_name" class="field" autocomplete="off"></label><label>Email<input required type="email" name="email" class="field" autocomplete="off"></label><label>Password<input required type="password" name="password" class="field" minlength="6" autocomplete="new-password"></label><label>Designation / Role<select required name="designation" id="svNewRole" class="field"><option value="">Select role</option>'+roles.map(x=>'<option value="'+x+'" '+(x==='Super Admin'?'disabled':'')+'>'+x+(x==='Super Admin'?' (Reserved)':'')+'</option>').join('')+'</select></label></div><fieldset style="border:1px solid #dce2e9;border-radius:9px;padding:12px;margin-top:14px"><legend style="font-weight:700;font-size:13px">Department Access</legend><div id="svNewDepartments" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+depts.map(x=>'<label style="display:flex;gap:5px;align-items:center"><input type="checkbox" name="department_access" value="'+x+'">'+x+'</label>').join('')+'</div><small id="svRoleHint" style="display:block;color:#718096;margin-top:8px">Select a role and department access.</small></fieldset><div style="font-size:12px;color:#718096;margin-top:12px">Password must contain at least 6 characters. Login password is hidden by default and is not stored in readable form.</div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Create User</button></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
     const roleSelect=$('svNewRole'),checks=[...wrap.querySelectorAll('input[name="department_access"]')];
-    const applyRole=()=>{$('svRoleHint').textContent='Select only the departments this employee is allowed to access.';checks.forEach(c=>c.disabled=false);};
+    const applyRole=()=>{
+      const managerScope=currentProfile?.designation==='Manager';
+      $('svRoleHint').textContent=managerScope?'Managers can create employees only in their own department.':'Select only departments assigned to your account.';
+      checks.forEach(c=>{c.disabled=managerScope||!allowedDepartmentList().includes(c.value);if(managerScope)c.checked=c.value===currentProfile.department;});
+    };
     roleSelect.addEventListener('change',applyRole);
     $('svEmployeeForm').onsubmit=async e=>{
       e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
