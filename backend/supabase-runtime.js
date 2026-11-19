@@ -700,11 +700,6 @@
     });
     $('permEmployee')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
     $('permModule')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
-    const uploadView=$('view-upload');
-    if(uploadView){
-      const gen=uploadView.querySelector('.card .card-body button.btn.primary');
-      if(gen)gen.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();previewReconciliation().catch(x=>notify(x.message));},true);
-    }
     $('saveQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(false);},true);
     $('savePrintQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(true);},true);
     const auditView=$('view-audit');
@@ -765,7 +760,7 @@
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdSubmit=()=>submitHold().catch(e=>notify(e.message));
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,savePermissions,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,previewReconciliation,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,savePermissions,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,audit};
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
   else init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();});
