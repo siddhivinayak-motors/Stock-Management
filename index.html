@@ -741,6 +741,23 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
  <div class="card" style="padding:20px;margin-bottom:16px"><h3>Backup Business Data</h3><p>Download operational business records from Supabase as a JSON file.</p><button class="btn primary" onclick="appBackup()">Download Backup</button><label style="display:block;margin-top:18px">Restore backup JSON<input type="file" id="backupFile" accept=".json" class="field" style="display:block;margin-top:8px;max-width:360px"></label><button class="btn" style="margin-top:10px" onclick="appRestore()">Validate &amp; Restore</button></div>
  <div class="card" style="padding:20px"><h3>Operational Reset</h3><p>Production-wide reset is disabled. Records will not be deleted from this screen.</p><div class="notice" style="margin:12px 0">A reset requires a separate audited Super Admin workflow, a verified backup and an explicit confirmation process.</div><button class="btn danger" style="margin-top:8px" onclick="resetAllExceptEmployees()">Reset Disabled</button></div>
 </section>
+<section class="view" id="view-password">
+ <div class="page-head"><div><div class="eyebrow">ACCOUNT SECURITY</div><h1>Change Password</h1><div class="subtitle">Update your own employee login password securely</div></div></div>
+ <div class="card" style="max-width:680px">
+  <div class="card-head"><div><div class="card-title">Change Your Password</div><div class="card-desc">Enter your current password, then choose and confirm a new password.</div></div></div>
+  <div class="card-body">
+   <form id="svChangePasswordForm" autocomplete="off">
+    <div class="form-grid" style="grid-template-columns:1fr;max-width:480px">
+     <label>Current Password<input class="field" id="svCurrentPassword" type="password" autocomplete="current-password" required></label>
+     <label>New Password<input class="field" id="svNewPassword" type="password" autocomplete="new-password" minlength="8" required><small class="muted">Use at least 8 characters.</small></label>
+     <label>Confirm New Password<input class="field" id="svConfirmPassword" type="password" autocomplete="new-password" minlength="8" required></label>
+    </div>
+    <div id="svChangePasswordError" role="alert" style="color:#c51c2a;font-size:13px;margin:12px 0;min-height:18px"></div>
+    <button class="btn primary" type="submit">Change Password</button>
+   </form>
+  </div>
+ </div>
+</section>
 </main>
 <div id="toast" style="position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#222a34;color:white;padding:11px 16px;border-radius:9px;font-size:12px;z-index:60;box-shadow:0 8px 25px #0003;transition:.25s"></div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
