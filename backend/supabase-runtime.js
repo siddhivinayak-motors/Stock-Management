@@ -121,8 +121,7 @@
     document.querySelectorAll('[data-page]').forEach(item=>{
       if(item.closest('[data-sub]'))return;
       const module=pageModule(item.dataset.page||'');
-      const holdPage=(item.dataset.page||'').startsWith('stock-hold');
-      item.style.display=(!module||has(module,'view'))&&(!holdPage||canManageHolds())?'':'none';
+      item.style.display=(!module||has(module,'view'))?'':'none';
     });
     document.querySelectorAll('[data-department]').forEach(card=>{
       const dept=String(card.dataset.department||'').toLowerCase();
@@ -132,8 +131,7 @@
     const shortcutAccess=new Set(Array.isArray(currentProfile?.dashboard_shortcuts)?currentProfile.dashboard_shortcuts:[]);
     document.querySelectorAll('.quick[data-go]').forEach(card=>{
       const module=quickModules[card.dataset.go];
-      const holdShortcut=card.dataset.go==='stock-hold-central';
-      card.style.display=(currentProfile?.is_super_admin||shortcutAccess.has('quick-access'))&&(card.dataset.go==='password'||(module&&has(module,'view')&&(!holdShortcut||canManageHolds())))?'':'none';
+      card.style.display=(currentProfile?.is_super_admin||shortcutAccess.has('quick-access'))&&(card.dataset.go==='password'||(module&&has(module,'view')))?'':'none';
     });
     if(!hasAnyModule){
       document.querySelectorAll('.sidebar [data-page], .sidebar [data-group], .sidebar .nav-section').forEach(item=>{
@@ -154,7 +152,7 @@
   async function signOut() { await db().auth.signOut(); location.reload(); }
 
   async function loadHolds() {
-    if(!canManageHolds()||!has('stock_hold_management','view')) return;
+    if(!has('stock_hold_management','view')) return;
     let rows=[],from=0,chunk=1000;
     while(true){
       const part=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}).range(from,from+chunk-1));
@@ -594,9 +592,10 @@
     if(!vehicle||String(vehicle.stage||'').toUpperCase()!=='OPEN')return;
     const old=$('svStockHoldDialog');if(old)old.remove();
     const wrap=document.createElement('div');wrap.id='svStockHoldDialog';wrap.style.cssText='position:fixed;inset:0;z-index:99992;background:#15202dcc;display:grid;place-items:center;padding:16px';
-    wrap.innerHTML='<form id="svStockHoldForm" style="width:min(480px,100%);background:#fff;padding:22px;border-radius:14px;color:#253140"><h3 style="margin:0 0 8px">Request Stock Hold</h3><p style="font-size:13px;color:#64748b">'+esc(vehicle.model)+' · '+esc(vehicle.chassis_number)+' · '+esc(vehicle.department)+'</p><label style="display:block;margin:12px 0;font-size:13px">Reason for Hold<textarea required name="reason" class="field" rows="3" style="width:100%" placeholder="Enter reason"></textarea></label><div id="svStockHoldError" style="color:#c51c2a;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svStockHoldCancel" class="btn">Cancel</button><button type="submit" class="btn" style="background:#dc2626;color:#fff">Submit Hold Request</button></div></form>';
+    const field=(label,value)=>'<label style="display:block;font-size:12px;color:#526174">'+label+'<input class="field" value="'+esc(value||'—')+'" readonly style="width:100%;margin-top:4px;background:#f6f8fb"></label>';
+    wrap.innerHTML='<form id="svStockHoldForm" style="width:min(680px,100%);max-height:92vh;overflow:auto;background:#fff;padding:22px;border-radius:14px;color:#253140"><h3 style="margin:0 0 6px">Customer Vehicle Hold Request</h3><p style="font-size:13px;color:#64748b;margin:0 0 14px">Vehicle details are filled automatically. Enter customer details to send approval request.</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px">'+field('Department',vehicle.department)+field('Chassis Number',vehicle.chassis_number)+field('Model',vehicle.model)+field('Variant',vehicle.variant)+field('Colour',vehicle.colour)+field('Seating',vehicle.seating)+field('Manufacturing Year',vehicle.manufacturing_year)+field('Vehicle Status',vehicle.status)+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px"><label style="font-size:13px;font-weight:650">Customer Name *<input required name="customer_name" class="field" maxlength="120" style="width:100%;margin-top:4px" placeholder="Enter customer full name"></label><label style="font-size:13px;font-weight:650">Customer Mobile *<input required name="customer_mobile" type="tel" inputmode="numeric" pattern="[0-9]{10}" maxlength="10" class="field" style="width:100%;margin-top:4px" placeholder="10-digit mobile number"></label></div><label style="display:block;margin:12px 0;font-size:13px;font-weight:650">Reason / Booking Note *<textarea required name="reason" class="field" rows="3" style="width:100%" placeholder="Enter booking or hold details"></textarea></label><div id="svStockHoldError" style="color:#c51c2a;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svStockHoldCancel" class="btn">Cancel</button><button type="submit" class="btn" style="background:#dc2626;color:#fff">Send for Approval</button></div></form>';
     document.body.appendChild(wrap);$('svStockHoldCancel').onclick=()=>wrap.remove();
-    $('svStockHoldForm').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button[type=submit]');b.disabled=true;try{await call(db().from('stock_holds').insert({department:vehicle.department,vehicle:vehicle.model,variant:[vehicle.variant,vehicle.colour].filter(Boolean).join(' / '),vin:vehicle.chassis_number,executive:currentProfile?.full_name||currentUser.email,reason:new FormData(e.target).get('reason').trim(),created_by:currentUser.id}));await audit('stock_hold_management','create','Submitted hold request','stock_hold',null,{chassis_number:vehicle.chassis_number,department:vehicle.department});wrap.remove();notify('Hold request submitted to Manager.');}catch(ex){$('svStockHoldError').textContent=ex.message;b.disabled=false;}};
+    $('svStockHoldForm').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button[type=submit]');b.disabled=true;try{const values=Object.fromEntries(new FormData(e.target).entries());const mobile=String(values.customer_mobile||'').replace(/\\D/g,'');if(!/^[0-9]{10}$/.test(mobile))throw new Error('Enter a valid 10-digit customer mobile number.');await call(db().from('stock_holds').insert({vehicle_id:vehicle.id,department:vehicle.department,vehicle:vehicle.model,variant:[vehicle.variant,vehicle.colour].filter(Boolean).join(' / '),vin:vehicle.chassis_number,executive:currentProfile?.full_name||currentUser.email,reason:values.reason.trim(),customer_name:values.customer_name.trim(),customer_mobile:mobile,created_by:currentUser.id}));await audit('stock_hold_management','create','Submitted customer vehicle hold request','stock_hold',null,{chassis_number:vehicle.chassis_number,department:vehicle.department,customer_name:values.customer_name.trim()});wrap.remove();notify('Customer hold request sent to Manager for approval.');}catch(ex){$('svStockHoldError').textContent=ex.message;b.disabled=false;}};
   }
   function editVehicleDialog(vehicle){
     if(!vehicle)return;
@@ -836,7 +835,7 @@
   }
   window.holdRender = async () => {
     try{
-      if(!canManageHolds()||!has('stock_hold_management','view'))throw new Error('Stock Hold Management is available to Manager and above only.');
+      if(!has('stock_hold_management','view'))throw new Error('You do not have permission to view Stock Hold Management.');
       let rows=[],from=0,chunk=1000;
       while(true){
         const part=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}).range(from,from+chunk-1));
@@ -850,7 +849,7 @@
       if(deptFilter){const current=deptFilter.value;deptFilter.innerHTML='<option>All Departments</option>'+permitted.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');if(permitted.includes(current))deptFilter.value=current;else deptFilter.value='All Departments';}
       const f=$('holdStatusFilter')?.value||'All',d=$('holdDeptFilter')?.value||'All Departments';
       const filtered=holdItems.filter(x=>(f==='All'||x.status===f||(f==='On Hold'&&x.status==='Approved'))&&(d==='All Departments'||x.dept===d));
-      $('holdRows').innerHTML=filtered.length?filtered.map(x=>'<tr><td>'+new Date(x.date).toLocaleDateString()+'</td><td>'+esc(x.dept)+'</td><td>'+esc(x.vehicle)+'</td><td>'+esc(x.variant||'—')+'</td><td>'+esc(x.vin)+'</td><td>'+esc(x.executive||'—')+'</td><td>'+esc(x.reason)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.approver)+'<br>'+esc(x.approvedAt)+'</td><td>'+(x.status==='Pending'?'<button class="btn small" data-hold-approve="'+esc(x.id)+'">Approve</button> <button class="btn small" data-hold-reject="'+esc(x.id)+'">Reject</button>':'—')+'</td></tr>').join(''):'<tr><td colspan="10">No matching requests.</td></tr>';
+      $('holdRows').innerHTML=filtered.length?filtered.map(x=>'<tr><td>'+new Date(x.date).toLocaleDateString()+'</td><td>'+esc(x.dept)+'</td><td>'+esc(x.vehicle)+'</td><td>'+esc(x.variant||'—')+'</td><td>'+esc(x.vin)+'</td><td>'+esc(x.customer_name||'—')+'</td><td>'+esc(x.customer_mobile||'—')+'</td><td>'+esc(x.executive||'—')+'</td><td>'+esc(x.reason)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.approver)+'<br>'+esc(x.approvedAt)+'</td><td>'+(canManageHolds()&&has('stock_hold_management','approve')&&x.status==='Pending'?'<button class="btn small" data-hold-approve="'+esc(x.id)+'">Approve</button> <button class="btn small" data-hold-reject="'+esc(x.id)+'">Reject</button>':'—')+'</td></tr>').join(''):'<tr><td colspan="12">No matching requests.</td></tr>';
       $('holdPendingCount').textContent=rows.filter(x=>x.status==='Pending').length;
       $('holdApprovedCount').textContent=rows.filter(x=>x.status==='Approved').length;
       $('holdRejectedCount').textContent=rows.filter(x=>x.status==='Rejected').length;
@@ -1004,7 +1003,7 @@
       const b=e.target?.closest?.('[data-page]');
       if(!b)return;
       const p=b.dataset.page||'';
-      if(p.startsWith('stock-hold')&&!canManageHolds()){e.preventDefault();e.stopImmediatePropagation();notify('Stock Hold Management is available to Manager and above only.');return;}
+      if(p.startsWith('stock-hold')&&!has('stock_hold_management','view')){e.preventDefault();e.stopImmediatePropagation();notify('You do not have permission to view Stock Hold Management.');return;}
       setTimeout(()=>{
         if(p==='employees')renderEmployees().catch(x=>notify(x.message));
         if(p==='audit')loadAudit().catch(x=>notify(x.message));
