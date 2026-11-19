@@ -22,8 +22,8 @@
   const db = () => { if (!client) throw new Error('Supabase client is not ready'); return client; };
   async function call(q) { const {data,error}=await q; if(error) throw error; return data; }
   function has(module,action='view') {
-    // Super Admin intentionally has no access to the audit module.
-    if(currentProfile?.is_super_admin) return module !== 'audit_history';
+    // Super Admin can view all audit records, but audit() below never records Super Admin activity.
+    if(currentProfile?.is_super_admin) return true;
     return (permissions.get(module)||[]).includes(action);
   }
   async function refreshIdentity() {
@@ -120,9 +120,6 @@
     if(currentProfile?.is_super_admin){
       document.querySelectorAll('[data-page="audit"], .quick[data-go="audit"]').forEach(item=>item.style.display='none');
     }
-    if(currentProfile?.is_super_admin){
-      document.querySelectorAll('[data-page="audit"], .quick[data-go="audit"]').forEach(item=>item.style.display='none');
-    }
     await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
     authReady=true;
   }
@@ -194,10 +191,10 @@
     await renderEmployees();
   }
   async function loadAudit() {
-    if(currentProfile?.is_super_admin || !has('audit_history','view')) {
+    if(!has('audit_history','view')) {
       window.svAuditRows=[];
       const body=$('view-audit')?.querySelector('.table-wrap table tbody');
-      if(body)body.innerHTML='<tr><td colspan="8" class="empty">Audit History is not available for this account.</td></tr>';
+      if(body)body.innerHTML='<tr><td colspan="8" class="empty">Audit History permission required.</td></tr>';
       return;
     }
     let rows=[],from=0,chunk=1000;
@@ -220,7 +217,7 @@
     const desc=view.querySelector('.card-desc');if(desc)desc.textContent=filtered.length+' activity records · Supabase audit log';
   }
   function downloadAuditCsv(){
-    if(currentProfile?.is_super_admin || !has('audit_history','export')){notify('Audit export permission required.');return;}
+    if(!has('audit_history','export')){notify('Audit export permission required.');return;}
     const rows=window.svAuditRows||[];
     const cols=['created_at','actor_email','module','action','action_label','record_type','record_id','details'];
     const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
