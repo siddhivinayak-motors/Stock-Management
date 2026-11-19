@@ -226,12 +226,27 @@ Deno.serve(async (req: Request) => {
   if (action === "save_employee_permissions") {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({error:"Select another employee"},400);
-    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation,department").eq("user_id",userId).maybeSingle();
+    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation,department,department_access").eq("user_id",userId).maybeSingle();
     if(targetError||!target||target.deleted_at) return json({error:"Active employee not found"},404);
     if(target.is_super_admin) return json({error:"Super Admin permissions cannot be changed"},403);
+    const requestedDepartments=Array.isArray(body.departments)?[...new Set(body.departments.map(String))]:[];
+    const validDepartments=new Set(["Personal","EV","Commercial","LLM"]);
+    if(requestedDepartments.some((d:string)=>!validDepartments.has(d)))return json({error:"Invalid department selection"},400);
+    if(!isOrgAdmin&&requestedDepartments.some((d:string)=>!canManageDepartment(d)))return json({error:"You cannot assign departments outside your own access."},403);
+    if(callerRole==="Manager"&&(requestedDepartments.length>1||requestedDepartments.some((d:string)=>d!==String(profile.department||""))))return json({error:"A Manager can assign only their own department."},403);
+    const requestedShortcuts=Array.isArray(body.dashboard_shortcuts)?[...new Set(body.dashboard_shortcuts.map(String))]:[];
+    const allowedShortcuts=new Set(["quotation","price-list","employees","audit","reports","upload"]);
+    if(requestedShortcuts.some((x:string)=>!allowedShortcuts.has(x)))return json({error:"Invalid dashboard shortcut"},400);
+    if(!canGrantAll&&requestedShortcuts.includes("audit"))return json({error:"You cannot grant Audit History shortcut."},403);
     if (!canManageDepartment(target.department||"")) return json({error:"You can change permissions only for employees in your assigned department."},403);
     const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
     if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
+    const {error:profileUpdateError}=await adminClient.from("profiles").update({
+      department:requestedDepartments[0]||null,
+      department_access:requestedDepartments,
+      dashboard_shortcuts:requestedShortcuts
+    }).eq("user_id",userId);
+    if(profileUpdateError)return json({error:profileUpdateError.message},500);
     const selected = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
     if(selected.some(m=>!ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
     const forbidden=selected.filter((m:string)=>!canGrantModule(m));
@@ -250,8 +265,8 @@ Deno.serve(async (req: Request) => {
       const {error:saveError}=await adminClient.from("employee_permissions").upsert(rows,{onConflict:"user_id,module"});
       if(saveError) return json({error:saveError.message},500);
     }
-    if (!isRoot) await adminClient.from("audit_logs").insert({actor_id:callerId,actor_email:authData.user.email,module:"employee_management",action:"edit",action_label:"Updated employee menu permissions",record_type:"profile",record_id:userId,details:{modules:selected}});
-    return json({success:true,modules:selected,message:"Employee permissions saved"});
+    if (!isRoot) await adminClient.from("audit_logs").insert({actor_id:callerId,actor_email:authData.user.email,module:"employee_management",action:"edit",action_label:"Updated employee menu permissions",record_type:"profile",record_id:userId,details:{modules:selected,departments:requestedDepartments,dashboard_shortcuts:requestedShortcuts}});
+    return json({success:true,modules:selected,departments:requestedDepartments,dashboard_shortcuts:requestedShortcuts,message:"Employee access saved"});
   }
 
   if (action === "delete_employee") {
