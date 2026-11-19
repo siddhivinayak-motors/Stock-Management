@@ -301,7 +301,7 @@
   }
   function mapStockForm(){
     const form=$('vehicleForm');if(!form) return;
-    const fields=[...form.querySelectorAll('.form-grid .field')];
+    const fields=[...form.querySelectorAll('.form-grid .field input, .form-grid .field select, .form-grid .field textarea')];
     const names=['chassis_number','excel_number','model','variant','seating','colour','manufacturing_year','oem_invoice_date','engine_number','sc_name','customer_name','status','stage','place'];
     fields.forEach((el,i)=>{if(names[i])el.dataset.backendField=names[i];});
     const save=form.querySelector('button.primary');
