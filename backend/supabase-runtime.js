@@ -743,7 +743,13 @@
     }
     const section=$('view-employees');if(!section)return;
     rows=rows.filter(p=>!p.deleted_at);
-    if(currentProfile?.designation==='Manager') rows=rows.filter(p=>String(p.department||'').toLowerCase()===String(currentProfile.department||'').toLowerCase());
+    if(currentProfile?.designation==='Manager'){
+      const managerDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
+      rows=rows.filter(p=>{
+        const employeeDepartments=(Array.isArray(p.department_access)&&p.department_access.length?p.department_access:[p.department].filter(Boolean)).map(x=>String(x).toLowerCase());
+        return employeeDepartments.some(d=>managerDepartments.has(d));
+      });
+    }
     const cards=section.querySelectorAll('.stat-grid .stat-value');
     if(cards[0])cards[0].textContent=rows.length;
     if(cards[1])cards[1].textContent=rows.filter(p=>p.status==='active').length;
