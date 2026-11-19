@@ -91,7 +91,12 @@
         page==='reports'?'retail_reports':
         page==='backup-restore'?'backup_restore':
         page==='dashboard'?'dashboard':null;
-      if(m) n.style.display=has(m,'view')?'':'none';
+      n.style.display=(!m||has(m,'view'))?'':'none';
+    });
+    document.querySelectorAll('[data-group]').forEach(group=>{
+      const sub=document.querySelector('[data-sub="'+group.dataset.group+'"]');
+      const visible=sub&&[...sub.querySelectorAll('[data-page]')].some(n=>n.style.display!=='none');
+      if(!visible){group.style.display='none';if(sub)sub.style.display='none';}
     });
     await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
     authReady=true;
@@ -159,14 +164,9 @@
       const part=await call(db().from('profiles').select('*').order('full_name').range(from,from+chunk-1));
       rows.push(...part);if(part.length<chunk)break;from+=chunk;
     }
-    const sel=$('permEmployee');if(sel) sel.innerHTML='<option value="">Select employee</option>'+rows.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name||x.email)+'</option>').join('');
+    rows=rows.filter(x=>!x.deleted_at);
     window.svEmployees=rows;
     await renderEmployees();
-  }
-  async function savePermissions(userId,module,actions) {
-    if(!has('employee_management','manage_users')) throw new Error('Not allowed to manage employee permissions.');
-    await call(db().from('employee_permissions').upsert({user_id:userId,module,actions,granted_by:currentUser.id,updated_at:new Date().toISOString()},{onConflict:'user_id,module'}));
-    await audit('employee_management','manage_users','Updated employee permissions','employee_permission',userId);
   }
   async function loadAudit() {
     if(!has('audit_history','view')&&!currentProfile?.is_super_admin) return;
@@ -575,27 +575,6 @@
       const p=rows.find(x=>x.user_id===btn.dataset.edit);if(p)editEmployeeDialog(p);
     }));
   }
-  async function renderPermissions(){
-    if(!has('employee_management','view')&&!currentProfile?.is_super_admin)return;
-    const employee=$('permEmployee')?.value,tbody=$('permRows');if(!tbody)return;
-    if(!employee){tbody.innerHTML='<tr><td colspan="3">Select an employee to view permissions.</td></tr>';return;}
-    const rows=await call(db().from('employee_permissions').select('*').eq('user_id',employee));
-    const selectedModule=moduleEnum($('permModule')?.value);
-    const current=rows.find(x=>x.module===selectedModule);
-    const allowed=new Set(current?.actions||[]);
-    document.querySelectorAll('#permChecks input').forEach(x=>{x.checked=allowed.has(x.value);});
-    tbody.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(employee)+'</td><td>'+esc(x.module)+'</td><td>'+esc((x.actions||[]).join(', '))+'</td></tr>').join(''):'<tr><td colspan="3">No permissions assigned.</td></tr>';
-  }
-  window.permSave = async () => {
-    try{
-      const user=$('permEmployee')?.value,module=moduleEnum($('permModule')?.value);
-      const actions=[...document.querySelectorAll('#permChecks input:checked')].map(x=>x.value);
-      if(!user)throw new Error('Select an employee.');
-      await savePermissions(user,module,actions);
-      await renderPermissions();notify('Permissions saved to Supabase.');
-    }catch(e){notify(e.message);}
-  };
-  window.permRender=()=>{renderPermissions().catch(e=>notify(e.message));};
   window.holdRender = async () => {
     try{
       if(!has('stock_hold_management','view'))throw new Error('No hold register permission.');
@@ -703,8 +682,6 @@
       catch(ex){if(error)error.textContent=ex.message||'Could not change password.';}
       finally{if(button){button.disabled=false;button.textContent='Change Password';}}
     });
-    $('permEmployee')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
-    $('permModule')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
     $('saveQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(false);},true);
     $('savePrintQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(true);},true);
     const auditView=$('view-audit');
@@ -765,7 +742,7 @@
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdSubmit=()=>submitHold().catch(e=>notify(e.message));
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,savePermissions,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,audit};
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
   else init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();});
