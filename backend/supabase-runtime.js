@@ -128,7 +128,7 @@
     const shortcutAccess=new Set(Array.isArray(currentProfile?.dashboard_shortcuts)?currentProfile.dashboard_shortcuts:[]);
     document.querySelectorAll('.quick[data-go]').forEach(card=>{
       const module=quickModules[card.dataset.go];
-      card.style.display=shortcutAccess.has('quick-access')&&module&&has(module,'view')?'':'none';
+      card.style.display=(currentProfile?.is_super_admin||shortcutAccess.has('quick-access'))&&module&&has(module,'view')?'':'none';
     });
     if(!hasAnyModule){
       document.querySelectorAll('.sidebar [data-page], .sidebar [data-group], .sidebar .nav-section').forEach(item=>{
@@ -722,7 +722,7 @@
       ['audit_history','Audit History'],['retail_reports','Retail Reports'],
       ['common_excel_upload','Common Excel Upload'],['backup_restore','Backup & Restore']
     ]},
-    {title:'Dashboard',items:[['dashboard','Dashboard'],['quick-access','Quick Access']]}
+    {title:'Dashboard',items:[['dashboard','Dashboard']]}
   ];
   const DASHBOARD_SHORTCUTS=[['quick-access','Quick Access']];
   async function openEmployeePermissions(profile){
@@ -746,7 +746,7 @@
     const deptRows=checkRows('employee_department',departments.map(x=>[x,x]),selectedDepartments,new Set(allowedDepartmentList()));
     const moduleRows=EMPLOYEE_MENU_GROUPS.map(group=>{const items=group.items.filter(([module])=>grantable.has(module));return items.length?'<section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">'+group.title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+checkRows('employee_module',items,selected,null)+'</div></section>':'';}).join('');
     const shortcutRows=checkRows('employee_shortcut',DASHBOARD_SHORTCUTS,selectedShortcuts,null);
-    wrap.innerHTML='<div style="width:min(760px,100%);max-height:94vh;overflow:auto;background:#fff;padding:18px;border-radius:14px;color:#253140"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2 style="font-size:19px;margin:0 0 5px">Employee Access Settings</h2><div style="font-size:13px;color:#64748b">'+esc(profile.full_name||profile.email)+'</div></div><button type="button" id="svPermissionClose" class="btn">✕</button></div><p style="font-size:12px;color:#64748b;margin:12px 0">Selected departments automatically include all four department functions. Workspace access is controlled separately. Change Password is always available.</p><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Department Access</h3><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">'+deptRows+'</div></section><div id="svPermissionList">'+moduleRows+'</div><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Dashboard Shortcuts</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+shortcutRows+'</div></section><div id="svPermissionError" style="color:#c51c2a;font-size:12px;margin:8px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svPermissionCancel" class="btn">Cancel</button><button type="button" id="svPermissionSave" class="btn primary">Save Access</button></div></div>';
+    wrap.innerHTML='<div style="width:min(760px,100%);max-height:94vh;overflow:auto;background:#fff;padding:18px;border-radius:14px;color:#253140"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2 style="font-size:19px;margin:0 0 5px">Employee Access Settings</h2><div style="font-size:13px;color:#64748b">'+esc(profile.full_name||profile.email)+'</div></div><button type="button" id="svPermissionClose" class="btn">✕</button></div><p style="font-size:12px;color:#64748b;margin:12px 0">Selected departments automatically include all four department functions. Workspace access is controlled separately. Change Password is always available.</p><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Department Access</h3><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">'+deptRows+'</div></section><div id="svPermissionList">'+moduleRows+'</div><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Dashboard</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+shortcutRows+'</div></section><div id="svPermissionError" style="color:#c51c2a;font-size:12px;margin:8px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svPermissionCancel" class="btn">Cancel</button><button type="button" id="svPermissionSave" class="btn primary">Save Access</button></div></div>';
     document.body.appendChild(wrap);
     const close=()=>wrap.remove();$('svPermissionClose').onclick=close;$('svPermissionCancel').onclick=close;
     $('svPermissionSave').onclick=async()=>{
