@@ -453,6 +453,7 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
 .quote-charge-list .discount-charge{background:#f0fbf4;border:1px solid #cfead8;border-radius:9px}
 .discount-charge .q-charge-name,.discount-total b{color:#168447}
 .q-words{padding:11px 4px 2px;text-align:right;font-size:11px;font-weight:750;color:#4e5a68}
+#qDate[readonly]{background:#f8fafc;color:#465365;cursor:default;user-select:none}
 .q-terms-box{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;background:#fafbfd;border:1px solid #e6ebf1;border-radius:10px;padding:16px;font-size:11px;line-height:1.65;color:#4a5664}
 .q-terms-box ol{margin:8px 0 0;padding-left:18px}.q-terms-box p{margin:8px 0 0}
 @media(max-width:850px){.q-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.q-terms-box{grid-template-columns:1fr}}
@@ -766,7 +767,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
    <div class="q-form-grid">
     <label>Customer Name / Company<input id="qCustomer" placeholder="Enter customer name" required></label>
     <label>Mobile Number<input id="qPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" required></label>
-    <label>Quotation Date<input id="qDate" type="date"></label>
+    <label>Quotation Date &amp; Time (Automatic)<input id="qDate" type="text" readonly aria-readonly="true" tabindex="-1" title="Automatically taken from this device when the quotation is saved"></label>
    </div>
    <details class="quote-more"><summary>＋ More customer details (optional)</summary>
     <div class="q-form-grid">
@@ -1376,13 +1377,21 @@ function updateQuoteNumber(){
  el.textContent=prefix+String(next).padStart(5,'0');
 }
 function renumberCharges(){charges.querySelectorAll('.charge-row').forEach((r,i)=>{const n=r.querySelector('.charge-index');if(n)n.textContent=String(i+1).padStart(2,'0')})}
+function getQuoteDateTime(now=new Date()){
+ const pad=n=>String(n).padStart(2,'0');
+ const date=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+ const dateTime=now.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+ return {date,dateTime,createdAt:now.toISOString()};
+}
+function setQuotationDateTime(){const el=document.getElementById('qDate');if(el)el.value=getQuoteDateTime().dateTime;}
 function getQuotePayload(){
+ const savedAt=getQuoteDateTime();
  const totals=calc(),model=document.getElementById('qVehicle').value.trim(),customer=document.getElementById('qCustomer').value.trim(),phone=document.getElementById('qPhone').value.trim();
  if(!model||!customer||phone.length!==10){toast('Enter Model, Customer / Lessee and valid 10-digit mobile number');return null}
  const items=[];
  charges.querySelectorAll('.charge-row').forEach(r=>{const input=r.querySelector('.amount');items.push({name:r.querySelector('.q-charge-name')?.textContent.trim()||r.querySelector('select')?.value||'Other',amount:Number(input?.value)||0,discount:r.classList.contains('discount-charge')})});
  const v=id=>document.getElementById(id)?.value.trim()||'';
- return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:v('qDate')||new Date().toISOString().slice(0,10),hypo:v('qHypo'),model,carDescription:v('qCarDesc'),variant:v('qVariant'),colour:v('qColour'),chassis:v('qChassis'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'PENDING',prints:0,items};
+ return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,carDescription:v('qCarDesc'),variant:v('qVariant'),colour:v('qColour'),chassis:v('qChassis'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'PENDING',prints:0,items};
 }
 function renderQuoteManagement(){
  const body=document.getElementById('quoteManagementRows');if(!body)return;
@@ -1406,7 +1415,7 @@ function printQuoteDocument(q){
  const rows=regular.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="amt">${amountINR(x.amount)}</td></tr>`).join('');
  const w=window.open('','_blank','width=980,height=1000');if(!w){toast('Allow pop-ups to print quotation');return}
  const d=q.date?new Date(q.date+'T00:00:00'):new Date();
- const dateText=isNaN(d.getTime())?q.date:d.toLocaleDateString('en-IN');
+ const dateText=q.dateTime||(isNaN(d.getTime())?q.date:d.toLocaleDateString('en-IN')); 
  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(q.no)}</title><style>
  @page{size:A4;margin:10mm 12mm}*{box-sizing:border-box}body{font:11.5px Arial,sans-serif;color:#222;margin:0}
  .sheet{width:100%;max-width:190mm;margin:auto}.brandhead{height:34mm;border:1px solid #d5d9df;border-bottom:3px solid #e51e2a;display:flex;align-items:center;justify-content:center;text-align:center;font-size:18px;font-weight:800;letter-spacing:.5px}
@@ -1421,7 +1430,7 @@ function printQuoteDocument(q){
  </style></head><body><div class="sheet">
  <div class="brandhead"><div>SIDDHIVINAYAK MOTORS PVT. LTD.<small>MAHINDRA AUTHORISED DEALERSHIP · BHAVNAGAR</small></div></div>
  <div class="topmeta"><span>QUOTATION · ${esc(q.department||'')}</span><span>SR. NO.: ${esc(q.no)}</span></div>
- <table class="details"><tr><td>NAME / M/S.</td><td colspan="3">${esc(q.customer)}</td></tr><tr><td>VEHICLE NOS.</td><td>${esc(q.vehicleNos||'1')}</td><td>DATE</td><td>${esc(dateText)}</td></tr><tr><td>ADDRESS</td><td colspan="3">${esc(q.address)}</td></tr><tr><td>MODEL</td><td>${esc(q.model)}</td><td>VARIANT</td><td>${esc(q.variant)}</td></tr><tr><td>CAR DESCRIPTION</td><td colspan="3">${esc(q.carDescription)}</td></tr><tr><td>HYPO</td><td>${esc(q.hypo)}</td><td>COLOUR</td><td>${esc(q.colour)}</td></tr><tr><td>VIN / CHASSIS</td><td colspan="3">${esc(q.chassis)}</td></tr></table>
+ <table class="details"><tr><td>NAME / M/S.</td><td colspan="3">${esc(q.customer)}</td></tr><tr><td>VEHICLE NOS.</td><td>${esc(q.vehicleNos||'1')}</td><td>DATE &amp; TIME</td><td>${esc(dateText)}</td></tr><tr><td>ADDRESS</td><td colspan="3">${esc(q.address)}</td></tr><tr><td>MODEL</td><td>${esc(q.model)}</td><td>VARIANT</td><td>${esc(q.variant)}</td></tr><tr><td>CAR DESCRIPTION</td><td colspan="3">${esc(q.carDescription)}</td></tr><tr><td>HYPO</td><td>${esc(q.hypo)}</td><td>COLOUR</td><td>${esc(q.colour)}</td></tr><tr><td>VIN / CHASSIS</td><td colspan="3">${esc(q.chassis)}</td></tr></table>
  <table class="charges" style="margin-top:8px"><thead><tr><th>SR.NO.</th><th>PARTICULARS</th><th>AMOUNT</th></tr></thead><tbody>${rows}<tr><td>—</td><td>(-) LESS — INCLUDING COMPANY DISCOUNT, DEALER MARGIN AND INSURANCE DISCOUNT</td><td class="amt">${amountINR(less)}</td></tr></tbody></table>
  <div class="net"><span>NET PAYABLE</span><span>${amountINR(q.total)}</span></div><div class="words">Amount in Words: ${esc(q.amountWords||numberWordsIndian(q.total))}</div>
  <div class="company"><div>PAN NO.: ${esc(q.pan)}</div><div>COMPANY GSTIN/UIN: ${esc(q.gstin)}</div></div>
@@ -1432,7 +1441,7 @@ function printQuoteDocument(q){
 }
 function resetQuotationForm(){
  ['qCustomer','qPhone','qAddress','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qChassis','qSalesPerson','qContactPerson','qContactMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
- document.getElementById('qDate').value=new Date().toISOString().slice(0,10);
+ setQuotationDateTime();
  charges.querySelectorAll('.amount').forEach(e=>e.value='');updateQuoteNumber();calc();
 }
 
@@ -1459,7 +1468,7 @@ document.getElementById('qVehicle').addEventListener('change',quoteAutoFillPrice
 document.getElementById('qVariant').addEventListener('change',quoteAutoFillPrice);
 refreshQuotePriceSuggestions();
 loadDepartmentQuotes();
-document.getElementById('qDate').value=new Date().toISOString().slice(0,10);
+setQuotationDateTime();
 document.getElementById('charges').addEventListener('input',calc);
 document.getElementById('charges').addEventListener('change',calc);
 
