@@ -153,7 +153,11 @@
   }
   async function loadAudit() {
     if(!has('audit_history','view')&&!currentProfile?.is_super_admin) return;
-    const rows=await call(db().from('audit_logs').select('*').order('created_at',{ascending:false}).limit(500));
+    let rows=[],from=0,chunk=1000;
+    while(true){
+      const part=await call(db().from('audit_logs').select('*').order('created_at',{ascending:false}).range(from,from+chunk-1));
+      rows.push(...part);if(part.length<chunk)break;from+=chunk;
+    }
     window.svAuditRows=rows; renderAuditRows(rows);
   }
   function renderAuditRows(rows=window.svAuditRows||[]) {
