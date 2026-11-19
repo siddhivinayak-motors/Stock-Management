@@ -143,9 +143,6 @@
       if(firstVisible){const p=firstVisible.dataset.page;if(p)window.showPage?.(p);}
       else document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-password'));
     }
-    if(currentProfile?.is_super_admin){
-      document.querySelectorAll('[data-page="audit"], .quick[data-go="audit"]').forEach(item=>item.style.display='none');
-    }
     await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
     authReady=true;
   }
@@ -687,27 +684,29 @@
   function employeeDialog(){
     const old=$('svEmployeeDialog');if(old)old.remove();
     const wrap=document.createElement('div');wrap.id='svEmployeeDialog';
-    wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
-    const roles=['Super Admin','Admin','General Manager','Manager','Accountant','HR','DMS','Executive','Reception','Driver'];
+    wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:12px';
+    const roles=['Admin','General Manager','Manager','Accountant','HR','DMS','Executive','Reception','Driver'];
     const depts=allowedDepartmentList();
-    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:20px;font-weight:850;margin-bottom:16px">Create Employee Login</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label>Full Name<input required name="full_name" class="field" autocomplete="off"></label><label>Email<input required type="email" name="email" class="field" autocomplete="off"></label><label>Password<input required type="password" name="password" class="field" minlength="6" autocomplete="new-password"></label><label>Designation / Role<select required name="designation" id="svNewRole" class="field"><option value="">Select role</option>'+roles.map(x=>'<option value="'+x+'" '+(x==='Super Admin'?'disabled':'')+'>'+x+(x==='Super Admin'?' (Reserved)':'')+'</option>').join('')+'</select></label></div><fieldset style="border:1px solid #dce2e9;border-radius:9px;padding:12px;margin-top:14px"><legend style="font-weight:700;font-size:13px">Department Access</legend><div id="svNewDepartments" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+depts.map(x=>'<label style="display:flex;gap:5px;align-items:center"><input type="checkbox" name="department_access" value="'+x+'">'+x+'</label>').join('')+'</div><small id="svRoleHint" style="display:block;color:#718096;margin-top:8px">Select a role and department access.</small></fieldset><div style="font-size:12px;color:#718096;margin-top:12px">Password must contain at least 6 characters. Login password is hidden by default and is not stored in readable form.</div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Create User</button></div></form>';
+    const canGrantAll=!!currentProfile?.is_super_admin||['Admin','General Manager'].includes(currentProfile?.designation);
+    const canGrantOperational=['Manager','HR'].includes(currentProfile?.designation);
+    const allowedModules=new Set(EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])).filter(m=>canGrantAll||(canGrantOperational&&m!=='audit_history')));
+    const deptRows=depts.map(x=>'<label style="display:flex;gap:5px;align-items:center;padding:8px;border:1px solid #edf0f3;border-radius:8px"><input type="checkbox" name="department_access" value="'+x+'">'+x+'</label>').join('');
+    const moduleRows=EMPLOYEE_MENU_GROUPS.map(group=>{const items=group.items.filter(([m])=>allowedModules.has(m));return items.length?'<section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">'+group.title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+items.map(([m,label])=>'<label style="display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #edf0f3;border-radius:8px"><input type="checkbox" name="module_access" value="'+m+'"><span>'+label+'</span></label>').join('')+'</div></section>':'';}).join('');
+    const shortcutRows=DASHBOARD_SHORTCUTS.map(([v,label])=>'<label style="display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #edf0f3;border-radius:8px"><input type="checkbox" name="dashboard_shortcuts" value="'+v+'"><span>'+label+'</span></label>').join('');
+    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(760px,100%);max-height:94vh;overflow:auto;background:#fff;padding:18px;border-radius:14px;color:#253140"><div style="font-size:20px;font-weight:850;margin-bottom:14px">Create Employee Login</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px"><label>Full Name<input required name="full_name" class="field" autocomplete="off"></label><label>Email<input required type="email" name="email" class="field" autocomplete="off"></label><label>Password<input required type="password" name="password" class="field" minlength="6" autocomplete="new-password"></label><label>Designation / Role<select required name="designation" id="svNewRole" class="field"><option value="">Select role</option>'+roles.map(x=>'<option value="'+x+'">'+x+'</option>').join('')+'</select></label></div><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Department Access</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">'+deptRows+'</div></section><div id="svCreateModulePermissions">'+moduleRows+'</div><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Dashboard Shortcuts</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+shortcutRows+'</div></section><div style="font-size:12px;color:#718096;margin-top:8px">Only the selected departments, modules and shortcuts will be granted. No access is added automatically from the designation.</div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Create User</button></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
-    const roleSelect=$('svNewRole'),checks=[...wrap.querySelectorAll('input[name="department_access"]')];
-    const applyRole=()=>{
-      const managerScope=currentProfile?.designation==='Manager';
-      $('svRoleHint').textContent=managerScope?'Managers can create employees only in departments assigned to their account.':'Select only departments assigned to your account.';
-      checks.forEach(c=>{c.disabled=!allowedDepartmentList().includes(c.value);if(managerScope)c.checked=false;});
-    };
-    roleSelect.addEventListener('change',applyRole);
     $('svEmployeeForm').onsubmit=async e=>{
-      e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
+      e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;button.textContent='Creating…';
       try{
-        const fd=new FormData(e.target),fields=Object.fromEntries(fd.entries());fields.department_access=fd.getAll('department_access');
+        const fd=new FormData(e.target),fields=Object.fromEntries(fd.entries());
+        fields.department_access=fd.getAll('department_access');
+        fields.modules=fd.getAll('module_access');
+        fields.dashboard_shortcuts=fd.getAll('dashboard_shortcuts');
         if(String(fields.password||'').length<6)throw new Error('Password must be at least 6 characters.');
         if(!fields.department_access.length)throw new Error('Select at least one department.');
-        const result=await createEmployee(fields);wrap.remove();notify('User created successfully: '+result.email);await renderEmployees();
-      }catch(ex){$('svEmployeeError').textContent=ex.message;button.disabled=false;}
+        const result=await createEmployee(fields);wrap.remove();notify('User created with selected permissions: '+result.email);await renderEmployees();
+      }catch(ex){$('svEmployeeError').textContent=ex.message;button.disabled=false;button.textContent='Create User';}
     };
   }
   async function loadImportHistory(){
