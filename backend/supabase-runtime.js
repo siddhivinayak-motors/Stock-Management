@@ -128,7 +128,28 @@
   async function loadAudit() {
     if(!has('audit_history','view')&&!currentProfile?.is_super_admin) return;
     const rows=await call(db().from('audit_logs').select('*').order('created_at',{ascending:false}).limit(500));
-    window.svAuditRows=rows;
+    window.svAuditRows=rows; renderAuditRows(rows);
+  }
+  function renderAuditRows(rows=window.svAuditRows||[]) {
+    const view=$('view-audit');if(!view)return;
+    const body=view.querySelector('.table-wrap table tbody');if(!body)return;
+    const search=(view.querySelector('.toolbar .search input')?.value||'').trim().toLowerCase();
+    const actionFilter=view.querySelector('.toolbar select')?.value||'All actions';
+    const filtered=rows.filter(r=>{
+      const text=[r.actor_email,r.action_label,r.module,r.action,r.record_type,r.record_id,JSON.stringify(r.details||{})].join(' ').toLowerCase();
+      return (!search||text.includes(search))&&(actionFilter==='All actions'||String(r.action||'').toUpperCase()===actionFilter);
+    });
+    body.innerHTML=filtered.length?filtered.map(r=>'<tr><td>'+new Date(r.created_at).toLocaleString()+'</td><td>'+esc(r.actor_email||'—')+'</td><td>—</td><td>'+esc(r.module||'—')+'</td><td>'+esc(String(r.action||'').toUpperCase())+'</td><td>'+esc([r.record_type,r.record_id].filter(Boolean).join(' · ')||'—')+'</td><td><span class="pill green">Recorded</span></td><td>'+esc(r.action_label||'')+' '+esc(JSON.stringify(r.details||{}))+'</td></tr>').join(''):'<tr><td colspan="8" class="empty">No matching activity records.</td></tr>';
+    const desc=view.querySelector('.card-desc');if(desc)desc.textContent=filtered.length+' activity records · Supabase audit log';
+  }
+  function downloadAuditCsv(){
+    if(!has('audit_history','export')&&!currentProfile?.is_super_admin){notify('Audit export permission required.');return;}
+    const rows=window.svAuditRows||[];
+    const cols=['created_at','actor_email','module','action','action_label','record_type','record_id','details'];
+    const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+    const csv=[cols.join(','),...rows.map(r=>cols.map(c=>q(typeof r[c]==='object'?JSON.stringify(r[c]):r[c])).join(','))].join('\r\n');
+    const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    a.href=url;a.download='Siddhivinayak-Audit-'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(url);
   }
   async function audit(module,action,label,type=null,id=null,details={}) {
     try { await db().rpc('log_activity',{p_module:module,p_action:action,p_label:label,p_record_type:type,p_record_id:id==null?null:String(id),p_details:details}); } catch(e){console.warn('Audit write failed',e);}
@@ -426,6 +447,16 @@
     const newUser=$('view-employees')?.querySelector('.stat-grid .btn.primary');
     if(newUser)newUser.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();employeeDialog();},true);
     $('permEmployee')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
+    const auditView=$('view-audit');
+    if(auditView){
+      const toolbar=auditView.querySelector('.toolbar');
+      const search=toolbar?.querySelector('.search input'),actionSelect=toolbar?.querySelector('select');
+      search?.addEventListener('input',()=>renderAuditRows());
+      actionSelect?.addEventListener('change',()=>renderAuditRows());
+      const buttons=toolbar?.querySelectorAll('button')||[];
+      if(buttons[0])buttons[0].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();loadAudit().catch(x=>notify(x.message));},true);
+      if(buttons[1])buttons[1].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.print();},true);
+    }
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
     $('holdDeptFilter')?.addEventListener('change',()=>window.holdRender());
     document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>{
