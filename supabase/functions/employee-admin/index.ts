@@ -154,6 +154,29 @@ Deno.serve(async (req: Request) => {
     return json({ success: true, message: "Employee profile updated" });
   }
 
+  if (action === "delete_employee") {
+    const userId = String(body.user_id || "");
+    if (!userId || userId === callerId) return json({ error: "You cannot delete your own account" }, 400);
+    const { data: target, error: targetError } = await adminClient.from("profiles")
+      .select("user_id,email,is_super_admin,deleted_at").eq("user_id", userId).maybeSingle();
+    if (targetError || !target) return json({ error: "Employee not found" }, 404);
+    if (target.is_super_admin) return json({ error: "The Super Admin account is protected and cannot be deleted" }, 403);
+    if (target.deleted_at) return json({ error: "This employee is already deleted" }, 409);
+    const { error: updateError } = await adminClient.from("profiles")
+      .update({ status: "inactive", deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq("user_id", userId);
+    if (updateError) return json({ error: updateError.message }, 400);
+    const { error: banError } = await adminClient.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
+    if (banError) return json({ error: "Employee archived but login blocking failed: " + banError.message }, 500);
+    const { error: auditError } = await adminClient.from("audit_logs").insert({
+      actor_id: callerId, actor_email: authData.user.email, module: "employee_management",
+      action: "delete", action_label: "Deleted employee account (archived)",
+      record_type: "profile", record_id: userId, details: { email: target.email, method: "soft_delete" },
+    });
+    if (auditError) return json({ error: "Employee archived, but audit entry failed: " + auditError.message }, 500);
+    return json({ success: true, message: "Employee deleted from the active directory. Historical records were preserved." });
+  }
+
   if (action === "deactivate_employee") {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
