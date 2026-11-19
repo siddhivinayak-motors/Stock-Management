@@ -114,9 +114,11 @@ Deno.serve(async (req: Request) => {
     .from("employee_permissions").select("module,actions").eq("user_id",callerId);
   if(callerPermError)return json({error:"Could not verify your permission limits"},500);
   const callerActions=new Map((callerPermRows||[]).map((r:any)=>[r.module,r.actions||[]]));
-  const canGrantModule=(module:string)=>isRoot
-    || (callerActions.get(module)||[]).includes("view")
-    || (module==="common_excel_upload"&&(callerActions.get(module)||[]).includes("create"));
+  const canGrantModule=(module:string)=>module==="audit_history"
+    ? (isRoot||callerRole==="Admin"||callerRole==="General Manager")
+    : (isRoot
+      || (callerActions.get(module)||[]).includes("view")
+      || (module==="common_excel_upload"&&(callerActions.get(module)||[]).includes("create")));
   if (action === "create_employee") {
     const email = String(body.email || "").trim().toLowerCase();
     const fullName = String(body.full_name || "").trim();
