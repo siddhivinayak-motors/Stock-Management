@@ -120,6 +120,9 @@
     if(currentProfile?.is_super_admin){
       document.querySelectorAll('[data-page="audit"], .quick[data-go="audit"]').forEach(item=>item.style.display='none');
     }
+    if(currentProfile?.is_super_admin){
+      document.querySelectorAll('[data-page="audit"], .quick[data-go="audit"]').forEach(item=>item.style.display='none');
+    }
     await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
     authReady=true;
   }
