@@ -491,6 +491,12 @@ td{padding:15px 16px;line-height:1.5}
  .stat-value{font-size:21px}
 }
 
+
+.quote-more{margin:10px 0 14px;border:1px solid var(--line,#d9e1e8);border-radius:10px;background:var(--surface-soft,#f8fafc);padding:10px 13px}
+.quote-more summary{cursor:pointer;font-size:13px;font-weight:650;color:var(--muted,#526174);list-style:none}
+.quote-more summary::-webkit-details-marker{display:none}
+.quote-more[open] summary{margin-bottom:12px;color:var(--text,#243447)}
+.quote-more .q-form-grid{margin-top:8px}
 </style>
 </head>
 <body>
@@ -595,24 +601,32 @@ td{padding:15px 16px;line-height:1.5}
   <div class="card-head"><div><div class="card-title">Create New Quotation</div><div class="card-desc">Complete customer and vehicle details, review all charge heads, then save or print.</div></div><span class="pill red">NEW</span></div>
   <div class="card-body">
    <div class="quote-number-strip"><span>Quotation Number</span><strong id="quoteNumber">SV-PER-00001</strong><span class="auto-tag">AUTO GENERATED</span></div>
-   <div class="q-section-heading">01 · CUSTOMER / LESSEE DETAILS</div>
+   <div class="q-section-heading">01 · CUSTOMER DETAILS</div>
    <div class="q-form-grid">
-    <label>Name / M/s. / Lessee<input id="qCustomer" placeholder="Customer or company name"></label>
-    <label>Customer Mobile Number<input id="qPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number"></label>
-    <label>Address<textarea id="qAddress" rows="2" placeholder="Full billing address"></textarea></label>
-    <label>Vehicle Nos.<input id="qVehicleNos" placeholder="Number of vehicles"></label>
+    <label>Customer Name / Company<input id="qCustomer" placeholder="Enter customer name" required></label>
+    <label>Mobile Number<input id="qPhone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" required></label>
     <label>Quotation Date<input id="qDate" type="date"></label>
-    <label>Hypothecation<input id="qHypo" placeholder="NA / CASH / Bank name"></label>
    </div>
+   <details class="quote-more"><summary>＋ More customer details (optional)</summary>
+    <div class="q-form-grid">
+     <label>Address<textarea id="qAddress" rows="2" placeholder="Full billing address"></textarea></label>
+     <label>Vehicle Nos.<input id="qVehicleNos" placeholder="1"></label>
+     <label>Hypothecation<input id="qHypo" placeholder="NA / CASH / Bank name"></label>
+    </div>
+   </details>
    <div class="q-section-heading">02 · VEHICLE DETAILS</div>
    <div class="q-form-grid">
-    <label>Model<input id="qVehicle" list="qModelSuggestions" placeholder="e.g. BOLERO NEO"><datalist id="qModelSuggestions"></datalist></label>
-    <label>Car Description<input id="qCarDesc" placeholder="e.g. BOLERO NEO N8 D MT 7STR DIAMOND WHITE"></label>
-    <label>Variant<input id="qVariant" placeholder="e.g. N8 D MT 7STR"></label>
-    <label>Colour<input id="qColour" placeholder="e.g. DIAMOND WHITE"></label>
-    <label>Vehicle / Chassis Number<input id="qChassis" placeholder="Enter VIN / chassis number"></label>
-    <label>Sales Consultant<input id="qSalesPerson" placeholder="Logged-in sales consultant"></label>
+    <label>Vehicle Model<input id="qVehicle" list="qModelSuggestions" placeholder="e.g. BOLERO NEO" required><datalist id="qModelSuggestions"></datalist></label>
    </div>
+   <details class="quote-more"><summary>＋ More vehicle details (optional)</summary>
+    <div class="q-form-grid">
+     <label>Car Description<input id="qCarDesc" placeholder="Vehicle description"></label>
+     <label>Variant<input id="qVariant" placeholder="Variant"></label>
+     <label>Colour<input id="qColour" placeholder="Colour"></label>
+     <label>Vehicle / Chassis Number<input id="qChassis" placeholder="Chassis number"></label>
+     <label>Sales Consultant<input id="qSalesPerson" placeholder="Sales consultant"></label>
+    </div>
+   </details>
    <div class="q-section-heading">03 · PRICE DETAILS</div>
    <div class="quote-charge-heading"><div><h3>Particulars &amp; Amount</h3><p>All charge heads from the approved quotation reference. Enter only applicable amounts; sample workbook values are not prefilled.</p></div><button class="btn small" id="addCharge">＋ Add Other Charge</button></div>
    <div class="quote-charge-list" id="charges"><div class="charge-row"><span class="charge-index">01</span><div class="q-charge-name">EX. SHOWROOM WITH CHARGER</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="Ex. Showroom With Charger"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">02</span><div class="q-charge-name">TCS</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="TCS"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">03</span><div class="q-charge-name">INSURANCE (CONSUMABLES, RETURN TO INVOICE, ENGINE GUARD AND DEPRECIATION REIMBURSEMENT) 1+2</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="Insurance (Consumables, RTI, Engine Guard, Depreciation Reimbursement)"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">04</span><div class="q-charge-name">BMC TAX</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="BMC Tax"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">05</span><div class="q-charge-name">REGISTRATION / CRTM (IF COMPANY REG 12% TAX)</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="Registration / CRTM"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">06</span><div class="q-charge-name">HYPOTHECATION ADDITION</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="Hypothecation Addition"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">07</span><div class="q-charge-name">EXTENDED WARRANTY 4TH</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="Extended Warranty 4th"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">08</span><div class="q-charge-name">VLD DEVICE CHARGE ONLY FOR TAXI PASSING</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="VLD Device Charge"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">09</span><div class="q-charge-name">ACCESSORIES</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="Accessories"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">10</span><div class="q-charge-name">MAXI CARE / CERAMIC COATING / PPF</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="Maxi Care / Ceramic Coating / PPF"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">11</span><div class="q-charge-name">RSA</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="RSA"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">12</span><div class="q-charge-name">RTO CHARGE</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="RTO Charge"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row discount-charge"><span class="charge-index">13</span><div class="q-charge-name">(-) LESS — COMPANY DISCOUNT, DEALER MARGIN AND INSURANCE DISCOUNT</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" id="quoteDiscount" type="number" min="0" step="0.01" placeholder="0.00" value="0" data-charge="Discount"></div><span class="discount-lock">LESS</span></div></div>
@@ -622,21 +636,24 @@ td{padding:15px 16px;line-height:1.5}
     <div class="total-line grand"><span>NET PAYABLE</span><strong id="grand">₹0.00</strong></div>
     <div class="q-words" id="qAmountWords">Amount in words: Zero Rupees Only</div>
    </div>
-   <div class="q-section-heading">04 · TAX / COMPANY DETAILS</div>
-   <div class="q-form-grid">
-    <label>PAN No.<input id="qPan" value="AAMCS1007J"></label>
-    <label>Company GSTIN / UIN<input id="qGstin" value="24AAMCS1007J1ZI"></label>
-    <label>Contact Person<input id="qContactPerson" value="PRATIK BADHEKA (SALES MANAGER)"></label>
-    <label>Contact Person Mobile<input id="qContactMobile" value="9879100031"></label>
-    <label>Email ID<input id="qEmail" value="SALES.B@SIDDHIVINAYAKMOTORS.COM"></label>
-    <label>Branch / Sales Address<textarea id="qBranchAddress" rows="2">Press Quarter, near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004</textarea></label>
-    <label>Sales Helpline<input id="qHelpline" value="9925139389"></label>
-   </div>
-   <div class="q-section-heading">05 · TERMS &amp; BANK DETAILS</div>
-   <div class="q-terms-box">
-    <div><b>Terms &amp; Conditions</b><ol><li>All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.</li><li>Kindly insist for receipt of all payments made.</li><li>Subject to availability of stock &amp; colour.</li><li>Price prevailing at the time of delivery shall be applicable.</li><li>Prices are subject to change without any notice.</li><li>Subject to Bhavnagar Jurisdiction.</li></ol></div>
-    <div><b>RTGS Details</b><p>Account Name: SIDDHIVINAYAK MOTORS PVT. LTD.<br>Bank: State Bank of India<br>Account Number: 33349775105<br>IFSC: SBIN0060231<br>Branch: Chitra, Bhavnagar</p></div>
-   </div>
+   <details class="quote-more">
+    <summary>＋ Company, terms &amp; bank details (already filled)</summary>
+    <div class="q-section-heading">Company Details</div>
+    <div class="q-form-grid">
+     <label>PAN No.<input id="qPan" value="AAMCS1007J"></label>
+     <label>Company GSTIN / UIN<input id="qGstin" value="24AAMCS1007J1ZI"></label>
+     <label>Contact Person<input id="qContactPerson" value="PRATIK BADHEKA (SALES MANAGER)"></label>
+     <label>Contact Person Mobile<input id="qContactMobile" value="9879100031"></label>
+     <label>Email ID<input id="qEmail" value="SALES.B@SIDDHIVINAYAKMOTORS.COM"></label>
+     <label>Branch / Sales Address<textarea id="qBranchAddress" rows="2">Press Quarter, near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004</textarea></label>
+     <label>Sales Helpline<input id="qHelpline" value="9925139389"></label>
+    </div>
+    <div class="q-section-heading">Terms &amp; Bank Details</div>
+    <div class="q-terms-box">
+     <div><b>Terms &amp; Conditions</b><ol><li>All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.</li><li>Kindly insist for receipt of all payments made.</li><li>Subject to availability of stock &amp; colour.</li><li>Price prevailing at the time of delivery shall be applicable.</li><li>Prices are subject to change without any notice.</li><li>Subject to Bhavnagar Jurisdiction.</li></ol></div>
+     <div><b>RTGS Details</b><p>Account Name: SIDDHIVINAYAK MOTORS PVT. LTD.<br>Bank: State Bank of India<br>Account Number: 33349775105<br>IFSC: SBIN0060231<br>Branch: Chitra, Bhavnagar</p></div>
+    </div>
+   </details>
    <div class="quote-actions"><button class="btn primary" id="saveQuote">Save Quotation</button><button class="btn" id="savePrintQuote">Save &amp; Print</button><span class="card-desc">Quotation records are separated by department.</span></div>
   </div>
  </div>
