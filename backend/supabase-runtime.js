@@ -489,10 +489,8 @@
     wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
     const input=(name,label,value,type='text')=>'<label style="display:block;font-size:13px;font-weight:650">'+label+'<input '+(type==='tel'?'type="tel" inputmode="numeric" maxlength="10"':'type="text"')+' name="'+name+'" class="field" value="'+esc(value||'')+'" style="width:100%;margin-top:5px"></label>';
     const selected=profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean);
-    const permissionRows=await call(db().from('employee_permissions').select('module').eq('user_id',profile.user_id));
-    const selectedModules=permissionRows.map(x=>x.module);
     const departments='<fieldset style="border:1px solid #dce2e9;border-radius:8px;padding:10px"><legend style="font-size:13px;font-weight:650">Department Access</legend>'+['Personal','EV','Commercial','LLM'].map(x=>'<label style="display:inline-flex;gap:5px;align-items:center;margin:5px 10px 5px 0"><input type="checkbox" name="department_access" value="'+x+'" '+(selected.includes(x)?'checked':'')+'>'+x+'</label>').join('')+'</fieldset>';
-    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Employee Details</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+input('full_name','Employee Name',profile.full_name)+input('phone','Mobile Number',profile.phone,'tel')+'<label style="display:block;font-size:13px;font-weight:650">New Password (leave blank to keep current)<input type="password" name="password" minlength="6" autocomplete="new-password" class="field" style="width:100%;margin-top:5px"></label><label style="display:block;font-size:13px;font-weight:650">Designation / Role<select name="designation" id="svEditRole" class="field" style="width:100%;margin-top:5px">'+Object.keys(ROLE_MODULES_UI).concat(['Super Admin']).map(x=>'<option value="'+x+'" '+(profile.designation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label>'+departments+moduleAccessMarkup(profile.designation,selectedModules)+'<label style="display:block;font-size:13px;font-weight:650">Account Status<select name="status" class="field" style="width:100%;margin-top:5px"><option value="active" '+(profile.status==='active'?'selected':'')+'>Active</option><option value="inactive" '+(profile.status!=='active'?'selected':'')+'>Inactive</option></select></label><label style="display:block;font-size:13px;font-weight:650">Email (read only)<input class="field" value="'+esc(profile.email||'')+'" readonly style="width:100%;margin-top:5px"></label></div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button type="button" id="svEmployeeDelete" class="btn" style="border-color:#efb7bc;color:#b4232c;background:#fff7f7">Delete User</button><div style="display:flex;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Save Changes</button></div></div></form>';
+    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Employee Details</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+input('full_name','Employee Name',profile.full_name)+input('phone','Mobile Number',profile.phone,'tel')+'<label style="display:block;font-size:13px;font-weight:650">New Password (leave blank to keep current)<input type="password" name="password" minlength="6" autocomplete="new-password" class="field" style="width:100%;margin-top:5px"></label><label style="display:block;font-size:13px;font-weight:650">Designation / Role<select name="designation" id="svEditRole" class="field" style="width:100%;margin-top:5px">'+Object.keys(ROLE_MODULES_UI).concat(['Super Admin']).map(x=>'<option value="'+x+'" '+(profile.designation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label>'+departments+'<label style="display:block;font-size:13px;font-weight:650">Account Status<select name="status" class="field" style="width:100%;margin-top:5px"><option value="active" '+(profile.status==='active'?'selected':'')+'>Active</option><option value="inactive" '+(profile.status!=='active'?'selected':'')+'>Inactive</option></select></label><label style="display:block;font-size:13px;font-weight:650">Email (read only)<input class="field" value="'+esc(profile.email||'')+'" readonly style="width:100%;margin-top:5px"></label></div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button type="button" id="svEmployeeDelete" class="btn" style="border-color:#efb7bc;color:#b4232c;background:#fff7f7">Delete User</button><div style="display:flex;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Save Changes</button></div></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
     const applyEditRole=()=>{
@@ -517,7 +515,7 @@
     $('svEmployeeForm').onsubmit=async e=>{
       e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
       try{
-        const fd=new FormData(e.target),fields=Object.fromEntries(fd.entries());fields.department_access=fd.getAll('department_access');fields.module_access=fd.getAll('module_access');
+        const fd=new FormData(e.target),fields=Object.fromEntries(fd.entries());fields.department_access=fd.getAll('department_access');
         if(!fields.full_name.trim())throw new Error('Employee name is required.');
         if(fields.phone&&!/^\\d{10}$/.test(fields.phone.trim()))throw new Error('Enter a valid 10-digit mobile number.');
         const {data:{session}}=await db().auth.getSession();
@@ -533,16 +531,16 @@
     wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
     const roles=['Super Admin','Admin','General Manager','Manager','Accountant','HR','DMS','Executive','Reception','Driver'];
     const depts=['Personal','EV','Commercial','LLM'];
-    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:20px;font-weight:850;margin-bottom:16px">Create Employee Login</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label>Full Name<input required name="full_name" class="field" autocomplete="off"></label><label>Email<input required type="email" name="email" class="field" autocomplete="off"></label><label>Password<input required type="password" name="password" class="field" minlength="6" autocomplete="new-password"></label><label>Designation / Role<select required name="designation" id="svNewRole" class="field"><option value="">Select role</option>'+roles.map(x=>'<option value="'+x+'" '+(x==='Super Admin'?'disabled':'')+'>'+x+(x==='Super Admin'?' (Reserved)':'')+'</option>').join('')+'</select></label></div><fieldset style="border:1px solid #dce2e9;border-radius:9px;padding:12px;margin-top:14px"><legend style="font-weight:700;font-size:13px">Department Access</legend><div id="svNewDepartments" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+depts.map(x=>'<label style="display:flex;gap:5px;align-items:center"><input type="checkbox" name="department_access" value="'+x+'">'+x+'</label>').join('')+'</div><small id="svRoleHint" style="display:block;color:#718096;margin-top:8px">Select a role and department access.</small></fieldset><div id="svNewModuleAccess">'+moduleAccessMarkup('')+'</div><div style="font-size:12px;color:#718096;margin-top:12px">Password must contain at least 6 characters. Login password is hidden by default and is not stored in readable form.</div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Create User</button></div></form>';
+    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:20px;font-weight:850;margin-bottom:16px">Create Employee Login</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><label>Full Name<input required name="full_name" class="field" autocomplete="off"></label><label>Email<input required type="email" name="email" class="field" autocomplete="off"></label><label>Password<input required type="password" name="password" class="field" minlength="6" autocomplete="new-password"></label><label>Designation / Role<select required name="designation" id="svNewRole" class="field"><option value="">Select role</option>'+roles.map(x=>'<option value="'+x+'" '+(x==='Super Admin'?'disabled':'')+'>'+x+(x==='Super Admin'?' (Reserved)':'')+'</option>').join('')+'</select></label></div><fieldset style="border:1px solid #dce2e9;border-radius:9px;padding:12px;margin-top:14px"><legend style="font-weight:700;font-size:13px">Department Access</legend><div id="svNewDepartments" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+depts.map(x=>'<label style="display:flex;gap:5px;align-items:center"><input type="checkbox" name="department_access" value="'+x+'">'+x+'</label>').join('')+'</div><small id="svRoleHint" style="display:block;color:#718096;margin-top:8px">Select a role and department access.</small></fieldset><div style="font-size:12px;color:#718096;margin-top:12px">Password must contain at least 6 characters. Login password is hidden by default and is not stored in readable form.</div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Create User</button></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
     const roleSelect=$('svNewRole'),checks=[...wrap.querySelectorAll('input[name="department_access"]')];
-    const applyRole=()=>{const role=roleSelect.value,all=['Super Admin','Admin','General Manager','Accountant','HR','DMS','Driver'].includes(role);checks.forEach(c=>{c.checked=all;c.disabled=all;});$('svRoleHint').textContent=all?'This role receives all four departments by default.':role==='Manager'||role==='Executive'||role==='Reception'?'Select one or more departments for this employee.':'Select department access.';$('svNewModuleAccess').innerHTML=moduleAccessMarkup(role,ROLE_MODULES_UI[role]||[]);};
+    const applyRole=()=>{const role=roleSelect.value,all=['Super Admin','Admin','General Manager','Accountant','HR','DMS','Driver'].includes(role);checks.forEach(c=>{c.checked=all;c.disabled=all;});$('svRoleHint').textContent=all?'This role receives all four departments by default.':role==='Manager'||role==='Executive'||role==='Reception'?'Select one or more departments for this employee.':'Select department access.';};
     roleSelect.addEventListener('change',applyRole);
     $('svEmployeeForm').onsubmit=async e=>{
       e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
       try{
-        const fd=new FormData(e.target),fields=Object.fromEntries(fd.entries());fields.department_access=fd.getAll('department_access');fields.module_access=fd.getAll('module_access');
+        const fd=new FormData(e.target),fields=Object.fromEntries(fd.entries());fields.department_access=fd.getAll('department_access');
         if(String(fields.password||'').length<6)throw new Error('Password must be at least 6 characters.');
         if(!fields.department_access.length)throw new Error('Select at least one department.');
         const result=await createEmployee(fields);wrap.remove();notify('User created successfully: '+result.email);await renderEmployees();
@@ -554,6 +552,41 @@
     const rows=await call(db().from('stock_import_batches').select('*').order('created_at',{ascending:false}).limit(500));
     const body=$('view-upload')?.querySelector('.card:last-child .table-wrap tbody');if(!body)return;
     body.innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.file_name)+'</td><td><span class="pill green">Imported</span></td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td></tr>').join(''):'<tr><td colspan="6" class="empty">No import history yet.</td></tr>';
+  }
+  const EMPLOYEE_MENU_GROUPS = [
+    {title:'Department Functions',items:[
+      ['stock_register','Stock Register'],['stock_hold_management','Stock Hold Management'],
+      ['quotation_management','Quotation'],['quotation_management','Quotation Management']
+    ]},
+    {title:'Workspace',items:[
+      ['price_list_management','Price List'],['employee_management','Employee Management'],
+      ['audit_history','Audit History'],['retail_reports','Retail Reports'],
+      ['common_excel_upload','Common Excel Upload'],['backup_restore','Backup & Restore'],
+      ['dashboard','Dashboard']
+    ]}
+  ];
+  async function openEmployeePermissions(profile){
+    if(profile.is_super_admin){notify('Super Admin permissions cannot be changed.');return;}
+    const old=$('svPermissionDialog');if(old)old.remove();
+    const current=await call(db().from('employee_permissions').select('module').eq('user_id',profile.user_id));
+    const selected=new Set(current.map(x=>x.module));
+    const wrap=document.createElement('div');wrap.id='svPermissionDialog';
+    wrap.style.cssText='position:fixed;inset:0;z-index:99991;background:#15202dcc;display:grid;place-items:center;padding:18px';
+    const moduleRows=EMPLOYEE_MENU_GROUPS.map(group=>'<section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">'+group.title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">'+group.items.map(([module,label])=>'<label style="display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #edf0f3;border-radius:8px"><input type="checkbox" name="employee_module" value="'+module+'" '+(selected.has(module)?'checked':'')+'><span>'+label+'</span></label>').join('')+'</div></section>').join('');
+    const depts=(profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean)).join(' · ');
+    wrap.innerHTML='<div style="width:min(680px,100%);max-height:90vh;overflow:auto;background:#fff;padding:22px;border-radius:14px;color:#253140"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2 style="font-size:19px;margin:0 0 5px">Employee Permissions</h2><div style="font-size:13px;color:#64748b">'+esc(profile.full_name||profile.email)+'</div><div style="font-size:11px;color:#7b8794;margin-top:4px">Department access: '+esc(depts||'None')+'</div></div><button type="button" id="svPermissionClose" class="btn">✕</button></div><p style="font-size:12px;color:#64748b;margin:14px 0">Tick only the menus this employee should see. Untick and save to remove access. Department menus are additionally limited to the departments assigned above.</p><div id="svPermissionList">'+moduleRows+'</div><div id="svPermissionError" style="color:#c51c2a;font-size:12px;margin:8px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svPermissionCancel" class="btn">Cancel</button><button type="button" id="svPermissionSave" class="btn primary">Save Permissions</button></div></div>';
+    document.body.appendChild(wrap);
+    const close=()=>wrap.remove();$('svPermissionClose').onclick=close;$('svPermissionCancel').onclick=close;
+    $('svPermissionSave').onclick=async()=>{
+      const button=$('svPermissionSave');button.disabled=true;button.textContent='Saving…';
+      try{
+        const modules=[...new Set([...wrap.querySelectorAll('input[name="employee_module"]:checked')].map(x=>x.value))];
+        const {data:{session}}=await db().auth.getSession();
+        const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'save_employee_permissions',user_id:profile.user_id,modules},headers:{Authorization:'Bearer '+session.access_token}});
+        if(error)throw error;if(data?.error)throw new Error(data.error);
+        notify('Permissions saved. Unchecked menus have been removed.');close();
+      }catch(e){$('svPermissionError').textContent=e.message||'Could not save permissions';button.disabled=false;button.textContent='Save Permissions';}
+    };
   }
   async function renderEmployees(){
     if(!has('employee_management','view')&&!currentProfile?.is_super_admin) return;
@@ -573,10 +606,13 @@
     if(table) table.innerHTML=rows.length?rows.map(p=>{
       const designation=p.is_super_admin?'Super Admin':(p.designation||'—');
       const access=p.is_super_admin?'Personal · EV · Commercial · LLM':((p.department_access?.length?p.department_access:[p.department].filter(Boolean)).join(' · ')||'—');
-      return '<tr><td><button type="button" class="btn small" data-edit="'+esc(p.user_id)+'" style="padding:2px 0;background:transparent;border:0;color:#26384d;text-decoration:underline;font-weight:750">'+esc(p.full_name||'—')+'</button></td><td>'+esc(p.phone||'—')+'<br><span class="muted">'+esc(p.email||'')+'</span></td><td>'+esc(designation)+'</td><td>'+esc(access)+'</td><td><span class="pill '+(p.status==='active'?'green':'red')+'">'+esc(p.status||'inactive')+'</span></td></tr>';
-    }).join(''):'<tr><td colspan="5" class="empty">No employees yet.</td></tr>';
+      return '<tr><td><button type="button" class="btn small" data-edit="'+esc(p.user_id)+'" style="padding:2px 0;background:transparent;border:0;color:#26384d;text-decoration:underline;font-weight:750">'+esc(p.full_name||'—')+'</button></td><td>'+esc(p.phone||'—')+'<br><span class="muted">'+esc(p.email||'')+'</span></td><td>'+esc(designation)+'</td><td>'+esc(access)+'</td><td><span class="pill '+(p.status==='active'?'green':'red')+'">'+esc(p.status||'inactive')+'</span></td><td><button type="button" class="btn small" data-permissions="'+esc(p.user_id)+'">Permissions</button></td></tr>';
+    }).join(''):'<tr><td colspan="6" class="empty">No employees yet.</td></tr>';
     table?.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>{
       const p=rows.find(x=>x.user_id===btn.dataset.edit);if(p)editEmployeeDialog(p).catch(e=>notify(e.message));
+    }));
+    table?.querySelectorAll('[data-permissions]').forEach(btn=>btn.addEventListener('click',()=>{
+      const p=rows.find(x=>x.user_id===btn.dataset.permissions);if(p)openEmployeePermissions(p).catch(e=>notify(e.message));
     }));
   }
   window.holdRender = async () => {
