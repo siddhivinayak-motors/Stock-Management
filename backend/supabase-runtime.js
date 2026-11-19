@@ -110,8 +110,10 @@
         item.style.display=allowed&&(!module||has(module,'view'))?'':'none';
       });
       const group=document.querySelector('[data-group="'+sub.dataset.sub+'"]');
-       // A department heading is visible only when at least one child module is granted.
-       if(group)group.style.display=allowed&&[...sub.querySelectorAll('[data-page]')].some(item=>item.style.display!=='none')?'':'none';
+       // Department Access grants all four department functions; no separate
+       // module checkbox is required for Personal / EV / Commercial / LLM.
+       sub.querySelectorAll('[data-page]').forEach(item=>item.style.display=allowed?'':'none');
+       if(group)group.style.display=allowed?'':'none';
     });
     document.querySelectorAll('[data-page]').forEach(item=>{
       if(item.closest('[data-sub]'))return;
@@ -120,13 +122,13 @@
     });
     document.querySelectorAll('[data-department]').forEach(card=>{
       const dept=String(card.dataset.department||'').toLowerCase();
-      card.style.display=allowedDepartments.has(dept)&&has('stock_register','view')?'':'none';
+      card.style.display=allowedDepartments.has(dept)?'':'none';
     });
     const quickModules={quotation:'quotation_management','price-list':'price_list_management',employees:'employee_management',audit:'audit_history',reports:'retail_reports',upload:'common_excel_upload'};
     const shortcutAccess=new Set(Array.isArray(currentProfile?.dashboard_shortcuts)?currentProfile.dashboard_shortcuts:[]);
     document.querySelectorAll('.quick[data-go]').forEach(card=>{
       const module=quickModules[card.dataset.go];
-      card.style.display=module&&shortcutAccess.has(card.dataset.go)&&has(module,'view')?'':'none';
+      card.style.display=shortcutAccess.has('quick-access')&&module&&has(module,'view')?'':'none';
     });
     if(!hasAnyModule){
       document.querySelectorAll('.sidebar [data-page], .sidebar [data-group], .sidebar .nav-section').forEach(item=>{
@@ -714,22 +716,16 @@
     const body=$('view-upload')?.querySelector('.card:last-child .table-wrap tbody');if(!body)return;
     body.innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.file_name)+'</td><td><span class="pill green">Imported</span></td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td></tr>').join(''):'<tr><td colspan="6" class="empty">No import history yet.</td></tr>';
   }
+  // Department functions are inherited automatically from Department Access.
   const EMPLOYEE_MENU_GROUPS = [
-    {title:'Department Functions',items:[
-      ['stock_register','Stock Register'],['stock_hold_management','Stock Hold Management'],
-      ['quotation_management','Quotation + Quotation Management']
-    ]},
     {title:'Workspace',items:[
       ['price_list_management','Price List'],['employee_management','Employee Management'],
       ['audit_history','Audit History'],['retail_reports','Retail Reports'],
-      ['common_excel_upload','Common Excel Upload'],['backup_restore','Backup & Restore'],
-      ['dashboard','Dashboard']
-    ]}
+      ['common_excel_upload','Common Excel Upload'],['backup_restore','Backup & Restore']
+    ]},
+    {title:'Dashboard',items:[['dashboard','Dashboard'],['quick-access','Quick Access']]}
   ];
-  const DASHBOARD_SHORTCUTS=[
-    ['quotation','New Quotation'],['price-list','Price List'],['employees','Employee Management'],
-    ['audit','Audit History'],['reports','Retail Reports'],['upload','Common Excel Upload']
-  ];
+  const DASHBOARD_SHORTCUTS=[['quick-access','Quick Access']];
   async function openEmployeePermissions(profile){
     if(!has('employee_management','manage_users')){notify('Manage Users permission required.');return;}
     if(!currentUser||profile.user_id===currentUser.id){notify('You cannot change your own permissions. Ask your superior.');return;}
@@ -744,21 +740,22 @@
     const selected=new Set(currentRows.map(x=>x.module));
     const departments=['Personal','EV','Commercial','LLM'];
     const selectedDepartments=new Set(profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean));
-    const selectedShortcuts=new Set(Array.isArray(profile.dashboard_shortcuts)?profile.dashboard_shortcuts:[]);
+    const selectedShortcuts=new Set(Array.isArray(profile.dashboard_shortcuts)&&profile.dashboard_shortcuts.length?['quick-access']:[]);
     const wrap=document.createElement('div');wrap.id='svPermissionDialog';
     wrap.style.cssText='position:fixed;inset:0;z-index:99991;background:#15202dcc;display:grid;place-items:center;padding:12px';
     const checkRows=(name,items,chosen,disabledSet)=>items.map(([value,label])=>'<label style="display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #edf0f3;border-radius:8px"><input type="checkbox" name="'+name+'" value="'+value+'" '+(chosen.has(value)?'checked':'')+' '+(disabledSet&&!disabledSet.has(value)?'disabled':'')+'><span>'+label+'</span></label>').join('');
     const deptRows=checkRows('employee_department',departments.map(x=>[x,x]),selectedDepartments,new Set(allowedDepartmentList()));
     const moduleRows=EMPLOYEE_MENU_GROUPS.map(group=>{const items=group.items.filter(([module])=>grantable.has(module));return items.length?'<section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">'+group.title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+checkRows('employee_module',items,selected,null)+'</div></section>':'';}).join('');
     const shortcutRows=checkRows('employee_shortcut',DASHBOARD_SHORTCUTS,selectedShortcuts,null);
-    wrap.innerHTML='<div style="width:min(760px,100%);max-height:94vh;overflow:auto;background:#fff;padding:18px;border-radius:14px;color:#253140"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2 style="font-size:19px;margin:0 0 5px">Employee Access Settings</h2><div style="font-size:13px;color:#64748b">'+esc(profile.full_name||profile.email)+'</div></div><button type="button" id="svPermissionClose" class="btn">✕</button></div><p style="font-size:12px;color:#64748b;margin:12px 0">Only selected departments, modules and shortcuts will be visible after saving. Untick all to leave Change Password only.</p><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Department Access</h3><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">'+deptRows+'</div></section><div id="svPermissionList">'+moduleRows+'</div><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Dashboard Shortcuts</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+shortcutRows+'</div></section><div id="svPermissionError" style="color:#c51c2a;font-size:12px;margin:8px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svPermissionCancel" class="btn">Cancel</button><button type="button" id="svPermissionSave" class="btn primary">Save Access</button></div></div>';
+    wrap.innerHTML='<div style="width:min(760px,100%);max-height:94vh;overflow:auto;background:#fff;padding:18px;border-radius:14px;color:#253140"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2 style="font-size:19px;margin:0 0 5px">Employee Access Settings</h2><div style="font-size:13px;color:#64748b">'+esc(profile.full_name||profile.email)+'</div></div><button type="button" id="svPermissionClose" class="btn">✕</button></div><p style="font-size:12px;color:#64748b;margin:12px 0">Selected departments automatically include all four department functions. Workspace access is controlled separately. Change Password is always available.</p><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Department Access</h3><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">'+deptRows+'</div></section><div id="svPermissionList">'+moduleRows+'</div><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Dashboard Shortcuts</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+shortcutRows+'</div></section><div id="svPermissionError" style="color:#c51c2a;font-size:12px;margin:8px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svPermissionCancel" class="btn">Cancel</button><button type="button" id="svPermissionSave" class="btn primary">Save Access</button></div></div>';
     document.body.appendChild(wrap);
     const close=()=>wrap.remove();$('svPermissionClose').onclick=close;$('svPermissionCancel').onclick=close;
     $('svPermissionSave').onclick=async()=>{
       const button=$('svPermissionSave');button.disabled=true;button.textContent='Saving…';
       try{
-        const modules=[...new Set([...wrap.querySelectorAll('input[name="employee_module"]:checked')].map(x=>x.value))];
+        const workspaceModules=[...new Set([...wrap.querySelectorAll('input[name="employee_module"]:checked')].map(x=>x.value))];
         const departments=[...new Set([...wrap.querySelectorAll('input[name="employee_department"]:checked')].map(x=>x.value))];
+        const modules=[...new Set([...workspaceModules,...(departments.length?['stock_register','stock_hold_management','quotation_management']:[])])];
         const dashboard_shortcuts=[...new Set([...wrap.querySelectorAll('input[name="employee_shortcut"]:checked')].map(x=>x.value))];
         const {data:{session}}=await db().auth.getSession();
         const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'save_employee_permissions',user_id:profile.user_id,modules,departments,dashboard_shortcuts},headers:{Authorization:'Bearer '+session.access_token}});
