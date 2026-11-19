@@ -22,7 +22,8 @@
   const db = () => { if (!client) throw new Error('Supabase client is not ready'); return client; };
   async function call(q) { const {data,error}=await q; if(error) throw error; return data; }
   function has(module,action='view') {
-    if(currentProfile?.is_super_admin) return true;
+    // Super Admin intentionally has no access to the audit module.
+    if(currentProfile?.is_super_admin) return module !== 'audit_history';
     return (permissions.get(module)||[]).includes(action);
   }
   async function refreshIdentity() {
@@ -116,6 +117,9 @@
     document.querySelectorAll('.quick[data-go]').forEach(card=>{
       const module=quickModules[card.dataset.go];card.style.display=module&&has(module,'view')?'':'none';
     });
+    if(currentProfile?.is_super_admin){
+      document.querySelectorAll('[data-page="audit"], .quick[data-go="audit"]').forEach(item=>item.style.display='none');
+    }
     await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
     authReady=true;
   }
@@ -187,7 +191,12 @@
     await renderEmployees();
   }
   async function loadAudit() {
-    if(!has('audit_history','view')&&!currentProfile?.is_super_admin) return;
+    if(currentProfile?.is_super_admin || !has('audit_history','view')) {
+      window.svAuditRows=[];
+      const body=$('view-audit')?.querySelector('.table-wrap table tbody');
+      if(body)body.innerHTML='<tr><td colspan="8" class="empty">Audit History is not available for this account.</td></tr>';
+      return;
+    }
     let rows=[],from=0,chunk=1000;
     while(true){
       const part=await call(db().from('audit_logs').select('*').order('created_at',{ascending:false}).range(from,from+chunk-1));
@@ -208,7 +217,7 @@
     const desc=view.querySelector('.card-desc');if(desc)desc.textContent=filtered.length+' activity records · Supabase audit log';
   }
   function downloadAuditCsv(){
-    if(!has('audit_history','export')&&!currentProfile?.is_super_admin){notify('Audit export permission required.');return;}
+    if(currentProfile?.is_super_admin || !has('audit_history','export')){notify('Audit export permission required.');return;}
     const rows=window.svAuditRows||[];
     const cols=['created_at','actor_email','module','action','action_label','record_type','record_id','details'];
     const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
@@ -217,6 +226,7 @@
     a.href=url;a.download='Siddhivinayak-Audit-'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(url);
   }
   async function audit(module,action,label,type=null,id=null,details={}) {
+    if(!currentUser || currentProfile?.is_super_admin) return;
     try { await db().rpc('log_activity',{p_module:module,p_action:action,p_label:label,p_record_type:type,p_record_id:id==null?null:String(id),p_details:details}); } catch(e){console.warn('Audit write failed',e);}
   }
   async function refreshDashboard(){
