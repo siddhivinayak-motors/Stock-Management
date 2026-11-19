@@ -238,7 +238,7 @@ Deno.serve(async (req: Request) => {
     const requestedShortcuts=Array.isArray(body.dashboard_shortcuts)?[...new Set(body.dashboard_shortcuts.map(String))]:[];
     const allowedShortcuts=new Set(["quotation","price-list","employees","audit","reports","upload"]);
     if(requestedShortcuts.some((x:string)=>!allowedShortcuts.has(x)))return json({error:"Invalid dashboard shortcut"},400);
-    if(!canGrantAll&&requestedShortcuts.includes("audit"))return json({error:"You cannot grant Audit History shortcut."},403);
+    if(requestedShortcuts.includes("audit")&&!canGrantModule("audit_history"))return json({error:"You cannot grant Audit History shortcut."},403);
     if (!canManageDepartment(target.department||"")) return json({error:"You can change permissions only for employees in your assigned department."},403);
     const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
     if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
