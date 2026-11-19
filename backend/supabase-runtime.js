@@ -70,6 +70,7 @@
     if(label) label.textContent=currentProfile.full_name||currentUser.email;
     const roleLabel=document.querySelector('.user-role');
     if(roleLabel) roleLabel.textContent=currentProfile?.is_super_admin?'SUPER ADMIN':String(currentProfile?.designation||'EMPLOYEE').toUpperCase();
+    const hasAnyModule=['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'].some(m=>has(m,'view'));
     // Keep the app shell intact; enforce module and department access on the actual navigation items.
     try{await refreshDashboard();}catch(e){console.error('Dashboard data refresh failed:',e);notify('Dashboard data could not be refreshed: '+(e.message||e));}
     const dashRefresh=document.querySelector('#view-dashboard .page-head .btn, #view-dashboard button[onclick*="Dashboard refreshed"]');
@@ -122,9 +123,24 @@
       card.style.display=allowedDepartments.has(dept)&&has('stock_register','view')?'':'none';
     });
     const quickModules={quotation:'quotation_management','price-list':'price_list_management',employees:'employee_management',audit:'audit_history',reports:'retail_reports',upload:'common_excel_upload'};
+    const shortcutAccess=new Set(Array.isArray(currentProfile?.dashboard_shortcuts)?currentProfile.dashboard_shortcuts:[]);
     document.querySelectorAll('.quick[data-go]').forEach(card=>{
-      const module=quickModules[card.dataset.go];card.style.display=module&&has(module,'view')?'':'none';
+      const module=quickModules[card.dataset.go];
+      card.style.display=module&&shortcutAccess.has(card.dataset.go)&&has(module,'view')?'':'none';
     });
+    if(!hasAnyModule){
+      document.querySelectorAll('.sidebar [data-page], .sidebar [data-group], .sidebar .nav-section').forEach(item=>{
+        if(item.dataset.page==='password')return;
+        item.style.display='none';
+      });
+      document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-password'));
+    }else if(!has('dashboard','view')){
+      const dashboardNav=document.querySelector('.sidebar [data-page="dashboard"]');
+      if(dashboardNav)dashboardNav.style.display='none';
+      const firstVisible=document.querySelector('.sidebar [data-page]:not([data-page="password"]):not([style*="display: none"])');
+      if(firstVisible){const p=firstVisible.dataset.page;if(p)window.showPage?.(p);}
+      else document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-password'));
+    }
     if(currentProfile?.is_super_admin){
       document.querySelectorAll('[data-page="audit"], .quick[data-go="audit"]').forEach(item=>item.style.display='none');
     }
@@ -592,7 +608,7 @@
     },true);
   }
   async function createEmployee(fields){
-    if(!has('employee_management','create')&&!has('employee_management','manage_users')) throw new Error('You do not have Create Employee permission.');
+    if(!currentProfile?.is_super_admin&&!has('employee_management','create')) throw new Error('You do not have Create Employee permission.');
     const {data:{session}}=await db().auth.getSession();
     const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'create_employee',...fields},headers:{Authorization:'Bearer '+session.access_token}});
     if(error){
@@ -706,35 +722,45 @@
       ['dashboard','Dashboard']
     ]}
   ];
+  const DASHBOARD_SHORTCUTS=[
+    ['quotation','New Quotation'],['price-list','Price List'],['employees','Employee Management'],
+    ['audit','Audit History'],['reports','Retail Reports'],['upload','Common Excel Upload']
+  ];
   async function openEmployeePermissions(profile){
     if(!has('employee_management','manage_users')){notify('Manage Users permission required.');return;}
     if(!currentUser||profile.user_id===currentUser.id){notify('You cannot change your own permissions. Ask your superior.');return;}
     if(profile.is_super_admin){notify('Super Admin permissions cannot be changed.');return;}
     const roleLevel={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Driver':10};
     const myRole=currentProfile?.is_super_admin?'Super Admin':String(currentProfile?.designation||'');
-    if((roleLevel[profile.designation]??0)>=(roleLevel[myRole]??0) && !currentProfile?.is_super_admin){notify('You can manage only employees below your designation.');return;}
+    if((roleLevel[profile.designation]??0)>=(roleLevel[myRole]??0)&&!currentProfile?.is_super_admin){notify('You can manage only employees below your designation.');return;}
     const canGrantAll=!!currentProfile?.is_super_admin||myRole==='Admin'||myRole==='General Manager';
     const canGrantOperational=myRole==='Manager'||myRole==='HR';
     const grantable=new Set(EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])).filter(m=>m!=='audit_history'||canGrantAll).filter(m=>canGrantAll||canGrantOperational));
-    const old=$('svPermissionDialog');if(old)old.remove();
-    const current=await call(db().from('employee_permissions').select('module').eq('user_id',profile.user_id));
-    const selected=new Set(current.map(x=>x.module));
+    const [currentRows]=await Promise.all([call(db().from('employee_permissions').select('module').eq('user_id',profile.user_id))]);
+    const selected=new Set(currentRows.map(x=>x.module));
+    const departments=['Personal','EV','Commercial','LLM'];
+    const selectedDepartments=new Set(profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean));
+    const selectedShortcuts=new Set(Array.isArray(profile.dashboard_shortcuts)?profile.dashboard_shortcuts:[]);
     const wrap=document.createElement('div');wrap.id='svPermissionDialog';
-    wrap.style.cssText='position:fixed;inset:0;z-index:99991;background:#15202dcc;display:grid;place-items:center;padding:18px';
-    const moduleRows=EMPLOYEE_MENU_GROUPS.map(group=>{const items=group.items.filter(([module])=>grantable.has(module));return items.length?'<section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">'+group.title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">'+items.map(([module,label])=>'<label style="display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #edf0f3;border-radius:8px"><input type="checkbox" name="employee_module" value="'+module+'" '+(selected.has(module)?'checked':'')+'><span>'+label+'</span></label>').join('')+'</div></section>':'';}).join('');
-    const depts=(profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean)).join(' · ');
-    wrap.innerHTML='<div style="width:min(680px,100%);max-height:90vh;overflow:auto;background:#fff;padding:22px;border-radius:14px;color:#253140"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2 style="font-size:19px;margin:0 0 5px">Employee Permissions</h2><div style="font-size:13px;color:#64748b">'+esc(profile.full_name||profile.email)+'</div><div style="font-size:11px;color:#7b8794;margin-top:4px">Department access: '+esc(depts||'None')+'</div></div><button type="button" id="svPermissionClose" class="btn">✕</button></div><p style="font-size:12px;color:#64748b;margin:14px 0">Tick only the menus this employee should see. Untick and save to remove access. Department menus are additionally limited to the departments assigned above.</p><div id="svPermissionList">'+moduleRows+'</div><div id="svPermissionError" style="color:#c51c2a;font-size:12px;margin:8px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svPermissionCancel" class="btn">Cancel</button><button type="button" id="svPermissionSave" class="btn primary">Save Permissions</button></div></div>';
+    wrap.style.cssText='position:fixed;inset:0;z-index:99991;background:#15202dcc;display:grid;place-items:center;padding:12px';
+    const checkRows=(name,items,chosen,disabledSet)=>items.map(([value,label])=>'<label style="display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #edf0f3;border-radius:8px"><input type="checkbox" name="'+name+'" value="'+value+'" '+(chosen.has(value)?'checked':'')+' '+(disabledSet&&!disabledSet.has(value)?'disabled':'')+'><span>'+label+'</span></label>').join('');
+    const deptRows=checkRows('employee_department',departments.map(x=>[x,x]),selectedDepartments,new Set(allowedDepartmentList()));
+    const moduleRows=EMPLOYEE_MENU_GROUPS.map(group=>{const items=group.items.filter(([module])=>grantable.has(module));return items.length?'<section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">'+group.title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+checkRows('employee_module',items,selected,null)+'</div></section>':'';}).join('');
+    const shortcutRows=checkRows('employee_shortcut',DASHBOARD_SHORTCUTS,selectedShortcuts,null);
+    wrap.innerHTML='<div style="width:min(760px,100%);max-height:94vh;overflow:auto;background:#fff;padding:18px;border-radius:14px;color:#253140"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2 style="font-size:19px;margin:0 0 5px">Employee Access Settings</h2><div style="font-size:13px;color:#64748b">'+esc(profile.full_name||profile.email)+'</div></div><button type="button" id="svPermissionClose" class="btn">✕</button></div><p style="font-size:12px;color:#64748b;margin:12px 0">Only selected departments, modules and shortcuts will be visible after saving. Untick all to leave Change Password only.</p><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Department Access</h3><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">'+deptRows+'</div></section><div id="svPermissionList">'+moduleRows+'</div><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Dashboard Shortcuts</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px">'+shortcutRows+'</div></section><div id="svPermissionError" style="color:#c51c2a;font-size:12px;margin:8px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svPermissionCancel" class="btn">Cancel</button><button type="button" id="svPermissionSave" class="btn primary">Save Access</button></div></div>';
     document.body.appendChild(wrap);
     const close=()=>wrap.remove();$('svPermissionClose').onclick=close;$('svPermissionCancel').onclick=close;
     $('svPermissionSave').onclick=async()=>{
       const button=$('svPermissionSave');button.disabled=true;button.textContent='Saving…';
       try{
         const modules=[...new Set([...wrap.querySelectorAll('input[name="employee_module"]:checked')].map(x=>x.value))];
+        const departments=[...new Set([...wrap.querySelectorAll('input[name="employee_department"]:checked')].map(x=>x.value))];
+        const dashboard_shortcuts=[...new Set([...wrap.querySelectorAll('input[name="employee_shortcut"]:checked')].map(x=>x.value))];
         const {data:{session}}=await db().auth.getSession();
-        const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'save_employee_permissions',user_id:profile.user_id,modules},headers:{Authorization:'Bearer '+session.access_token}});
+        const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'save_employee_permissions',user_id:profile.user_id,modules,departments,dashboard_shortcuts},headers:{Authorization:'Bearer '+session.access_token}});
         if(error)throw error;if(data?.error)throw new Error(data.error);
-        notify('Permissions saved to Supabase. Selected modules are now enabled; unchecked modules are removed.');close();
-      }catch(e){$('svPermissionError').textContent=e.message||'Could not save permissions';button.disabled=false;button.textContent='Save Permissions';}
+        notify('Employee access saved.');close();await renderEmployees();
+      }catch(e){$('svPermissionError').textContent=e.message||'Could not save access';button.disabled=false;button.textContent='Save Access';}
     };
   }
   async function renderEmployees(){
