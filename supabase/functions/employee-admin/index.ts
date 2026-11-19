@@ -162,6 +162,12 @@ Deno.serve(async (req: Request) => {
         if (permissionError) return json({error:"Profile updated but permissions could not be saved: "+permissionError.message},500);
       }
     }
+    if (body.password !== undefined && String(body.password).length > 0) {
+      const newPassword = String(body.password);
+      if (newPassword.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
+      const { error: passwordError } = await adminClient.auth.admin.updateUserById(userId, { password: newPassword });
+      if (passwordError) return json({ error: "Profile updated but password change failed: " + passwordError.message }, 400);
+    }
     if (patch.status === "inactive") {
       const { error: banError } = await adminClient.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
       if (banError) return json({ error: "Profile status updated but login deactivation failed: " + banError.message }, 500);
