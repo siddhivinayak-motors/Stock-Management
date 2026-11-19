@@ -773,7 +773,7 @@
           if(page==='upload') loadImportHistory().catch(err=>notify(err.message));
           if(page==='price-list') loadPriceLists().catch(err=>notify(err.message));
           if(page==='reports') loadRetailReport().catch(err=>notify(err.message));
-          if(page==='dashboard') loadDashboardData?.();
+          if(page==='dashboard') window.loadDashboardData?.();
         }
         document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n===b));
       } catch(err) {
