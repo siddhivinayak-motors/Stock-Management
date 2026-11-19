@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const callerId = authData.user.id;
 
   const { data: profile, error: profileError } = await callerClient
-    .from("profiles").select("is_super_admin,status,designation").eq("user_id", callerId).maybeSingle();
+    .from("profiles").select("is_super_admin,status,designation,department,department_access").eq("user_id", callerId).maybeSingle();
   if (profileError || !profile || profile.status !== "active") return json({ error: "Active employee profile required" }, 403);
 
   const [canManageResult,canCreateResult,canEditResult,canDeleteResult] = await Promise.all([
@@ -98,13 +98,21 @@ Deno.serve(async (req: Request) => {
   };
   const callerRole=profile.is_super_admin?"Super Admin":String(profile.designation||"");
   const callerLevel=ROLE_LEVEL[callerRole]??0;
-  const isAdmin=callerRole==="Admin";
+  const isOrgAdmin=isRoot||callerRole==="Admin"||callerRole==="General Manager";
+  const callerDepartmentScope=new Set(
+    (callerRole==="Manager"
+      ? [profile.department].filter(Boolean)
+      : (Array.isArray(profile.department_access)&&profile.department_access.length?profile.department_access:[profile.department].filter(Boolean))
+    ).map((d:string)=>String(d).toLowerCase())
+  );
+  const canManageDepartment=(department:string)=>isOrgAdmin||callerDepartmentScope.has(String(department||"").toLowerCase());
   const {data:callerPermRows,error:callerPermError}=await callerClient
     .from("employee_permissions").select("module,actions").eq("user_id",callerId);
   if(callerPermError)return json({error:"Could not verify your permission limits"},500);
   const callerActions=new Map((callerPermRows||[]).map((r:any)=>[r.module,r.actions||[]]));
-  const callerModules=new Set((callerPermRows||[]).filter((r:any)=>(r.actions||[]).includes("view")).map((r:any)=>r.module));
-  const canGrantModule=(module:string)=>isRoot||isAdmin||(module==="common_excel_upload"?(callerActions.get(module)||[]).includes("create"):callerModules.has(module));
+  const canGrantModule=(module:string)=>isRoot
+    || (callerActions.get(module)||[]).includes("view")
+    || (module==="common_excel_upload"&&(callerActions.get(module)||[]).includes("create"));
   if (action === "create_employee") {
     const email = String(body.email || "").trim().toLowerCase();
     const fullName = String(body.full_name || "").trim();
@@ -120,6 +128,8 @@ Deno.serve(async (req: Request) => {
     const targetLevel = ROLE_LEVEL[role] ?? 0;
     if (!isRoot && targetLevel >= callerLevel) return json({ error: "You can create only employees below your own designation." }, 403);
     if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
+    if (!isOrgAdmin && departments.some((d:string)=>!canManageDepartment(d))) return json({error:"You can create employees only in your assigned department."},403);
+    if (callerRole==="Manager" && (departments.length!==1 || departments[0]!==String(profile.department||""))) return json({error:"A Manager can create employees only in their primary department: "+String(profile.department||"not assigned")},403);
     const finalDepartments = departments;
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email, password, email_confirm: true, user_metadata: { full_name: fullName },
@@ -152,9 +162,11 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin,designation").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,designation,department,department_access").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "A Super Admin profile cannot be edited here" }, 403);
+    if (!canManageDepartment(target.department||"")) return json({error:"You can manage employees only in your assigned department."},403);
+    if (!isRoot && (ROLE_LEVEL[String(target.designation||"")]??0)>=callerLevel) return json({error:"You can manage only employees below your own designation."},403);
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of ["full_name","employee_code","phone","designation","department"]) {
       if (Object.prototype.hasOwnProperty.call(body, key)) {
@@ -171,6 +183,8 @@ Deno.serve(async (req: Request) => {
       if (access.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Invalid department access" }, 400);
       const finalAccess = [...new Set(access)];
       if (!finalAccess.length) return json({error:"Select at least one department"},400);
+      if (!isOrgAdmin && finalAccess.some((d:string)=>!canManageDepartment(d))) return json({error:"You cannot assign access outside your own department."},403);
+      if (callerRole==="Manager" && (finalAccess.length!==1 || finalAccess[0]!==String(profile.department||""))) return json({error:"A Manager can assign only their own department."},403);
       patch.department_access = finalAccess;
       patch.department = finalAccess[0];
     }
@@ -212,9 +226,10 @@ Deno.serve(async (req: Request) => {
   if (action === "save_employee_permissions") {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({error:"Select another employee"},400);
-    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation").eq("user_id",userId).maybeSingle();
+    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation,department").eq("user_id",userId).maybeSingle();
     if(targetError||!target||target.deleted_at) return json({error:"Active employee not found"},404);
     if(target.is_super_admin) return json({error:"Super Admin permissions cannot be changed"},403);
+    if (!canManageDepartment(target.department||"")) return json({error:"You can change permissions only for employees in your assigned department."},403);
     const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
     if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
     const selected = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
@@ -227,7 +242,10 @@ Deno.serve(async (req: Request) => {
     const protectedRows=(targetExisting||[]).filter((r:any)=>!canGrantModule(r.module));
     const {error:clearError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId);
     if(clearError) return json({error:clearError.message},500);
-    const rows=[...protectedRows,...rolePermissionRows(String(target.designation||""),userId,callerId,selected)];
+    const requestedRows=rolePermissionRows(String(target.designation||""),userId,callerId,selected)
+      .map((row:any)=>({...row,actions:isRoot?row.actions:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
+      .filter((row:any)=>row.actions.length>0);
+    const rows=[...protectedRows,...requestedRows];
     if(rows.length){
       const {error:saveError}=await adminClient.from("employee_permissions").upsert(rows,{onConflict:"user_id,module"});
       if(saveError) return json({error:saveError.message},500);
