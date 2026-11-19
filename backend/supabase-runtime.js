@@ -567,7 +567,16 @@
       if(!has('backup_restore','export'))throw new Error('Backup permission required.');
       const tables=['vehicles','quotations','quotation_items','price_list_versions','price_list_items','stock_holds','stock_import_batches'];
       const payload={format:'SVM-SUPABASE-BACKUP',version:1,createdAt:new Date().toISOString(),project:'tvpaxdvqvwpblcfssgsj',data:{}};
-      for(const t of tables) payload.data[t]=await call(db().from(t).select('*').limit(10000));
+      for(const t of tables){
+        let all=[],from=0,chunk=1000;
+        while(true){
+          const part=await call(db().from(t).select('*').order('id').range(from,from+chunk-1));
+          all=all.concat(part);
+          if(part.length<chunk)break;
+          from+=chunk;
+        }
+        payload.data[t]=all;
+      }
       const a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
       a.href=url;a.download='Siddhivinayak-Supabase-Backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);
       await audit('backup_restore','export','Downloaded database backup');
