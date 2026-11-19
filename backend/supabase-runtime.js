@@ -160,6 +160,8 @@
   }
   async function submitHold() {
     if(!has('stock_hold_management','create')) throw new Error('You do not have permission to submit hold requests.');
+    const selectedDepartment=$('holdDept').value;
+    if(!allowedDepartmentList().includes(selectedDepartment)) throw new Error('You do not have access to this department.');
     const vehicle=$('holdVehicle').value.trim(),vin=$('holdVin').value.trim(),reason=$('holdReason').value.trim();
     if(!vehicle||!vin||!reason) throw new Error('Vehicle, VIN/Chassis and reason are required');
     await call(db().from('stock_holds').insert({department:$('holdDept').value,vehicle,variant:$('holdVariant').value,vin,executive:$('holdExecutive').value||'Not specified',reason,created_by:currentUser.id}));
@@ -327,6 +329,9 @@
   }
   async function loadVehicles(department='Personal') {
     if(!has('stock_register','view')) throw new Error('No stock view permission.');
+    const allowed=allowedDepartmentList();
+    if(department==='All') return allowed.length?call(db().from('vehicles').select('*').in('department',allowed).order('created_at',{ascending:false})):[];
+    if(!allowed.some(x=>String(x).toLowerCase()===String(department).toLowerCase())) throw new Error('You do not have access to this department.');
     return call(db().from('vehicles').select('*').eq('department',department).order('created_at',{ascending:false}));
   }
   async function saveVehicle(data) {
@@ -554,7 +559,9 @@
     try{
       const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
       const canEdit=has('stock_register','edit'),canDelete=has('stock_register','delete');
-      let rows=await loadVehicles(dept);
+      const deptFilter=$('stockDepartmentFilter');
+      const selectedDept=dept==='All'?(deptFilter?.value||'All Accessible Departments'):dept;
+      let rows=await loadVehicles(dept==='All'&&selectedDept!=='All Accessible Departments'?selectedDept:dept);
       const search=($('stockSearch')?.value||'').trim().toLowerCase();
       const stageFilter=$('view-stock')?.querySelector('.toolbar select')?.value||'All stages and statuses';
       if(search) rows=rows.filter(v=>[v.chassis_number,v.model,v.variant,v.colour,v.sc_name,v.customer_name,v.status,v.stage].some(x=>String(x||'').toLowerCase().includes(search)));
@@ -566,6 +573,8 @@
         if(!confirm('Delete this stock vehicle? This action is permanent.'))return;
         try{await deleteVehicle(b.dataset.stockDelete);await renderStock();notify('Vehicle deleted.');}catch(e){notify(e.message);}
       });
+      const title=$('stockTable').closest('.card')?.querySelector('.card-head .card-title');
+      if(title)title.textContent=rows.length+' records · '+(dept==='All'?(selectedDept==='All Accessible Departments'?'All accessible departments':selectedDept):dept);
       const head=$('stockTable').querySelector('thead tr');
       if(head&&head.children.length===11){const th=document.createElement('th');th.textContent='Actions';head.appendChild(th);}
     }catch(e){console.error(e);notify(e.message);}
@@ -600,7 +609,10 @@
     if(save) save.addEventListener('click',async e=>{
       e.preventDefault();e.stopImmediatePropagation();
       try{
-        const obj={department:currentStockDepartment||'Personal'};
+        const deptPicker=$('stockDepartmentForNewVehicle');
+        const selectedDepartment=currentStockDepartment==='All'?(deptPicker?.value||''):currentStockDepartment;
+        if(!selectedDepartment||!allowedDepartmentList().includes(selectedDepartment)) throw new Error('Select a department you are authorized to access.');
+        const obj={department:selectedDepartment};
         fields.forEach(el=>{const k=el.dataset.backendField;if(k)obj[k]=el.value||null;});
         if(!obj.chassis_number||!obj.model) throw new Error('Chassis Number and Model are required.');
         if(obj.manufacturing_year)obj.manufacturing_year=Number(obj.manufacturing_year);
@@ -810,6 +822,11 @@
         rows.push(...part);if(part.length<chunk)break;from+=chunk;
       }
       holdItems=rows.map(x=>({...x,id:x.id,date:x.created_at,dept:x.department,approver:x.approver_id||'—',approvedAt:x.approved_at||'—'}));
+      const permitted=allowedDepartmentList();
+      const formDept=$('holdDept');
+      if(formDept){const current=formDept.value;formDept.innerHTML=permitted.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');if(permitted.includes(current))formDept.value=current;}
+      const deptFilter=$('holdDeptFilter');
+      if(deptFilter){const current=deptFilter.value;deptFilter.innerHTML='<option>All Departments</option>'+permitted.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');if(permitted.includes(current))deptFilter.value=current;else deptFilter.value='All Departments';}
       const f=$('holdStatusFilter')?.value||'All',d=$('holdDeptFilter')?.value||'All Departments';
       const filtered=holdItems.filter(x=>(f==='All'||x.status===f||(f==='On Hold'&&x.status==='Approved'))&&(d==='All Departments'||x.dept===d));
       $('holdRows').innerHTML=filtered.length?filtered.map(x=>'<tr><td>'+new Date(x.date).toLocaleDateString()+'</td><td>'+esc(x.dept)+'</td><td>'+esc(x.vehicle)+'</td><td>'+esc(x.variant||'—')+'</td><td>'+esc(x.vin)+'</td><td>'+esc(x.executive||'—')+'</td><td>'+esc(x.reason)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.approver)+'<br>'+esc(x.approvedAt)+'</td><td>'+(x.status==='Pending'?'<button class="btn small" data-hold-approve="'+esc(x.id)+'">Approve</button> <button class="btn small" data-hold-reject="'+esc(x.id)+'">Reject</button>':'—')+'</td></tr>').join(''):'<tr><td colspan="10">No matching requests.</td></tr>';
@@ -825,6 +842,8 @@
   window.holdDecision = (id,decision) => decideHold(id,decision).catch(e=>notify(e.message));
   window.openDepartmentStock = (department) => {
     currentStockDepartment=department||'Personal';
+    const deptFilter=$('stockDepartmentFilter');if(deptFilter)deptFilter.value='All Accessible Departments';
+    const deptPicker=$('stockDepartmentForNewVehicle');if(deptPicker){deptPicker.value=currentStockDepartment;deptPicker.disabled=true;}
     if($('stockPageTitle'))$('stockPageTitle').textContent=currentStockDepartment+' — Stock Register';
     if($('stockPageSubtitle'))$('stockPageSubtitle').textContent=currentStockDepartment+' · Live operational workspace';
     if(typeof window.showPage==='function')window.showPage('stock');
@@ -938,6 +957,11 @@
       if(buttons[0])buttons[0].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();downloadAuditCsv();},true);
       if(buttons[1])buttons[1].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.print();},true);
     }
+    const permittedDepartments=allowedDepartmentList();
+    const stockFilter=$('stockDepartmentFilter');
+    if(stockFilter){const current=stockFilter.value;stockFilter.innerHTML='<option>All Accessible Departments</option>'+permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');if(permittedDepartments.includes(current))stockFilter.value=current;stockFilter.onchange=()=>renderStock();}
+    const newVehicleDept=$('stockDepartmentForNewVehicle');
+    if(newVehicleDept){newVehicleDept.innerHTML=permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');newVehicleDept.value=permittedDepartments[0]||'';}
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
     $('holdDeptFilter')?.addEventListener('change',()=>window.holdRender());
     // Let the original UI's own click handlers perform navigation.
@@ -945,6 +969,15 @@
     // the existing button handlers, making otherwise valid controls appear dead.
     // Observe navigation in the bubble phase only, then refresh the selected module.
     document.addEventListener('click',e=>{
+      const quick=e.target?.closest?.('.quick[data-go]');
+      if(quick?.dataset.go==='stock'){
+        currentStockDepartment='All';
+        if($('stockPageTitle'))$('stockPageTitle').textContent='All Accessible Departments — Stock Register';
+        if($('stockPageSubtitle'))$('stockPageSubtitle').textContent='Combined live stock across your authorized departments';
+        const picker=$('stockDepartmentForNewVehicle');if(picker)picker.disabled=false;
+        const filter=$('stockDepartmentFilter');if(filter)filter.value='All Accessible Departments';
+        setTimeout(()=>renderStock(),0);
+      }
       const b=e.target?.closest?.('[data-page]');
       if(!b)return;
       const p=b.dataset.page||'';
