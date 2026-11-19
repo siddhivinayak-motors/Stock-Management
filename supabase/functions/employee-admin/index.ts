@@ -129,6 +129,14 @@ Deno.serve(async (req: Request) => {
     const targetLevel = ROLE_LEVEL[role] ?? 0;
     if (!isRoot && targetLevel >= callerLevel) return json({ error: "You can create only employees below your own designation." }, 403);
     if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
+    const selectedModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
+    if (selectedModules.some(m => !ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
+    const forbiddenModules = selectedModules.filter(m => !canGrantModule(m));
+    if (forbiddenModules.length) return json({error:"You cannot grant permissions you do not have: "+forbiddenModules.join(", ")},403);
+    const selectedShortcuts = Array.isArray(body.dashboard_shortcuts) ? [...new Set(body.dashboard_shortcuts.map(String))] : [];
+    const allowedShortcuts = new Set(["quotation","price-list","employees","audit","reports","upload"]);
+    if (selectedShortcuts.some(x => !allowedShortcuts.has(x))) return json({error:"Invalid dashboard shortcut"},400);
+    if (selectedShortcuts.includes("audit") && !canGrantModule("audit_history")) return json({error:"You cannot grant Audit History shortcut."},403);
     if (!isOrgAdmin && departments.some((d:string)=>!canManageDepartment(d))) return json({error:"You can create employees only in your assigned department."},403);
     if (callerRole==="Manager" && (departments.length!==1 || departments[0]!==String(profile.department||""))) return json({error:"A Manager can create employees only in their primary department: "+String(profile.department||"not assigned")},403);
     const finalDepartments = departments;
@@ -146,9 +154,16 @@ Deno.serve(async (req: Request) => {
     const { error: insertError } = await adminClient.from("profiles").upsert({
       user_id: userId, full_name: fullName, email, employee_code: null, phone: null,
       designation: role, department: finalDepartments[0], department_access: finalDepartments,
-      status: "active", is_super_admin: false,
+      status: "active", is_super_admin: false, dashboard_shortcuts: selectedShortcuts,
     }, { onConflict: "user_id" });
     if (insertError) { await adminClient.auth.admin.deleteUser(userId); return json({ error: insertError.message }, 400); }
+    const permissionRows = rolePermissionRows(role,userId,callerId,selectedModules)
+      .map((row:any)=>({...row,actions:isRoot?row.actions:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
+      .filter((row:any)=>row.actions.length>0);
+    if(permissionRows.length){
+      const {error:permissionSaveError}=await adminClient.from("employee_permissions").upsert(permissionRows,{onConflict:"user_id,module"});
+      if(permissionSaveError){await adminClient.from("profiles").delete().eq("user_id",userId);await adminClient.auth.admin.deleteUser(userId);return json({error:permissionSaveError.message},500);}
+    }
 
     // New employees receive no workspace/module access until Super Admin assigns it from the Permissions menu.
     if (!isRoot) await adminClient.from("audit_logs").insert({
@@ -156,7 +171,7 @@ Deno.serve(async (req: Request) => {
       action:"create", action_label:"Created employee account", record_type:"profile", record_id:userId,
       details:{email,designation:role,department_access:finalDepartments},
     });
-    return json({success:true,user_id:userId,email,designation:role,department_access:finalDepartments,message:"Employee account created. They can sign in immediately with this email and password."},201);
+    return json({success:true,user_id:userId,email,designation:role,department_access:finalDepartments,modules:selectedModules,dashboard_shortcuts:selectedShortcuts,message:"Employee account created with selected access. They can sign in immediately."},201);
   }
 
   if (action === "update_employee") {
