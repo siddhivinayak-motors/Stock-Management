@@ -345,6 +345,26 @@
     if(data?.error) throw new Error(data.error);
     await loadEmployees();return data;
   }
+  function editEmployeeDialog(profile){
+    const old=$('svEmployeeDialog');if(old)old.remove();
+    const wrap=document.createElement('div');wrap.id='svEmployeeDialog';
+    wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
+    const input=(name,label,value)=>'<label>'+label+'<input name="'+name+'" class="field" value="'+esc(value||'')+'"></label>';
+    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(520px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Employee</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+input('full_name','Full Name',profile.full_name)+input('email_display','Email (read only)',profile.email)+input('employee_code','Employee Code',profile.employee_code)+input('phone','Mobile',profile.phone)+input('designation','Designation',profile.designation)+input('department','Department',profile.department)+'</div><p style="font-size:12px;color:#6f7c8b">Email address and login identity cannot be changed here.</p><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Save Changes</button></div></form>';
+    document.body.appendChild(wrap);
+    const email=wrap.querySelector('[name=email_display]');email.readOnly=true;
+    $('svEmployeeCancel').onclick=()=>wrap.remove();
+    $('svEmployeeForm').onsubmit=async e=>{
+      e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
+      try{
+        const fd=new FormData(e.target);const fields=Object.fromEntries(fd.entries());delete fields.email_display;
+        const {data:{session}}=await db().auth.getSession();
+        const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'update_employee',user_id:profile.user_id,...fields},headers:{Authorization:'Bearer '+session.access_token}});
+        if(error)throw error;if(data?.error)throw new Error(data.error);
+        wrap.remove();await renderEmployees();notify('Employee updated.');
+      }catch(ex){$('svEmployeeError').textContent=ex.message;button.disabled=false;}
+    };
+  }
   function employeeDialog(){
     const old=$('svEmployeeDialog');if(old)old.remove();
     const wrap=document.createElement('div');wrap.id='svEmployeeDialog';
@@ -365,7 +385,11 @@
     const rows=await call(db().from('profiles').select('*').order('full_name'));
     const section=$('view-employees');if(!section)return;
     const table=section.querySelector('.card .table-wrap tbody');
-    if(table) table.innerHTML=rows.length?rows.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.email)+'<br>'+esc(p.phone||'')+'</td><td>'+esc(p.designation||'—')+'</td><td>'+esc(p.department||'—')+'</td><td>'+esc(p.status)+'</td><td>'+new Date(p.created_at).toLocaleDateString()+'</td><td>'+(p.is_super_admin?'Super Admin':p.status==='active'?'<button class="btn small" data-deactivate="'+esc(p.user_id)+'">Deactivate</button>':'Inactive')+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">No employees yet.</td></tr>';
+    if(table) table.innerHTML=rows.length?rows.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.email)+'<br>'+esc(p.phone||'')+'</td><td>'+esc(p.designation||'—')+'</td><td>'+esc(p.department||'—')+'</td><td>'+esc(p.status)+'</td><td>'+new Date(p.created_at).toLocaleDateString()+'</td><td>'+(p.is_super_admin?'Super Admin':(p.status==='active'?'<button class="btn small" data-edit="'+esc(p.user_id)+'">Edit</button> <button class="btn small" data-deactivate="'+esc(p.user_id)+'">Deactivate</button>':'Inactive'))+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">No employees yet.</td></tr>';
+    table?.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>{
+      const p=rows.find(x=>x.user_id===btn.dataset.edit);if(!p)return;
+      editEmployeeDialog(p);
+    }));
     table?.querySelectorAll('[data-deactivate]').forEach(btn=>btn.addEventListener('click',async()=>{
       if(!confirm('Deactivate this employee login?'))return;
       try{const {data:{session}}=await db().auth.getSession();const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'deactivate_employee',user_id:btn.dataset.deactivate},headers:{Authorization:'Bearer '+session.access_token}});if(error)throw error;if(data?.error)throw new Error(data.error);await renderEmployees();notify('Employee deactivated.');}catch(ex){notify(ex.message);}
