@@ -62,7 +62,9 @@
     if($('svAuthGate')) $('svAuthGate').remove();
     const label=$('userName')||document.querySelector('.user-name');
     if(label) label.textContent=currentProfile.full_name||currentUser.email;
-    // Keep the app shell intact; enforce module access on the actual view sections.
+    const roleLabel=document.querySelector('.user-role');
+    if(roleLabel) roleLabel.textContent=currentProfile?.is_super_admin?'SUPER ADMIN':String(currentProfile?.designation||'EMPLOYEE').toUpperCase();
+    // Keep the app shell intact; enforce module and department access on the actual navigation items.
     const viewMap={
       'view-dashboard':'dashboard','view-stock':'stock_register','view-quotation':'quotation_management',
       'view-quotation-management':'quotation_management',
@@ -72,31 +74,35 @@
     };
     const allowedDepartments=new Set((currentProfile?.is_super_admin?['Personal','EV','Commercial','LLM']:(currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean))).map(x=>String(x).toLowerCase()));
     const departmentKeys={personal:'Personal',ev:'EV',commercial:'Commercial',llm:'LLM'};
-    document.querySelectorAll('[data-group]').forEach(group=>{
-      const key=group.dataset.group,dept=departmentKeys[key],allowed=allowedDepartments.has(String(dept||'').toLowerCase());
-      group.style.display=allowed?'':'none';
-      const sub=document.querySelector('[data-sub="'+key+'"]');if(sub)sub.style.display=allowed?'':'none';
+    const pageModule=page=>{
+      if(page.startsWith('stock-hold'))return 'stock_hold_management';
+      if(page==='upload')return 'common_excel_upload';
+      if(page.startsWith('stock'))return 'stock_register';
+      if(page.includes('quotation'))return 'quotation_management';
+      if(page==='price-list')return 'price_list_management';
+      if(page==='employees')return 'employee_management';
+      if(page==='audit')return 'audit_history';
+      if(page==='reports')return 'retail_reports';
+      if(page==='backup-restore')return 'backup_restore';
+      if(page==='dashboard')return 'dashboard';
+      return null;
+    };
+    // First hide each department's complete four-item register submenu unless that department is assigned.
+    document.querySelectorAll('[data-sub]').forEach(sub=>{
+      const dept=departmentKeys[sub.dataset.sub];
+      const allowed=!!dept&&allowedDepartments.has(String(dept).toLowerCase());
+      sub.style.display=allowed?'':'none';
+      sub.querySelectorAll('[data-page]').forEach(item=>{
+        const module=pageModule(item.dataset.page||'');
+        item.style.display=allowed&&(!module||has(module,'view'))?'':'none';
+      });
+      const group=document.querySelector('[data-group="'+sub.dataset.sub+'"]');
+      if(group)group.style.display=allowed&&[...sub.querySelectorAll('[data-page]')].some(item=>item.style.display!=='none')?'':'none';
     });
-
-    Object.entries(viewMap).forEach(([id,module])=>{const node=$(id);if(node)node.style.display=has(module,'view')?'':'none';});
-    document.querySelectorAll('[data-page]').forEach(n=>{
-      const page=n.dataset.page||'';
-      const m=page.startsWith('stock-hold')?'stock_hold_management':
-        page==='upload'?'common_excel_upload':
-        page.startsWith('stock')?'stock_register':
-        page.includes('quotation')?'quotation_management':
-        page==='price-list'?'price_list_management':
-        page==='employees'?'employee_management':
-        page==='audit'?'audit_history':
-        page==='reports'?'retail_reports':
-        page==='backup-restore'?'backup_restore':
-        page==='dashboard'?'dashboard':null;
-      n.style.display=(!m||has(m,'view'))?'':'none';
-    });
-    document.querySelectorAll('[data-group]').forEach(group=>{
-      const sub=document.querySelector('[data-sub="'+group.dataset.group+'"]');
-      const visible=sub&&[...sub.querySelectorAll('[data-page]')].some(n=>n.style.display!=='none');
-      if(!visible){group.style.display='none';if(sub)sub.style.display='none';}
+    document.querySelectorAll('[data-page]').forEach(item=>{
+      if(item.closest('[data-sub]'))return;
+      const module=pageModule(item.dataset.page||'');
+      item.style.display=(!module||has(module,'view'))?'':'none';
     });
     document.querySelectorAll('[data-department]').forEach(card=>{
       const dept=String(card.dataset.department||'').toLowerCase();
