@@ -800,6 +800,43 @@ td,.data-table td{font-size:13px;line-height:1.45}
   #view-dashboard .quick-grid .quick b{font-size:12px}
 }
 
+
+/* V26 — Stock Register filters and action hierarchy (Personal + General/other departments) */
+#view-stock .stock-page-head{align-items:flex-start;gap:18px}
+#view-stock .stock-page-actions{display:flex;flex-direction:column;align-items:stretch;gap:9px;flex:0 0 138px}
+#view-stock .stock-page-actions .btn{width:100%;min-height:54px;justify-content:center;border-radius:13px;font-size:14px;font-weight:800}
+#view-stock #stockPrintPdfButton{background:#c92535!important;border:1px solid #b51e2c!important;color:#fff!important;box-shadow:0 4px 11px rgba(201,37,53,.17)}
+#view-stock #stockPrintPdfButton:hover{background:#ad1d2b!important}
+#view-stock .stock-toolbar{display:flex;flex-direction:column;align-items:stretch;gap:13px;margin:0 0 18px}
+#view-stock .stock-search{width:100%;min-height:54px}
+#view-stock .stock-search input{width:100%;min-width:0}
+#view-stock .stock-filter-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;width:100%}
+#view-stock .stock-filter-control{display:flex;flex-direction:column;gap:6px;min-width:0}
+#view-stock .stock-filter-control>span{font-size:11px;line-height:1.2;font-weight:850;letter-spacing:.35px;text-transform:uppercase;color:#687586;padding-left:2px}
+#view-stock .stock-filter-control select{width:100%;min-width:0;min-height:52px;padding:0 30px 0 12px;border:1px solid #dce3eb;border-radius:12px;background-color:#fff;color:#35404d;font-size:13px;font-weight:700;white-space:nowrap}
+@media(max-width:900px){
+ #view-stock .stock-page-actions{flex-basis:118px}
+ #view-stock .stock-filter-grid{gap:10px}
+}
+@media(max-width:680px){
+ #view-stock .stock-page-head{display:flex;align-items:flex-start;gap:12px}
+ #view-stock .stock-page-actions{flex:0 0 104px;gap:8px}
+ #view-stock .stock-page-actions .btn{min-height:48px;padding:8px 6px;font-size:12px;border-radius:11px}
+ #view-stock .stock-toolbar{gap:12px}
+ #view-stock .stock-search{min-height:54px}
+ #view-stock .stock-search input{font-size:13px}
+ #view-stock .stock-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 10px}
+ #view-stock .stock-filter-control{gap:5px}
+ #view-stock .stock-filter-control>span{font-size:10px;letter-spacing:.3px}
+ #view-stock .stock-filter-control select{min-height:51px;padding-left:10px;padding-right:25px;font-size:12px}
+}
+@media(max-width:360px){
+ #view-stock .stock-page-actions{flex-basis:94px}
+ #view-stock .stock-page-actions .btn{font-size:11px}
+ #view-stock .stock-filter-grid{gap:9px 8px}
+ #view-stock .stock-filter-control select{font-size:11px}
+}
+
 </style>
 </head>
 <body>
@@ -978,8 +1015,8 @@ td,.data-table td{font-size:13px;line-height:1.45}
  </div>
 </section>
 <section class="view" id="view-stock">
- <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1 id="stockPageTitle">Personal — Stock Register</h1><div class="subtitle" id="stockPageSubtitle">Personal · Live operational workspace</div></div><button class="btn" onclick="toast('Stock refreshed')">⟳ &nbsp;Refresh</button></div>
- <div class="toolbar"><div class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input placeholder="Search chassis, model, variant, colour, customer..." id="stockSearch"></div><select id="stockDepartmentFilter"><option>All Accessible Departments</option></select><select id="stockStatusFilter"><option value="All">All Statuses</option><option value="In Transit">In Transit</option><option value="Received">Received</option></select><select id="stockStageFilter"><option value="All">All Stages</option><option value="OPEN">OPEN</option><option value="ALLOTED">ALLOTED</option><option value="HOLD">HOLD</option><option value="DAMAGE">DAMAGE</option></select><select id="stockAgeSort" title="Sort vehicles by ageing"><option value="oldest">Oldest Age First</option><option value="newest">Newest Age First</option></select><button class="btn" type="button" id="stockPrintPdfButton" onclick="window.openStockPrintPreview?.()">Print / PDF</button></div>
+ <div class="page-head stock-page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1 id="stockPageTitle">Personal — Stock Register</h1><div class="subtitle" id="stockPageSubtitle">Personal · Live operational workspace</div></div><div class="stock-page-actions"><button class="btn stock-refresh-button" type="button" onclick="toast('Stock refreshed')">⟳ &nbsp;Refresh</button><button class="btn" type="button" id="stockPrintPdfButton" onclick="window.openStockPrintPreview?.()">Print / PDF</button></div></div>
+ <div class="toolbar stock-toolbar"><div class="search stock-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input placeholder="Search chassis, model, variant, colour, customer..." id="stockSearch"></div><div class="stock-filter-grid"><label class="stock-filter-control"><span>Department</span><select id="stockDepartmentFilter"><option>All Accessible Departments</option></select></label><label class="stock-filter-control"><span>Stock Status</span><select id="stockStatusFilter"><option value="All">All Statuses</option><option value="In Transit">In Transit</option><option value="Received">Received</option></select></label><label class="stock-filter-control"><span>Stock Stage</span><select id="stockStageFilter"><option value="All">All Stages</option><option value="OPEN">OPEN</option><option value="ALLOTED">ALLOTED</option><option value="HOLD">HOLD</option><option value="DAMAGE">DAMAGE</option></select></label><label class="stock-filter-control"><span>Ageing Sort</span><select id="stockAgeSort" title="Sort vehicles by ageing"><option value="oldest">Oldest Age First</option><option value="newest">Newest Age First</option></select></label></div></div>
  <div class="card"><div class="card-head"><div class="card-title">0 records · Add or import stock to begin</div><button class="btn primary small" id="addVehicle">＋ Add Vehicle</button></div><div class="card-body" id="vehicleForm" style="display:none"><div class="form-grid"><div class="field" id="stockNewVehicleDepartmentWrap"><label>Department</label><select id="stockDepartmentForNewVehicle" class="field"></select></div><div class="field"><label>Chassis Number</label><input placeholder="Enter chassis number"></div><div class="field"><label>Excel Number</label><input></div><div class="field"><label>Model</label><input></div><div class="field"><label>Variant</label><input></div><div class="field"><label>Seating</label><input></div><div class="field"><label>Colour</label><input></div><div class="field"><label>Manufacturing Year</label><input></div><div class="field"><label>OEM Invoice Date</label><input type="date"></div><div class="field"><label>Engine Number</label><input></div><div class="field"><label>SC Name</label><input></div><div class="field"><label>Customer Name</label><input></div><div class="field"><label>Status</label><select><option>Received / In Stock</option><option>Delivered</option></select></div><div class="field"><label>Stage</label><select><option>OPEN</option><option>HOLD</option><option>ALLOTED</option></select></div><div class="field"><label>Place</label><input></div></div><div style="text-align:right;margin-top:14px"><button class="btn primary" onclick="toast('Demo only — connect database to save')">Save Vehicle</button></div></div>
  <div class="table-wrap"><table id="stockTable"><thead><tr><th>Chassis Number</th><th>Model / Variant</th><th>Seating</th><th>Colour</th><th>Mfg Year</th><th>OEM Invoice</th><th>Ageing</th><th>SC Name</th><th>Customer</th><th>Status</th><th>Stage</th></tr></thead><tbody><tr><td colspan="11" class="empty">No stock records yet. Add a vehicle or import a stock file.</td></tr></tbody></table></div></div>
 </section>
