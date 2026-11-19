@@ -98,6 +98,14 @@
       const visible=sub&&[...sub.querySelectorAll('[data-page]')].some(n=>n.style.display!=='none');
       if(!visible){group.style.display='none';if(sub)sub.style.display='none';}
     });
+    document.querySelectorAll('[data-department]').forEach(card=>{
+      const dept=String(card.dataset.department||'').toLowerCase();
+      card.style.display=allowedDepartments.has(dept)&&has('stock_register','view')?'':'none';
+    });
+    const quickModules={quotation:'quotation_management','price-list':'price_list_management',employees:'employee_management',audit:'audit_history',reports:'retail_reports',upload:'common_excel_upload'};
+    document.querySelectorAll('.quick[data-go]').forEach(card=>{
+      const module=quickModules[card.dataset.go];card.style.display=module&&has(module,'view')?'':'none';
+    });
     await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
     authReady=true;
   }
