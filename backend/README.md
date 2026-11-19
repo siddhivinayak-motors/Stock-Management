@@ -2,25 +2,39 @@
 
 Supabase project: `tvpaxdvqvwpblcfssgsj` (Mumbai / ap-south-1).
 
-## Current state
-- Core schema, enum types, indexes, and RLS policies are deployed in Supabase.
-- Initial Super Admin profile is provisioned for the existing Auth user `anjararakesh98@gmail.com`.
-- Modules: Dashboard, Stock Register, Stock Hold Management, Price List Management, Quotation Management, Employee Management, Common Excel Upload, Backup & Restore, Audit History, Retail Reports.
-- Employee permissions are per-user and per-module; actions: view, create, edit, delete, approve, manage_users, export, restore.
-- Do not put the Supabase service-role key in browser code.
-- Do not treat this schema as a completed frontend integration. The existing index.html still contains demo/localStorage handlers and requires explicit adapter wiring and runtime verification.
+## Deployed components
+- Supabase schema and Row Level Security (RLS) for profiles, employee permissions, vehicles, quotations, quotation line items, price list versions/items, stock holds, stock import batches and audit logs.
+- Individual Email + Password identities through Supabase Auth.
+- Initial Super Admin profile for the existing Auth user `anjararakesh98@gmail.com`.
+- Per-user, per-module permissions with view/create/edit/delete/approve/manage-users/export/restore actions.
+- Protected `employee-admin` Edge Function (JWT required) for employee invitation, profile updates and deactivation. The function uses the server-side service-role key only; never expose that key in browser code.
+- Browser runtime adapter loaded from the main `index.html` without changing its visual theme.
+- GitHub Actions syntax/type-check workflow at `.github/workflows/backend-validation.yml`.
 
-## Tables
-profiles, employee_permissions, vehicles, quotations, quotation_items, price_list_versions, price_list_items, stock_holds, stock_import_batches, audit_logs.
+## Operational workflows connected
+- Email/password login and password reset.
+- Stock create/list/edit/delete and department filtering.
+- OEM stock report import preview/commit.
+- Quotation save, approval and print count.
+- Department price list publication/version history.
+- Stock hold request/approval/rejection with database-trigger stock-stage synchronization.
+- Employee invitation, profile edit, deactivation and individual permission changes.
+- Audit read/search/export.
+- Operational data backup/restore (profiles, Auth identities and permission grants are deliberately excluded from restore).
 
-## Auth
-Email + Password using Supabase Auth. Employee creation must be performed by a trusted server-side Edge Function using the service role key, and must check the caller's database permission before calling Auth Admin APIs.
+## Data and security
+- No demo/seed stock, quote, hold or price-list data was inserted into the database.
+- RLS is enabled on all public operational tables. Permission checks use helper functions in a non-exposed private schema.
+- The service-role key is not included in GitHub browser code.
+- Legacy local-only quote/workspace cache keys are removed by the Supabase runtime on startup.
 
-## Required follow-up
-1. Add Auth UI and Supabase JS client initialization to the current HTML without changing visible layout except the required login surface.
-2. Replace localStorage writes in quotation, price-list, hold, stock import, permission and audit workflows with database calls.
-3. Add a protected Edge Function for creating/inviting and deactivating employees.
-4. Wire export/backup and restore to authenticated workflows.
-5. Verify sign-in, RLS, CRUD, import, quote save/print, hold approval, permission enforcement, audit rows, and Android PWA persistence in a real browser session.
-6. Enable leaked-password protection in Supabase Auth settings.
+## Remaining production validation / limitations
+1. Run an end-to-end browser test with the Super Admin's real account and then test representative employee accounts. GitHub CI checks JavaScript syntax and Edge Function types; it is not a substitute for browser testing.
+2. Configure and verify Auth email delivery/redirect URLs for employee invitations and password reset. Enable leaked-password protection in Supabase Auth settings.
+3. Common Excel reconciliation currently matches exact full chassis numbers only; unmatched/ambiguous rows remain untouched. Validate the actual Tally and manager workbook column headers before business use.
+4. Retail reporting is intentionally disabled until an authoritative retail-sale date/source is identified. OEM invoice date must not be treated as retail date.
+5. Operational restore is limited to business tables; no Auth users or employee permission grants are restored. Global reset is intentionally disabled pending an audited server-side design.
+6. Verify the live hosting/PWA update path and Android install/session persistence before staff rollout.
 
+## Database tables
+`profiles`, `employee_permissions`, `vehicles`, `quotations`, `quotation_items`, `price_list_versions`, `price_list_items`, `stock_holds`, `stock_import_batches`, `audit_logs`.
