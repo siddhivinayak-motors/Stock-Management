@@ -561,6 +561,11 @@
       const gen=uploadView.querySelector('.card .card-body button.btn.primary');
       if(gen)gen.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();previewReconciliation().catch(x=>notify(x.message));},true);
     }
+    const uploadView=$('view-upload');
+    if(uploadView){
+      const gen=uploadView.querySelector('.card .card-body button.btn.primary');
+      if(gen)gen.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();previewReconciliation().catch(x=>notify(x.message));},true);
+    }
     const auditView=$('view-audit');
     if(auditView){
       const toolbar=auditView.querySelector('.toolbar');
