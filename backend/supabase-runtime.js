@@ -73,11 +73,17 @@
     Object.entries(viewMap).forEach(([id,module])=>{const node=$(id);if(node)node.style.display=has(module,'view')?'':'none';});
     document.querySelectorAll('[data-page]').forEach(n=>{
       const page=n.dataset.page||'';
-      const m=page.startsWith('stock')?'stock_register':
+      const m=page.startsWith('stock-hold')?'stock_hold_management':
+        page==='stock-import'||page==='upload'?'common_excel_upload':
+        page.startsWith('stock')?'stock_register':
         page.includes('quotation')?'quotation_management':
-        page.includes('price')?'price_list_management':
-        page.includes('employee')?'employee_management':null;
-      if(m && !has(m,'view')) n.style.display='none';
+        page==='price-list'?'price_list_management':
+        page==='employees'?'employee_management':
+        page==='audit'?'audit_history':
+        page==='reports'?'retail_reports':
+        page==='backup-restore'?'backup_restore':
+        page==='dashboard'?'dashboard':null;
+      if(m) n.style.display=has(m,'view')?'':'none';
     });
     await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
     authReady=true;
