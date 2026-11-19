@@ -498,6 +498,9 @@
   async function init() {
     if(!window.supabase?.createClient) throw new Error('Supabase JavaScript SDK failed to load.');
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    const oldStore=localStorage.getItem(quoteStoreKey);
+      try { localStorage.removeItem(quoteStoreKey); localStorage.removeItem(DEPT_QUOTE_KEY); } catch(_e) {}
+      // Don't migrate browser records automatically; only explicit new Supabase records are used.
     installScreenHooks();
     try { await refreshIdentity(); } catch(e){ console.error(e); }
     if(currentUser) await startApp(); else showLogin();
