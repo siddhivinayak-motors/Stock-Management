@@ -746,18 +746,11 @@
         'commercial-quotation':'Commercial','commercial-management':'Commercial',
         'llm-quotation':'LLM','llm-management':'LLM'
       };
+      // Quotation routes keep their original handler because it updates the
+      // page's lexical department state before rendering the quotation form.
+      if(quoteRoute[page]) return;
       try {
-        if(quoteRoute[page]){
-          window.currentQuoteDepartment=quoteRoute[page];
-          if(typeof window.loadDepartmentQuotes==='function') window.loadDepartmentQuotes();
-          if(typeof window.refreshQuotePriceSuggestions==='function') window.refreshQuotePriceSuggestions();
-          window.showPage(page.includes('management')?'quotation-management':'quotation');
-          const title=$('quotationPageTitle');
-          if(title) title.textContent=quoteRoute[page]+' — Quotation';
-          if(typeof window.updateQuoteNumber==='function') window.updateQuoteNumber();
-          if(typeof window.calc==='function') window.calc();
-          if(page.includes('management') && typeof window.renderQuoteManagement==='function') window.renderQuoteManagement();
-        } else if(page.startsWith('stock-hold-') || page==='stock-hold-central') {
+        if(page.startsWith('stock-hold-') || page==='stock-hold-central') {
           window.showPage('stock-hold-central');
           if(typeof window.holdRender==='function') window.holdRender();
         } else if(page.startsWith('stock-')) {
