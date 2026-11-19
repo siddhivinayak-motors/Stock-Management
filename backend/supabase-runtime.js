@@ -15,7 +15,7 @@
     'Backup & Restore':'backup_restore','Audit History':'audit_history',
     'Retail Reports':'retail_reports'
   };
-  let client, currentUser, currentProfile, permissions = new Map(), authReady = false;
+  let client, currentUser, currentProfile, permissions = new Map(), authReady = false, sessionLoginRecordedFor = null;
   const $ = id => document.getElementById(id);
   const notify = msg => { if (typeof window.toast === 'function') window.toast(msg); else console.info(msg); };
   const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -24,6 +24,7 @@
   function has(module,action='view') {
     // Super Admin can view all audit records, but audit() below never records Super Admin activity.
     if(currentProfile?.is_super_admin) return true;
+    if(module==='audit_history'&&action==='view'&&['Admin','General Manager'].includes(currentProfile?.designation)) return true;
     return (permissions.get(module)||[]).includes(action);
   }
   function roleLevel(){const levels={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Driver':10};return currentProfile?.is_super_admin?100:(levels[currentProfile?.designation]??0);}
@@ -56,7 +57,7 @@
       try {
         const {error}=await db().auth.signInWithPassword({email:$('svLoginEmail').value.trim(),password:$('svLoginPassword').value});
         if(error) throw error;
-        await refreshIdentity();el.remove();await startApp();
+        await refreshIdentity();el.remove();await startApp();await recordSessionLogin();
       } catch(ex){err.textContent=ex.message||'Login failed';}
       finally{btn.disabled=false;btn.textContent='Sign in';}
     });
@@ -149,7 +150,7 @@
     await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
     authReady=true;
   }
-  async function signOut() { await db().auth.signOut(); location.reload(); }
+  async function signOut() { await audit('dashboard','logout','Employee signed out','auth_session',currentUser?.id||null); await db().auth.signOut(); sessionLoginRecordedFor=null; location.reload(); }
 
   async function loadHolds() {
     if(!has('stock_hold_management','view')) return;
@@ -288,24 +289,33 @@
     const search=(view.querySelector('.toolbar .search input')?.value||'').trim().toLowerCase();
     const actionFilter=view.querySelector('.toolbar select')?.value||'All actions';
     const filtered=rows.filter(r=>{
-      const text=[r.actor_email,r.action_label,r.module,r.action,r.record_type,r.record_id,JSON.stringify(r.details||{})].join(' ').toLowerCase();
+      const text=[r.actor_email,r.actor_designation,r.action_label,r.module,r.action,r.record_type,r.record_id,JSON.stringify(r.details||{})].join(' ').toLowerCase();
       return (!search||text.includes(search))&&(actionFilter==='All actions'||String(r.action||'').toUpperCase()===actionFilter);
     });
-    body.innerHTML=filtered.length?filtered.map(r=>'<tr><td>'+new Date(r.created_at).toLocaleString()+'</td><td>'+esc(r.actor_email||'—')+'</td><td>—</td><td>'+esc(r.module||'—')+'</td><td>'+esc(String(r.action||'').toUpperCase())+'</td><td>'+esc([r.record_type,r.record_id].filter(Boolean).join(' · ')||'—')+'</td><td><span class="pill green">Recorded</span></td><td>'+esc(r.action_label||'')+' '+esc(JSON.stringify(r.details||{}))+'</td></tr>').join(''):'<tr><td colspan="8" class="empty">No matching activity records.</td></tr>';
+    body.innerHTML=filtered.length?filtered.map(r=>'<tr><td>'+new Date(r.created_at).toLocaleString()+'</td><td>'+esc(r.actor_email||'—')+'</td><td>'+esc(r.actor_designation||'—')+'</td><td>'+esc(r.module||'—')+'</td><td>'+esc(String(r.action||'').toUpperCase())+'</td><td>'+esc([r.record_type,r.record_id].filter(Boolean).join(' · ')||'—')+'</td><td><span class="pill green">Recorded</span></td><td>'+esc(r.action_label||'')+' '+esc(JSON.stringify(r.details||{}))+'</td></tr>').join(''):'<tr><td colspan="8" class="empty">No matching activity records.</td></tr>';
     const desc=view.querySelector('.card-desc');if(desc)desc.textContent=filtered.length+' activity records · Supabase audit log';
   }
   function downloadAuditCsv(){
     if(!has('audit_history','export')){notify('Audit export permission required.');return;}
     const rows=window.svAuditRows||[];
-    const cols=['created_at','actor_email','module','action','action_label','record_type','record_id','details'];
+    const cols=['created_at','actor_email','actor_designation','module','action','action_label','record_type','record_id','details'];
     const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
     const csv=[cols.join(','),...rows.map(r=>cols.map(c=>q(typeof r[c]==='object'?JSON.stringify(r[c]):r[c])).join(','))].join('\r\n');
     const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
     a.href=url;a.download='Siddhivinayak-Audit-'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(url);
   }
   async function audit(module,action,label,type=null,id=null,details={}) {
-    if(!currentUser || currentProfile?.is_super_admin) return;
-    try { await db().rpc('log_activity',{p_module:module,p_action:action,p_label:label,p_record_type:type,p_record_id:id==null?null:String(id),p_details:details}); } catch(e){console.warn('Audit write failed',e);}
+    if(!currentUser || currentProfile?.is_super_admin) return false;
+    try {
+      const {error}=await db().rpc('log_activity',{p_module:module,p_action:action,p_label:label,p_record_type:type,p_record_id:id==null?null:String(id),p_details:details});
+      if(error) throw error;
+      return true;
+    } catch(e){console.error('Audit write failed:',{module,action,label,error:e});return false;}
+  }
+  async function recordSessionLogin(){
+    if(!currentUser||currentProfile?.is_super_admin||sessionLoginRecordedFor===currentUser.id)return;
+    sessionLoginRecordedFor=currentUser.id;
+    await audit('dashboard','login','Employee signed in','auth_session',currentUser.id);
   }
   async function refreshDashboard(){
     const cards=[...document.querySelectorAll('#view-dashboard .department-kpi[data-department]')];
@@ -1092,10 +1102,10 @@
     // Re-apply permission-dependent controls only after the authenticated profile is loaded.
     // The initial call above runs before currentProfile exists and must not hide Super Admin actions.
     if(currentUser) installScreenHooks();
-    if(currentUser) await startApp(); else showLogin();
+    if(currentUser){await startApp();await recordSessionLogin();} else showLogin();
     db().auth.onAuthStateChange(async(_event,session)=>{
-      if(!session){currentUser=null;currentProfile=null;permissions.clear();showLogin();return;}
-      try{await refreshIdentity();await startApp();}catch(e){console.error(e);showLogin();}
+      if(!session){currentUser=null;currentProfile=null;permissions.clear();sessionLoginRecordedFor=null;showLogin();return;}
+      try{await refreshIdentity();await startApp();await recordSessionLogin();}catch(e){console.error(e);showLogin();}
     });
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
