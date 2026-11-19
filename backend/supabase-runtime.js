@@ -65,7 +65,7 @@
     // Keep the app shell intact; enforce module access on the actual view sections.
     const viewMap={
       'view-dashboard':'dashboard','view-stock':'stock_register','view-quotation':'quotation_management',
-      'view-quotation-management':'quotation_management','view-stock-import':'common_excel_upload',
+      'view-quotation-management':'quotation_management',
       'view-upload':'common_excel_upload','view-stock-hold-central':'stock_hold_management',
       'view-price-list':'price_list_management','view-employees':'employee_management',
       'view-audit':'audit_history','view-reports':'retail_reports','view-backup-restore':'backup_restore'
@@ -74,7 +74,7 @@
     document.querySelectorAll('[data-page]').forEach(n=>{
       const page=n.dataset.page||'';
       const m=page.startsWith('stock-hold')?'stock_hold_management':
-        page==='stock-import'||page==='upload'?'common_excel_upload':
+        page==='upload'?'common_excel_upload':
         page.startsWith('stock')?'stock_register':
         page.includes('quotation')?'quotation_management':
         page==='price-list'?'price_list_management':
@@ -331,84 +331,57 @@
   };
   window.stockImportPreview = async () => {
     try{
-      const file=$('stockReportFile')?.files?.[0];if(!file){notify('Select a stock report');return;}
-      if(!has('common_excel_upload','create')&&!has('stock_register','create'))throw new Error('You do not have stock import permission.');
+      const file=$('stockReportFile')?.files?.[0];if(!file)throw new Error('Select the standard stock report Excel file.');
+      if(!has('common_excel_upload','create'))throw new Error('You do not have Excel Upload permission.');
       const rows=await readWorkbook(file);
       const existing=[];
-      for(let from=0;;from+=1000){
-        const part=await call(db().from('vehicles').select('chassis_number').range(from,from+999));
-        existing.push(...part);if(part.length<1000)break;
-      }
-      const seen=new Set(existing.map(x=>String(x.chassis_number||'').trim().toLowerCase()));
+      for(let from=0;;from+=1000){const part=await call(db().from('vehicles').select('chassis_number').range(from,from+999));existing.push(...part);if(part.length<1000)break;}
+      const seen=new Set(existing.map(x=>String(x.chassis_number||'').trim().toUpperCase()));
       const map={PERSONAL:'Personal',BEV:'EV',PROSPER:'Commercial',LMM:'LLM'};
-      stockPreviewRows=rows.map(r=>{
+      stockPreviewRows=rows.filter(r=>Object.values(r||{}).some(v=>v!==null&&v!==undefined&&String(v).trim()!=='')).map(r=>{
         const segment=String(plHeader(r,['segmentcode','segment'])||'').trim().toUpperCase();
-        const dateRaw=plHeader(r,['oem invoicedate','oeminvoicedate','invoicedate']);
-        const dt=dateRaw instanceof Date?dateRaw:(typeof dateRaw==='number'&&window.XLSX?(()=>{const z=XLSX.SSF.parse_date_code(dateRaw);return z?new Date(z.y,z.m-1,z.d):new Date('invalid')})():new Date(dateRaw));
-        const vin=String(plHeader(r,['vin'])||'').trim(),chassis=String(plHeader(r,['chassisnumber','chassis'])||'').trim();
-        const fullVin=vin||chassis;let decision='Import',department=map[segment]||'';
-        if(!department)decision='Manual Review: Unknown Segment';
-        else if(!dateRaw||isNaN(dt.getTime()))decision='Review: Invalid OEM Invoice Date';
-        else if(dt<new Date('2025-01-01T00:00:00'))decision='Skip: Before 2025';
-        else if(!fullVin)decision='Review: Missing VIN/Chassis';
-        else if(seen.has(fullVin.toLowerCase()))decision='Duplicate';
-        else seen.add(fullVin.toLowerCase());
-        return {vin:fullVin,model:String(plHeader(r,['model'])||''),variant:String(plHeader(r,['variantdesc','variant'])||''),segment,date:dateRaw?String(dateRaw):'',department,decision,raw:r};
+        const department=map[segment]||'';
+        const chassis=String(plHeader(r,['chassisnumber','chassis'])||'').trim().toUpperCase();
+        let decision='Import';
+        if(!department)decision='Review: Unknown Segment';
+        else if(!chassis)decision='Review: Missing Chassis Number';
+        else if(seen.has(chassis))decision='Duplicate — Skip';
+        else seen.add(chassis);
+        return {chassis,vin:String(plHeader(r,['vin'])||'').trim(),model:String(plHeader(r,['model'])||''),variant:String(plHeader(r,['variantdesc','variant'])||''),segment,department,status:String(plHeader(r,['vehiclestatus','status'])||'Received'),stockType:String(plHeader(r,['stocktype'])||''),date:plHeader(r,['oeminvoicedate','invoicedate']),raw:r,decision};
       });
       const count=k=>stockPreviewRows.filter(x=>x.decision===k).length;
-      const review=stockPreviewRows.filter(x=>x.decision.startsWith('Review')||x.decision.startsWith('Manual')).length;
-      const summary='Rows: '+rows.length+' · Importable: '+count('Import')+' · Skipped (old date): '+stockPreviewRows.filter(x=>x.decision.startsWith('Skip')).length+' · Duplicates: '+count('Duplicate')+' · Review: '+review;
-      $('stockImportSummary').style.display='block';$('stockImportSummary').textContent=summary;
-      $('stockImportRows').innerHTML=stockPreviewRows.slice(0,400).map(x=>'<tr><td>'+esc(x.vin)+'</td><td>'+esc(x.model)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.segment)+'</td><td>'+esc(x.date)+'</td><td>'+esc(x.department)+'</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No rows found</td></tr>';
+      const review=stockPreviewRows.filter(x=>x.decision.startsWith('Review')).length;
+      const duplicates=stockPreviewRows.filter(x=>x.decision.startsWith('Duplicate')).length;
+      $('stockImportSummary').style.display='block';
+      $('stockImportSummary').textContent='Rows: '+rows.length+' · Importable: '+count('Import')+' · Duplicates skipped: '+duplicates+' · Needs review: '+review+' · Department: Personal '+stockPreviewRows.filter(x=>x.department==='Personal'&&x.decision==='Import').length+' / Commercial '+stockPreviewRows.filter(x=>x.department==='Commercial'&&x.decision==='Import').length+' / EV '+stockPreviewRows.filter(x=>x.department==='EV'&&x.decision==='Import').length+' / LLM '+stockPreviewRows.filter(x=>x.department==='LLM'&&x.decision==='Import').length;
+      $('stockImportRows').innerHTML=stockPreviewRows.slice(0,500).map(x=>'<tr><td>'+esc(x.chassis||'—')+'</td><td>'+esc(x.model)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.segment)+'</td><td>'+esc(x.department||'Review')+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No valid rows found.</td></tr>';
     }catch(e){console.error(e);notify(e.message);}
   };
   window.stockImportCommit = async () => {
     try{
-      if(!Array.isArray(stockPreviewRows)||!stockPreviewRows.length){notify('Preview a report first');return;}
-      if(!has('common_excel_upload','create')&&!has('stock_register','create')) throw new Error('You do not have import permission.');
-      const ready=stockPreviewRows.filter(x=>x.decision==='Import');
-      if(!ready.length){notify('No importable rows.');return;}
+      if(!Array.isArray(stockPreviewRows)||!stockPreviewRows.length)throw new Error('Generate Preview before uploading.');
+      if(!has('common_excel_upload','create'))throw new Error('You do not have Excel Upload permission.');
       const file=$('stockReportFile')?.files?.[0];
-      const vins=ready.map(x=>x.vin).filter(Boolean);
-      const existingSet=new Set();
-      for(let i=0;i<vins.length;i+=300){
-        const found=await call(db().from('vehicles').select('chassis_number').in('chassis_number',vins.slice(i,i+300)));
-        found.forEach(x=>existingSet.add(String(x.chassis_number||'').toLowerCase()));
-      }
-      const toImport=ready.filter(x=>!existingSet.has(String(x.vin||'').toLowerCase()));
-      const dbDuplicates=ready.length-toImport.length;
-      if(!toImport.length){notify('All importable VINs already exist in the database.');return;}
-      if(!confirm('Import '+toImport.length+' new stock rows into Supabase? '+dbDuplicates+' existing chassis duplicates will be skipped.')) return;
-      const records=toImport.map(x=>{
-        const r=x.raw||{};
-        const inv=plHeader(r,['oem invoicedate','oeminvoicedate','invoicedate']);
+      const ready=stockPreviewRows.filter(x=>x.decision==='Import');
+      if(!ready.length)throw new Error('No new vehicles to import.');
+      if(!confirm('Upload '+ready.length+' new vehicles? Existing chassis numbers and duplicate rows will be skipped.'))return;
+      const records=ready.map(x=>{
+        const r=x.raw||{},inv=x.date;
         let invoice=null;
-        if(inv instanceof Date) invoice=inv.toISOString().slice(0,10);
-        else if(inv && !isNaN(Date.parse(inv))) invoice=new Date(inv).toISOString().slice(0,10);
-        return {
-          department:x.department,chassis_number:x.vin,model:x.model||'Unknown',variant:x.variant||'',
-          excel_number:String(plHeader(r,['excelnumber','excelno'])||''),
-          seating:String(plHeader(r,['seating','seat'])||''),
-          colour:String(plHeader(r,['colour','color'])||''),
-          manufacturing_year:Number(plHeader(r,['manufacturingyear','mfgyear','year'])||0)||null,
-          oem_invoice_date:invoice,
-          engine_number:String(plHeader(r,['enginenumber','engine'])||''),
-          sc_name:String(plHeader(r,['scname','salesconsultant'])||''),
-          customer_name:String(plHeader(r,['customername','customer'])||''),
-          status:'Received / In Stock',stage:'OPEN',source:'stock_report_import',
-          imported_at:new Date().toISOString(),created_by:currentUser.id
-        };
+        if(inv instanceof Date)invoice=inv.toISOString().slice(0,10);
+        else if(typeof inv==='number'&&window.XLSX){const z=XLSX.SSF.parse_date_code(inv);if(z)invoice=new Date(Date.UTC(z.y,z.m-1,z.d)).toISOString().slice(0,10);}
+        else if(inv&&!isNaN(Date.parse(inv)))invoice=new Date(inv).toISOString().slice(0,10);
+        const stockType=String(x.stockType||'').trim().toUpperCase();
+        return {department:x.department,chassis_number:x.chassis,excel_number:x.vin||null,model:x.model||'Unknown',variant:x.variant||null,seating:String(plHeader(r,['seating','seat'])||'')||null,colour:String(plHeader(r,['colour','color'])||'')||null,oem_invoice_date:invoice,engine_number:String(plHeader(r,['enginenumber','engine'])||'')||null,sc_name:String(plHeader(r,['scname','salesconsultant'])||'')||null,customer_name:String(plHeader(r,['customername','customer'])||'')||null,status:x.status||'Received',stage:stockType==='ALLOTED'||stockType==='ALLOTTED'?'ALLOTED':'OPEN',place:String(plHeader(r,['physicallocation','dealerlocationname'])||'')||null,source:'standard_stock_report',imported_at:new Date().toISOString(),created_by:currentUser.id};
       });
-      let importedCount=0;
-      for(let i=0;i<records.length;i+=300){
-        const {data,error}=await db().from('vehicles').insert(records.slice(i,i+300)).select('id');
-        if(error)throw error;
-        importedCount+=data.length;
-      }
-      await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Import',department:null,imported_rows:importedCount,skipped_rows:stockPreviewRows.length-importedCount,error_rows:0,created_by:currentUser.id}));
-      await audit('common_excel_upload','create','Imported stock report','stock_import_batch',null,{count:importedCount,database_duplicates:dbDuplicates,file:file?.name||''});
+      let imported=0;
+      for(let i=0;i<records.length;i+=200){const batch=records.slice(i,i+200);const {data,error}=await db().from('vehicles').upsert(batch,{onConflict:'chassis_number',ignoreDuplicates:true}).select('id');if(error)throw error;imported+=data?.length||0;}
+      const skipped=stockPreviewRows.length-imported;
+      await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Report',department:null,imported_rows:imported,skipped_rows:skipped,error_rows:0,created_by:currentUser.id}));
+      await audit('common_excel_upload','create','Uploaded standard stock report','stock_import_batch',null,{imported,skipped,file:file?.name||''});
       stockPreviewRows=[];await renderStock();await loadImportHistory();
-      notify(importedCount+' vehicles imported; '+dbDuplicates+' existing VIN duplicates skipped.');
+      $('stockImportSummary').textContent='Upload complete · Imported '+imported+' · Skipped '+skipped+'.';
+      notify(imported+' vehicles imported; '+skipped+' duplicates or review rows skipped.');
     }catch(e){console.error(e);notify(e.message);}
   };
   async function renderStock(){
@@ -529,8 +502,8 @@
   async function loadImportHistory(){
     if(!has('common_excel_upload','view'))return;
     const rows=await call(db().from('stock_import_batches').select('*').order('created_at',{ascending:false}).limit(500));
-    const body=$('view-upload')?.querySelector('.table-wrap tbody');if(!body)return;
-    body.innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.file_name)+'</td><td>Imported</td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td><td>—</td></tr>').join(''):'<tr><td colspan="8" class="empty">No import history yet.</td></tr>';
+    const body=$('view-upload')?.querySelector('.card:last-child .table-wrap tbody');if(!body)return;
+    body.innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.file_name)+'</td><td><span class="pill green">Imported</span></td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td></tr>').join(''):'<tr><td colspan="6" class="empty">No import history yet.</td></tr>';
   }
   async function previewReconciliation(){
     const panel=$('view-upload');if(!panel)return;
