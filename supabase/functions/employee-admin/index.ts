@@ -141,7 +141,7 @@ Deno.serve(async (req: Request) => {
     if (insertError) { await adminClient.auth.admin.deleteUser(userId); return json({ error: insertError.message }, 400); }
 
     // New employees receive no workspace/module access until Super Admin assigns it from the Permissions menu.
-    await adminClient.from("audit_logs").insert({
+    if (!isRoot) await adminClient.from("audit_logs").insert({
       actor_id: callerId, actor_email: authData.user.email, module:"employee_management",
       action:"create", action_label:"Created employee account", record_type:"profile", record_id:userId,
       details:{email,designation:role,department_access:finalDepartments},
@@ -202,7 +202,7 @@ Deno.serve(async (req: Request) => {
       });
       if (authUpdateError) return json({ error: "Profile updated, but Auth metadata update failed: " + authUpdateError.message }, 500);
     }
-    await adminClient.from("audit_logs").insert({
+    if (!isRoot) await adminClient.from("audit_logs").insert({
       actor_id: callerId, actor_email: authData.user.email, module: "employee_management",
       action: "edit", action_label: "Updated employee profile",
       record_type: "profile", record_id: userId,
@@ -233,7 +233,7 @@ Deno.serve(async (req: Request) => {
       const {error:saveError}=await adminClient.from("employee_permissions").upsert(rows,{onConflict:"user_id,module"});
       if(saveError) return json({error:saveError.message},500);
     }
-    await adminClient.from("audit_logs").insert({actor_id:callerId,actor_email:authData.user.email,module:"employee_management",action:"edit",action_label:"Updated employee menu permissions",record_type:"profile",record_id:userId,details:{modules:selected}});
+    if (!isRoot) await adminClient.from("audit_logs").insert({actor_id:callerId,actor_email:authData.user.email,module:"employee_management",action:"edit",action_label:"Updated employee menu permissions",record_type:"profile",record_id:userId,details:{modules:selected}});
     return json({success:true,modules:selected,message:"Employee permissions saved"});
   }
 
@@ -253,7 +253,7 @@ Deno.serve(async (req: Request) => {
     if (banError) return json({ error: "Employee archived but login blocking failed: " + banError.message }, 500);
     const { error: permissionDeleteError } = await adminClient.from("employee_permissions").delete().eq("user_id",userId);
     if (permissionDeleteError) return json({error:"Employee archived but permissions cleanup failed: "+permissionDeleteError.message},500);
-    const { error: auditError } = await adminClient.from("audit_logs").insert({
+    const { error: auditError } = if (!isRoot) await adminClient.from("audit_logs").insert({
       actor_id: callerId, actor_email: authData.user.email, module: "employee_management",
       action: "delete", action_label: "Deleted employee account (archived)",
       record_type: "profile", record_id: userId, details: { email: target.email, method: "soft_delete" },
@@ -273,7 +273,7 @@ Deno.serve(async (req: Request) => {
       .update({ status: "inactive", updated_at: new Date().toISOString() }).eq("user_id", userId);
     if (updateError) return json({ error: updateError.message }, 400);
     await adminClient.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
-    await adminClient.from("audit_logs").insert({
+    if (!isRoot) await adminClient.from("audit_logs").insert({
       actor_id: callerId, actor_email: authData.user.email, module: "employee_management",
       action: "edit", action_label: "Deactivated employee",
       record_type: "profile", record_id: userId, details: { email: target.email },
