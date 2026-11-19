@@ -418,7 +418,8 @@
     const form=$('vehicleForm');if(!form) return;
     const fields=[...form.querySelectorAll('.form-grid .field input, .form-grid .field select, .form-grid .field textarea')];
     const names=['chassis_number','excel_number','model','variant','seating','colour','manufacturing_year','oem_invoice_date','engine_number','sc_name','customer_name','status','stage','place'];
-    fields.forEach((el,i)=>{if(names[i])el.dataset.backendField=names[i];});
+    fields.forEach((el,i)=>{if(names[i]){el.dataset.backendField=names[i];el.id='svVehicleField_'+names[i];}});
+    if($('svVehicleField_manufacturing_year'))$('svVehicleField_manufacturing_year').type='number';
     const save=form.querySelector('button.primary');
     if(save) save.addEventListener('click',async e=>{
       e.preventDefault();e.stopImmediatePropagation();
@@ -427,7 +428,9 @@
         fields.forEach(el=>{const k=el.dataset.backendField;if(k)obj[k]=el.value||null;});
         if(!obj.chassis_number||!obj.model) throw new Error('Chassis Number and Model are required.');
         if(obj.manufacturing_year)obj.manufacturing_year=Number(obj.manufacturing_year);
-        await saveVehicle(obj);form.style.display='none';form.querySelectorAll('input').forEach(x=>x.value='');await renderStock();notify('Vehicle saved to Supabase.');
+        if(!obj.status)obj.status='Received / In Stock';
+        if(!obj.stage)obj.stage='OPEN';
+        await saveVehicle(obj);form.style.display='none';form.querySelectorAll('input').forEach(x=>x.value='');form.querySelectorAll('select').forEach(x=>x.selectedIndex=0);await renderStock();notify('Vehicle saved to Supabase.');
       }catch(ex){notify(ex.message);}
     },true);
   }
