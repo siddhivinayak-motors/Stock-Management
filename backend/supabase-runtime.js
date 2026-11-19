@@ -415,13 +415,7 @@
         const stockType=String(x.stockType||'').trim().toUpperCase();
         return {department:x.department,chassis_number:x.chassis,excel_number:x.vin||null,model:x.model||'Unknown',variant:x.variant||null,seating:String(plHeader(r,['seating','seat'])||'')||null,colour:String(plHeader(r,['colour','color'])||'')||null,oem_invoice_date:invoice,engine_number:String(plHeader(r,['enginenumber','engine'])||'')||null,sc_name:String(plHeader(r,['scname','salesconsultant'])||'')||null,customer_name:String(plHeader(r,['customername','customer'])||'')||null,status:x.status||'Received',stage:stockType==='ALLOTED'||stockType==='ALLOTTED'?'ALLOTED':'OPEN',place:String(plHeader(r,['physicallocation','dealerlocationname'])||'')||null,source:'standard_stock_report',imported_at:new Date().toISOString(),created_by:currentUser.id};
       });
-      let imported=0;
-      for(let i=0;i<records.length;i+=200){
-        const batch=records.slice(i,i+200);
-        const {count,error}=await db().from('vehicles').upsert(batch,{onConflict:'chassis_number',ignoreDuplicates:true,count:'exact'});
-        if(error)throw error;
-        imported+=count??batch.length;
-      }
+      const imported=await call(db().rpc('import_stock_vehicles',{p_rows:records,p_file_name:file?.name||'Stock Report'}));
       const skipped=stockPreviewRows.length-imported;
       const byDepartment=['Personal','EV','Commercial','LLM'];
       for(const dept of byDepartment){
