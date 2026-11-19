@@ -531,6 +531,79 @@ td{padding:15px 16px;line-height:1.5}
 @media(max-width:680px){.pl-head-actions{min-width:126px}.pl-head-actions .btn{padding:9px 10px;font-size:10px}.pl-filter-grid{grid-template-columns:1fr 1fr;padding:13px}.pl-search-field{grid-column:1/-1}.pl-reset-btn{grid-column:1/-1}.pl-results-bar{padding:10px 13px}.pl-table-wrap{max-height:none}.pl-preview-footer{align-items:flex-start;flex-direction:column}}
 
 
+/* V25 — approved readable typography + consistently left-aligned department sidebar */
+:root{
+  --sidebar:264px;
+}
+body{font-size:14px;line-height:1.5}
+.main{max-width:none;line-height:1.5}
+h1{font-size:26px;line-height:1.25}
+.card-title{font-size:16px}
+.card-desc,.subtitle{font-size:13px;line-height:1.5}
+.nav-item{font-size:14px;line-height:1.35;text-align:left;justify-content:flex-start}
+.nav-item.group{font-size:14px;min-height:46px;gap:12px}
+.subnav{
+  display:block!important;
+  margin:2px 0 14px 0;
+  padding:0 0 0 8px;
+  border-left:1px solid #e7ebf0;
+}
+.subnav .nav-item{
+  width:100%;
+  min-height:43px;
+  padding:10px 10px;
+  margin:2px 0;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:12px;
+  text-align:left;
+  white-space:normal;
+  overflow-wrap:normal;
+  font-size:13.5px;
+  font-weight:650;
+  line-height:1.35;
+}
+.subnav .nav-item .nav-icon{
+  width:18px;
+  height:18px;
+  flex:0 0 18px;
+}
+.field label,.form-grid label{font-size:13px}
+.field input,.field select,.field textarea,
+select,input,textarea{font-size:14px}
+table,.table-wrap td{font-size:13px}
+th{font-size:11px}
+td{line-height:1.5}
+.btn{font-size:13px}
+@media(max-width:900px){
+  :root{--sidebar:230px}
+}
+@media(max-width:680px){
+  :root{--sidebar:270px}
+  body{font-size:14px}
+  .main{max-width:none}
+  h1{font-size:24px}
+  .nav-item.group{font-size:14px;min-height:47px}
+  .subnav{
+    margin:2px 0 13px 0;
+    padding-left:8px;
+  }
+  .subnav .nav-item{
+    min-height:44px;
+    padding:10px 10px;
+    font-size:13.5px;
+    line-height:1.35;
+    gap:12px;
+  }
+  .subnav .nav-item .nav-icon{width:18px;height:18px;flex-basis:18px}
+  .field label,.form-grid label{font-size:13px}
+  .field input,.field select,.field textarea{font-size:14px;min-height:44px}
+  table{font-size:13px}
+  td,.table-wrap td{font-size:13px}
+}
+
+
 </style>
 </head>
 <body>
