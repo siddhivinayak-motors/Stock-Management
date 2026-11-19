@@ -209,13 +209,21 @@
   // --- Bind the existing screens and controls to persistent Supabase records ---
   const moduleEnum = (label) => MODULES[label] || label;
   const toQuoteView = (row) => ({
-    id:row.id,no:row.quote_number,customer:row.customer_name,phone:row.phone||'',
+    id:row.id,no:row.quote_number,department:row.department,customer:row.customer_name,phone:row.phone||'',
     vehicle:[row.model,row.variant].filter(Boolean).join(' · '),chassis:row.chassis||'',
     by:row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'Employee',
     total:Number(row.total||0),subtotal:Number(row.subtotal||0),discount:Number(row.discount||0),
     status:String(row.status||'Pending').toUpperCase(),prints:Number(row.print_count||0),
     date:row.quote_date,items:(row.quotation_items||[]).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount}))
   });
+  window.renderQuoteManagement = () => {
+    const body=$('quoteManagementRows');if(!body)return;
+    body.innerHTML=quoteRecords.map((q,i)=>'<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.vehicle)+'</td><td>'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+(q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red')+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+(q.status==='PENDING'?'<button class="btn small" onclick="approveQuote('+i+')">Approve</button>':'')+'</div></td></tr>').join('');
+    $('qmTotal').textContent=quoteRecords.length;
+    $('qmPending').textContent=quoteRecords.filter(q=>q.status==='PENDING').length;
+    $('qmApproved').textContent=quoteRecords.filter(q=>q.status==='APPROVED').length;
+    $('qmPrints').textContent=quoteRecords.reduce((sum,q)=>sum+Number(q.prints||0),0);
+  };
   async function reloadQuoteList() {
     if(!has('quotation_management','view')) return;
     const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
@@ -268,8 +276,7 @@
     try{
       const q=quoteRecords[i];if(!q) return;
       if(q.id){
-        const row=await call(db().from('quotations').update({print_count:(q.prints||0)+1}).eq('id',q.id).select().single());
-        q.prints=Number(row.print_count||0);
+        q.prints=Number(await call(db().rpc('increment_quotation_print_count',{p_quotation_id:q.id}))||0);
         if(typeof renderQuoteManagement==='function') renderQuoteManagement();
       }
       printQuoteDocument(q);
@@ -550,7 +557,7 @@
   window.appBackup = async () => {
     try{
       if(!has('backup_restore','export'))throw new Error('Backup permission required.');
-      const tables=['profiles','employee_permissions','vehicles','quotations','quotation_items','price_list_versions','price_list_items','stock_holds','stock_import_batches','audit_logs'];
+      const tables=['vehicles','quotations','quotation_items','price_list_versions','price_list_items','stock_holds','stock_import_batches'];
       const payload={format:'SVM-SUPABASE-BACKUP',version:1,createdAt:new Date().toISOString(),project:'tvpaxdvqvwpblcfssgsj',data:{}};
       for(const t of tables) payload.data[t]=await call(db().from(t).select('*').limit(10000));
       const a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
