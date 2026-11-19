@@ -154,7 +154,7 @@
   async function signOut() { await db().auth.signOut(); location.reload(); }
 
   async function loadHolds() {
-    if(!has('stock_hold_management','view')) return;
+    if(!canManageHolds()||!has('stock_hold_management','view')) return;
     let rows=[],from=0,chunk=1000;
     while(true){
       const part=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}).range(from,from+chunk-1));
@@ -1001,6 +1001,7 @@
       const b=e.target?.closest?.('[data-page]');
       if(!b)return;
       const p=b.dataset.page||'';
+      if(p.startsWith('stock-hold')&&!canManageHolds()){e.preventDefault();e.stopImmediatePropagation();notify('Stock Hold Management is available to Manager and above only.');return;}
       setTimeout(()=>{
         if(p==='employees')renderEmployees().catch(x=>notify(x.message));
         if(p==='audit')loadAudit().catch(x=>notify(x.message));
