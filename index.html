@@ -663,19 +663,7 @@ td{padding:15px 16px;line-height:1.5}
  <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Employee Management</h1><div class="subtitle">Live operational workspace</div></div><button class="btn" onclick="window.SVMBackend?.refreshEmployees?.()">⟳ &nbsp;Refresh</button></div>
  <div class="stat-grid"><div class="stat"><div class="stat-label">Total Employees</div><div class="stat-value">0</div></div><div class="stat"><div class="stat-label">Active</div><div class="stat-value">0</div></div><div class="stat"><div class="stat-label">Inactive</div><div class="stat-value">0</div></div><div style="margin-left:auto;align-self:center"><button class="btn primary" type="button" id="svNewEmployee">＋ New User</button></div></div>
  <div class="card"><div class="card-head"><div><div class="card-title">Employee Directory</div><div class="card-desc">Manage employee accounts, roles and department access</div></div><span class="pill">0 users</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Contact</th><th>Designation</th><th>Department Access</th><th>Status</th></tr></thead><tbody><tr><td colspan="5" class="empty">No employee records yet.</td></tr></tbody></table></div></div>
- <div class="card" style="padding:20px;margin-top:16px">
-  <div class="card-head"><div><h3>Individual Employee Permissions</h3><p>Configure module access and actions per employee, independent of designation</p></div></div>
-  <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
-   <label>Employee<select id="permEmployee" class="field"><option value="">Select employee after employee setup</option></select></label>
-   <label>Module<select id="permModule" class="field"><option>Dashboard</option><option>Stock Register</option><option>Stock Hold Management</option><option>Price List Management</option><option>Quotation Management</option><option>Employee Management</option><option>Common Excel Upload</option><option>Backup &amp; Restore</option><option>Audit History</option><option>Retail Reports</option></select></label>
-  </div>
-  <div id="permChecks" style="display:flex;gap:14px;flex-wrap:wrap;margin:15px 0">
-   <label><input type="checkbox" value="view" checked> View</label><label><input type="checkbox" value="create"> Add / Create</label><label><input type="checkbox" value="edit"> Edit</label><label><input type="checkbox" value="delete"> Delete</label><label><input type="checkbox" value="approve"> Approve / Reject</label><label><input type="checkbox" value="manage_users"> Manage Users</label><label><input type="checkbox" value="export"> Export</label><label><input type="checkbox" value="restore"> Restore</label>
-  </div>
-  <button class="btn primary" onclick="permSave()">Save Employee Permissions</button>
-  <div class="table-wrap" style="margin-top:16px"><table class="data-table"><thead><tr><th>Employee</th><th>Module</th><th>Allowed Actions</th></tr></thead><tbody id="permRows"><tr><td colspan="3">No individual overrides saved.</td></tr></tbody></table></div>
-  <small class="muted">Production must enforce these permissions through Supabase RLS/RPC as well as the UI. Client-side settings alone are not security.</small>
- </div>
+
 </section>
 <section class="view" id="view-audit">
  <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Audit History</h1><div class="subtitle">Live operational workspace</div></div><button class="btn" onclick="toast('Audit records refreshed')">⟳ &nbsp;Refresh</button></div>
