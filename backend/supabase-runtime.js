@@ -91,6 +91,8 @@
       if(page.includes('quotation'))return 'quotation_management';
       if(page==='price-list')return 'price_list_management';
       if(page==='employees')return 'employee_management';
+      // Department-specific quotation-management pages use the same module gate.
+      if(['personal-management','ev-management','commercial-management','llm-management'].includes(page))return 'quotation_management';
       if(page==='audit')return 'audit_history';
       if(page==='reports')return 'retail_reports';
       if(page==='backup-restore')return 'backup_restore';
@@ -107,7 +109,8 @@
         item.style.display=allowed&&(!module||has(module,'view'))?'':'none';
       });
       const group=document.querySelector('[data-group="'+sub.dataset.sub+'"]');
-      if(group)group.style.display=allowed&&[...sub.querySelectorAll('[data-page]')].some(item=>item.style.display!=='none')?'':'none';
+       // Show assigned department headings; each child remains permission-gated.
+       if(group)group.style.display=allowed?'':'none';
     });
     document.querySelectorAll('[data-page]').forEach(item=>{
       if(item.closest('[data-sub]'))return;
