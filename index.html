@@ -692,6 +692,114 @@ td,.data-table td{font-size:13px;line-height:1.45}
  #svStockHoldDialog form,#svVehicleDialog form,#svEmployeeDialog form{width:calc(100vw - 24px)!important;max-width:760px}
 }
 
+/* V25 — Quick Access: premium, responsive workspace shortcuts */
+#view-dashboard .quick-access-card{
+  margin-top:4px;
+  border:1px solid #e5eaf0;
+  border-radius:18px;
+  box-shadow:0 7px 24px rgba(25,39,58,.055);
+  overflow:hidden;
+}
+#view-dashboard .quick-access-card .card-head{
+  padding:20px 22px;
+  align-items:center;
+  background:linear-gradient(110deg,#fff 0%,#fbfcfe 100%);
+}
+#view-dashboard .quick-access-card .card-title{
+  font-size:19px;
+  font-weight:850;
+  letter-spacing:-.25px;
+}
+#view-dashboard .quick-access-card .card-desc{
+  margin-top:6px;
+  font-size:13px;
+  color:#788594;
+}
+#view-dashboard .quick-access-card .pill.red{
+  padding:8px 13px;
+  border-radius:30px;
+  font-size:10px;
+  letter-spacing:.45px;
+}
+#view-dashboard .quick-access-card .card-body{padding:18px 20px 20px}
+#view-dashboard .quick-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+}
+#view-dashboard .quick-grid .quick{
+  min-width:0;
+  min-height:164px;
+  padding:17px 17px 15px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:flex-start;
+  gap:0;
+  border:1px solid #e3e8ee;
+  border-radius:15px;
+  background:linear-gradient(150deg,#fff 0%,#fbfcfe 100%);
+  box-shadow:0 2px 7px rgba(25,39,58,.035);
+  color:#303b47;
+  text-align:left;
+  transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease;
+}
+#view-dashboard .quick-grid .quick:hover{
+  border-color:#e9a3a8;
+  background:#fff;
+  box-shadow:0 8px 20px rgba(190,35,48,.09);
+  transform:translateY(-2px);
+}
+#view-dashboard .quick-grid .quick-icon{
+  width:42px;height:42px;flex:0 0 42px;
+  border-radius:12px;
+  font-size:20px;
+}
+#view-dashboard .quick-grid .quick b{
+  margin:13px 0 5px;
+  font-size:14px;
+  line-height:1.3;
+  font-weight:850;
+  color:#303b47;
+}
+#view-dashboard .quick-grid .quick span:not(.quick-icon){
+  font-size:12px;
+  line-height:1.45;
+  color:#7e8996;
+}
+#view-dashboard .quick-grid .quick em{
+  margin-top:auto;
+  padding-top:13px;
+  font-size:11px;
+  font-style:normal;
+  font-weight:850;
+  color:#bd2633;
+  letter-spacing:.05px;
+}
+@media(max-width:900px){
+  #view-dashboard .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  #view-dashboard .quick-grid .quick{min-height:158px;padding:16px}
+}
+@media(max-width:680px){
+  #view-dashboard .quick-access-card{border-radius:16px}
+  #view-dashboard .quick-access-card .card-head{padding:17px 16px}
+  #view-dashboard .quick-access-card .card-title{font-size:18px}
+  #view-dashboard .quick-access-card .card-desc{font-size:12px}
+  #view-dashboard .quick-access-card .pill.red{padding:7px 10px;font-size:9px}
+  #view-dashboard .quick-access-card .card-body{padding:13px}
+  #view-dashboard .quick-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  #view-dashboard .quick-grid .quick{min-height:158px;padding:14px 13px 13px;border-radius:13px}
+  #view-dashboard .quick-grid .quick-icon{width:40px;height:40px;flex-basis:40px}
+  #view-dashboard .quick-grid .quick b{font-size:13px;margin-top:11px}
+  #view-dashboard .quick-grid .quick span:not(.quick-icon){font-size:11px}
+  #view-dashboard .quick-grid .quick em{font-size:10.5px;padding-top:11px}
+}
+@media(max-width:360px){
+  #view-dashboard .quick-grid{gap:8px}
+  #view-dashboard .quick-grid .quick{padding:12px 10px;min-height:154px}
+  #view-dashboard .quick-grid .quick b{font-size:12px}
+}
+
 </style>
 </head>
 <body>
