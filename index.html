@@ -606,6 +606,22 @@ td{line-height:1.5}
 
 
 
+
+/* Compact filters for Central Stock Hold Management */
+.hold-register-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.hold-register-toolbar h3{margin:0;font-size:15px;font-weight:780;color:#263240}
+.hold-register-filters{display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.hold-filter-control{display:flex;align-items:center;gap:6px;margin:0;color:#697586;font-size:11px;font-weight:750;white-space:nowrap}
+.hold-filter-control select{width:auto;min-width:112px;max-width:145px;min-height:34px;height:34px;padding:5px 27px 5px 9px;border:1px solid #dfe5ec;border-radius:8px;background:#fff;color:#34404d;font-size:11.5px;font-weight:650}
+.hold-filter-control:last-child select{min-width:124px}
+@media(max-width:680px){
+ .hold-register-card{padding:14px!important}
+ .hold-register-toolbar{align-items:flex-start;flex-wrap:wrap}
+ .hold-register-filters{width:100%;justify-content:flex-start;flex-wrap:wrap}
+ .hold-filter-control{flex:0 0 auto}
+ .hold-filter-control select{min-width:105px;max-width:132px}
+}
+
 /* V26 — application-wide readable typography scale */
 body{font-size:14.5px;line-height:1.5}
 .main,.content,.page-content{line-height:1.5}
@@ -923,7 +939,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <div class="stats-grid" style="margin-bottom:16px">
   <div class="stat-card"><span>Pending Requests</span><strong id="holdPendingCount">0</strong></div><div class="stat-card"><span>Approved</span><strong id="holdApprovedCount">0</strong></div><div class="stat-card"><span>Rejected</span><strong id="holdRejectedCount">0</strong></div><div class="stat-card"><span>Currently On Hold</span><strong id="holdOnCount">0</strong></div>
  </div>
- <div class="card" style="padding:20px"><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><h3 style="margin:0 auto 0 0">Hold Request Register</h3><select id="holdStatusFilter" class="field" onchange="holdRender()"><option>All</option><option>Pending</option><option>Approved</option><option>Rejected</option><option>On Hold</option></select><select id="holdDeptFilter" class="field" onchange="holdRender()"><option>All Departments</option><option>Personal</option><option>EV</option><option>Commercial</option><option>LLM</option></select></div>
+ <div class="card hold-register-card" style="padding:20px"><div class="hold-register-toolbar"><h3>Hold Request Register</h3><div class="hold-register-filters"><label class="hold-filter-control"><span>Status</span><select id="holdStatusFilter" aria-label="Filter by status" onchange="holdRender()"><option value="All">All</option><option>Pending</option><option>Approved</option><option>Rejected</option><option>On Hold</option></select></label><label class="hold-filter-control"><span>Department</span><select id="holdDeptFilter" aria-label="Filter by department" onchange="holdRender()"><option value="All Departments">All</option><option value="Personal">Personal</option><option value="EV">EV</option><option value="Commercial">Commercial</option><option value="LLM">LLM</option></select></label></div></div>
  <div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Department</th><th>Vehicle</th><th>Variant / Colour</th><th>VIN / Chassis</th><th>Customer Name</th><th>Customer Mobile</th><th>Executive</th><th>Reason</th><th>Request Status</th><th>Approver / Date</th><th>Action</th></tr></thead><tbody id="holdRows"><tr><td colspan="12">No requests yet.</td></tr></tbody></table></div></div>
 </section>
 
