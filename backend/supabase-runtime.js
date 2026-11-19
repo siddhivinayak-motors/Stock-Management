@@ -99,9 +99,9 @@
     const versions=await call(db().from('price_list_versions').select('*').order('published_at',{ascending:false}));
     const by={Personal:[],EV:[],Commercial:[],LLM:[]};
     for(const v of versions){ if(by[v.department]?.length) continue;
-      by[v.department]=await call(db().from('price_list_items').select('*').eq('version_id',v.id).order('vehicle'));
+      by[v.department]=(await call(db().from('price_list_items').select('*').eq('version_id',v.id).order('vehicle'))).map(x=>({...x,exShowroom:Number(x.ex_showroom||0),rto:Number(x.rto||0)}));
     }
-    window.plData=by;window.plHistory=versions;
+    window.plData=by;window.plHistory=versions.map(v=>({version:v.version_label,dept:v.department,file:v.source_file||'',date:v.published_at,rows:v.row_count}));
     if(typeof window.plRender==='function') window.plRender();
   }
   async function publishPriceList(rowsByDepartment,sourceFile='') {
@@ -292,7 +292,9 @@
     if(!$('stockTable')) return;
     try{
       const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
-      const rows=await loadVehicles(dept);
+      let rows=await loadVehicles(dept);
+      const search=($('stockSearch')?.value||'').trim().toLowerCase();
+      if(search) rows=rows.filter(v=>[v.chassis_number,v.model,v.variant,v.colour,v.sc_name,v.customer_name,v.status,v.stage].some(x=>String(x||'').toLowerCase().includes(search)));
       const body=$('stockTable').querySelector('tbody');
       body.innerHTML=rows.length?rows.map(v=>'<tr><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+ (v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td></tr>').join(''):'<tr><td colspan="11" class="empty">No stock records yet.</td></tr>';
     }catch(e){console.error(e);notify(e.message);}
