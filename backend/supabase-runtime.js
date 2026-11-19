@@ -941,6 +941,9 @@
     installScreenHooks();
     const plHead=document.querySelector('.pl-head-actions');if(plHead)plHead.style.flexDirection='row';
     try { await refreshIdentity(); } catch(e){ console.error(e); }
+    // Re-apply permission-dependent controls only after the authenticated profile is loaded.
+    // The initial call above runs before currentProfile exists and must not hide Super Admin actions.
+    if(currentUser) installScreenHooks();
     if(currentUser) await startApp(); else showLogin();
     db().auth.onAuthStateChange(async(_event,session)=>{
       if(!session){currentUser=null;currentProfile=null;permissions.clear();showLogin();return;}
