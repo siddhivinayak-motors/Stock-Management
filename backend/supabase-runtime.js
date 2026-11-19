@@ -461,9 +461,19 @@
     const input=(name,label,value,type='text')=>'<label style="display:block;font-size:13px;font-weight:650">'+label+'<input '+(type==='tel'?'type="tel" inputmode="numeric" maxlength="10"':'type="text"')+' name="'+name+'" class="field" value="'+esc(value||'')+'" style="width:100%;margin-top:5px"></label>';
     const selected=profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean);
     const departments='<fieldset style="border:1px solid #dce2e9;border-radius:8px;padding:10px"><legend style="font-size:13px;font-weight:650">Department Access</legend>'+['Personal','EV','Commercial','LLM'].map(x=>'<label style="display:inline-flex;gap:5px;align-items:center;margin:5px 10px 5px 0"><input type="checkbox" name="department_access" value="'+x+'" '+(selected.includes(x)?'checked':'')+'>'+x+'</label>').join('')+'</fieldset>';
-    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Employee Details</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+input('full_name','Employee Name',profile.full_name)+input('phone','Mobile Number',profile.phone,'tel')+input('designation','Designation',profile.designation)+departments+'<label style="display:block;font-size:13px;font-weight:650">Account Status<select name="status" class="field" style="width:100%;margin-top:5px"><option value="active" '+(profile.status==='active'?'selected':'')+'>Active</option><option value="inactive" '+(profile.status!=='active'?'selected':'')+'>Inactive</option></select></label><label style="display:block;font-size:13px;font-weight:650">Email (read only)<input class="field" value="'+esc(profile.email||'')+'" readonly style="width:100%;margin-top:5px"></label></div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Save Changes</button></div></form>';
+    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Employee Details</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+input('full_name','Employee Name',profile.full_name)+input('phone','Mobile Number',profile.phone,'tel')+input('designation','Designation',profile.designation)+departments+'<label style="display:block;font-size:13px;font-weight:650">Account Status<select name="status" class="field" style="width:100%;margin-top:5px"><option value="active" '+(profile.status==='active'?'selected':'')+'>Active</option><option value="inactive" '+(profile.status!=='active'?'selected':'')+'>Inactive</option></select></label><label style="display:block;font-size:13px;font-weight:650">Email (read only)<input class="field" value="'+esc(profile.email||'')+'" readonly style="width:100%;margin-top:5px"></label></div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button type="button" id="svEmployeeDelete" class="btn" style="border-color:#efb7bc;color:#b4232c;background:#fff7f7">Delete User</button><div style="display:flex;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Save Changes</button></div></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
+    $('svEmployeeDelete').onclick=async()=>{
+      if(!confirm('Delete '+(profile.full_name||profile.email)+'? This removes the account from Employee Directory and blocks login. Historical stock, quotation and audit records will be preserved.'))return;
+      const button=$('svEmployeeDelete');button.disabled=true;button.textContent='Deleting…';
+      try{
+        const {data:{session}}=await db().auth.getSession();
+        const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'delete_employee',user_id:profile.user_id},headers:{Authorization:'Bearer '+session.access_token}});
+        if(error)throw error;if(data?.error)throw new Error(data.error);
+        wrap.remove();await loadEmployees();notify('Employee deleted. Historical records preserved.');
+      }catch(ex){$('svEmployeeError').textContent=ex.message;button.disabled=false;button.textContent='Delete User';}
+    };
     $('svEmployeeForm').onsubmit=async e=>{
       e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
       try{
@@ -513,6 +523,7 @@
       rows.push(...part);if(part.length<chunk)break;from+=chunk;
     }
     const section=$('view-employees');if(!section)return;
+    rows=rows.filter(p=>!p.deleted_at);
     const cards=section.querySelectorAll('.stat-grid .stat-value');
     if(cards[0])cards[0].textContent=rows.length;
     if(cards[1])cards[1].textContent=rows.filter(p=>p.status==='active').length;
