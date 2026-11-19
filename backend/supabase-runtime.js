@@ -124,7 +124,7 @@
       const dept=String(card.dataset.department||'').toLowerCase();
       card.style.display=allowedDepartments.has(dept)?'':'none';
     });
-    const quickModules={quotation:'quotation_management','price-list':'price_list_management',employees:'employee_management',audit:'audit_history',reports:'retail_reports',upload:'common_excel_upload',stock:'stock_register','stock-hold':'stock_hold_management','backup-restore':'backup_restore'};
+    const quickModules={quotation:'quotation_management','price-list':'price_list_management',employees:'employee_management',audit:'audit_history',reports:'retail_reports',upload:'common_excel_upload',stock:'stock_register','stock-hold-central':'stock_hold_management','backup-restore':'backup_restore'};
     const shortcutAccess=new Set(Array.isArray(currentProfile?.dashboard_shortcuts)?currentProfile.dashboard_shortcuts:[]);
     document.querySelectorAll('.quick[data-go]').forEach(card=>{
       const module=quickModules[card.dataset.go];
