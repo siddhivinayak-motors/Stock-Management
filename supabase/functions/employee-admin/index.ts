@@ -109,6 +109,12 @@ Deno.serve(async (req: Request) => {
     if (typeof patch.full_name === "string" && !patch.full_name) return json({ error: "Full name cannot be empty" }, 400);
     if (typeof patch.phone === "string" && patch.phone && !/^\\d{10}$/.test(patch.phone)) return json({ error: "Mobile number must be exactly 10 digits" }, 400);
     if (typeof patch.department === "string" && patch.department && !["Personal","EV","Commercial","LLM"].includes(patch.department)) return json({ error: "Invalid department" }, 400);
+    if (body.department_access !== undefined) {
+      const access = Array.isArray(body.department_access) ? body.department_access.map(String) : [];
+      const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
+      if (access.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Invalid department access" }, 400);
+      patch.department_access = [...new Set(access)];
+    }
     if (body.status !== undefined) {
       const status = String(body.status);
       if (!["active","inactive"].includes(status)) return json({ error: "Status must be active or inactive" }, 400);
