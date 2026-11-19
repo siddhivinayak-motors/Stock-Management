@@ -98,7 +98,6 @@ Deno.serve(async (req: Request) => {
   };
   const callerRole=profile.is_super_admin?"Super Admin":String(profile.designation||"");
   const callerLevel=ROLE_LEVEL[callerRole]??0;
-  const isRoot=profile.is_super_admin===true;
   const isAdmin=callerRole==="Admin";
   const {data:callerPermRows,error:callerPermError}=await callerClient
     .from("employee_permissions").select("module,actions").eq("user_id",callerId);
