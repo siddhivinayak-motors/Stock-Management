@@ -543,7 +543,7 @@
     },true);
   }
   async function createEmployee(fields){
-    if(!has('employee_management','manage_users')) throw new Error('You do not have Manage Users permission.');
+    if(!has('employee_management','create')&&!has('employee_management','manage_users')) throw new Error('You do not have Create Employee permission.');
     const {data:{session}}=await db().auth.getSession();
     const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'create_employee',...fields},headers:{Authorization:'Bearer '+session.access_token}});
     if(error){
@@ -654,6 +654,7 @@
     ]}
   ];
   async function openEmployeePermissions(profile){
+    if(!has('employee_management','manage_users')){notify('Manage Users permission required.');return;}
     if(!currentUser||profile.user_id===currentUser.id){notify('You cannot change your own permissions. Ask your superior.');return;}
     if(profile.is_super_admin){notify('Super Admin permissions cannot be changed.');return;}
     const roleLevel={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Driver':10};
@@ -700,8 +701,9 @@
     if(table) table.innerHTML=rows.length?rows.map(p=>{
       const designation=p.is_super_admin?'Super Admin':(p.designation||'—');
       const access=p.is_super_admin?'Personal · EV · Commercial · LLM':((p.department_access?.length?p.department_access:[p.department].filter(Boolean)).join(' · ')||'—');
-      const canManageThis=!p.is_super_admin&&p.user_id!==currentUser.id;
-      return '<tr><td><button type="button" class="btn small" data-edit="'+esc(p.user_id)+'" style="padding:2px 0;background:transparent;border:0;color:#26384d;text-decoration:underline;font-weight:750">'+esc(p.full_name||'—')+'</button></td><td>'+esc(p.phone||'—')+'<br><span class="muted">'+esc(p.email||'')+'</span></td><td>'+esc(designation)+'</td><td>'+esc(access)+'</td><td><span class="pill '+(p.status==='active'?'green':'red')+'">'+esc(p.status||'inactive')+'</span></td><td>'+(canManageThis?'<button type="button" class="btn small" data-permissions="'+esc(p.user_id)+'">Permissions</button>':'—')+'</td></tr>';
+      const canEditThis=has('employee_management','edit')&&!p.is_super_admin&&p.user_id!==currentUser.id;
+      const canManageThis=has('employee_management','manage_users')&&!p.is_super_admin&&p.user_id!==currentUser.id;
+      return '<tr><td>'+(canEditThis?'<button type="button" class="btn small" data-edit="'+esc(p.user_id)+'" style="padding:2px 0;background:transparent;border:0;color:#26384d;text-decoration:underline;font-weight:750">'+esc(p.full_name||'—')+'</button>':esc(p.full_name||'—'))+'</td><td>'+esc(p.phone||'—')+'<br><span class="muted">'+esc(p.email||'')+'</span></td><td>'+esc(designation)+'</td><td>'+esc(access)+'</td><td><span class="pill '+(p.status==='active'?'green':'red')+'">'+esc(p.status||'inactive')+'</span></td><td>'+(canManageThis?'<button type="button" class="btn small" data-permissions="'+esc(p.user_id)+'">Permissions</button>':'—')+'</td></tr>';
     }).join(''):'<tr><td colspan="6" class="empty">No employees yet.</td></tr>';
     table?.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>{
       const p=rows.find(x=>x.user_id===btn.dataset.edit);if(p)editEmployeeDialog(p).catch(e=>notify(e.message));
@@ -802,7 +804,11 @@
   function installScreenHooks(){
     mapStockForm();
     const newUser=$('svNewEmployee')||$('view-employees')?.querySelector('.stat-grid .btn.primary');
-    if(newUser)newUser.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();employeeDialog();},true);
+    if(newUser){
+      const canCreate=has('employee_management','create')||has('employee_management','manage_users');
+      newUser.style.display=canCreate?'':'none';
+      if(canCreate)newUser.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();employeeDialog();},true);
+    }
     $('svChangePasswordForm')?.addEventListener('submit',async e=>{
       e.preventDefault();
       const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
