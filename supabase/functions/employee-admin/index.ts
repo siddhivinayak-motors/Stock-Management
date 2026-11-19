@@ -75,15 +75,23 @@ Deno.serve(async (req: Request) => {
     .from("profiles").select("is_super_admin,status,designation").eq("user_id", callerId).maybeSingle();
   if (profileError || !profile || profile.status !== "active") return json({ error: "Active employee profile required" }, 403);
 
-  const { data: canManage, error: permError } = await callerClient
-    .rpc("has_permission", { p_module: "employee_management", p_action: "manage_users" });
-  const { data: canViewEmployees, error: viewError } = await callerClient
-    .rpc("has_permission", { p_module: "employee_management", p_action: "view" });
+  const [canManageResult,canCreateResult,canEditResult,canDeleteResult] = await Promise.all([
+    callerClient.rpc("has_permission", { p_module: "employee_management", p_action: "manage_users" }),
+    callerClient.rpc("has_permission", { p_module: "employee_management", p_action: "create" }),
+    callerClient.rpc("has_permission", { p_module: "employee_management", p_action: "edit" }),
+    callerClient.rpc("has_permission", { p_module: "employee_management", p_action: "delete" }),
+  ]);
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON body" }, 400); }
   const action = String(body.action || "");
-  const allowed = profile.is_super_admin === true || canManage === true || (action === "save_employee_permissions" && canViewEmployees === true);
-  if (permError || viewError || !allowed) return json({ error: "You are not allowed to manage employees" }, 403);
+  const isRoot = profile.is_super_admin === true;
+  const allowed = isRoot
+    || (action === "create_employee" && (canCreateResult.data === true || canManageResult.data === true))
+    || (["update_employee","deactivate_employee"].includes(action) && (canEditResult.data === true || canManageResult.data === true))
+    || (action === "delete_employee" && (canDeleteResult.data === true || canManageResult.data === true))
+    || (action === "save_employee_permissions" && canManageResult.data === true);
+  const permissionError = canManageResult.error || canCreateResult.error || canEditResult.error || canDeleteResult.error;
+  if (permissionError || !allowed) return json({ error: "You do not have the required permission for this employee action." }, 403);
   const ROLE_LEVEL: Record<string,number> = {
     "Super Admin":100,"Admin":90,"General Manager":80,"Manager":70,
     "Accountant":60,"HR":50,"DMS":40,"Executive":30,"Reception":20,"Driver":10
@@ -110,6 +118,8 @@ Deno.serve(async (req: Request) => {
     if (password.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
     if (!roles.includes(role)) return json({ error: "Select a valid designation / role" }, 400);
     if (role === "Super Admin") return json({ error: "The Super Admin account is unique and cannot be created from New User." }, 403);
+    const targetLevel = ROLE_LEVEL[role] ?? 0;
+    if (!isRoot && targetLevel >= callerLevel) return json({ error: "You can create only employees below your own designation." }, 403);
     if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
     const finalDepartments = departments;
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
