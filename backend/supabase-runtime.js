@@ -954,11 +954,11 @@
   };
   const plDepartment = file => {
     const n=String(file.name||'').toLowerCase();
-    if(/\\bev\\b|electric/.test(n))return 'EV';
-    if(/commercial|prosper/.test(n))return 'Commercial';
-    if(/\\bllm\\b|light.?motor/.test(n))return 'LLM';
-    if(/personal|suv|thar|xuv|scorpio|bolero/.test(n))return 'Personal';
-    const answer=prompt('Choose department for '+file.name+':\\n1. Personal\\n2. EV\\n3. Commercial\\n4. LLM','1');
+    if(n.includes('electric')||n.startsWith('ev')||n.includes('_ev')||n.includes(' ev'))return 'EV';
+    if(n.includes('commercial')||n.includes('prosper'))return 'Commercial';
+    if(n.includes('llm')||n.includes('lightmotor')||n.includes('light_motor'))return 'LLM';
+    if(n.includes('personal')||n.includes('suv')||n.includes('thar')||n.includes('xuv')||n.includes('scorpio')||n.includes('bolero'))return 'Personal';
+    const answer=prompt('Choose department for '+file.name+':\n1. Personal\n2. EV\n3. Commercial\n4. LLM','1');
     return ({'1':'Personal','2':'EV','3':'Commercial','4':'LLM'})[String(answer||'').trim()]||'';
   };
   window.plPreview = async () => {
