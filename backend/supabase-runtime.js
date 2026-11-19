@@ -273,7 +273,9 @@
     try{
       const q=quoteRecords[i];if(!q?.id) return;
       if(!has('quotation_management','approve')) throw new Error('You do not have approval permission.');
-      await call(db().from('quotations').update({status:'Approved',approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id));
+      const {data,error}=await db().from('quotations').update({status:'Approved',approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id).eq('status','Pending').select('id');
+      if(error)throw error;
+      if(!data?.length)throw new Error('Quotation is not pending or was already approved.');
       await audit('quotation_management','approve','Approved quotation','quotation',q.id);
       await reloadQuoteList();notify('Quotation approved.');
     }catch(e){notify(e.message);}
