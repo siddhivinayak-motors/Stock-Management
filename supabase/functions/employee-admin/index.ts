@@ -10,6 +10,33 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
   status, headers: { ...cors, "Content-Type": "application/json" },
 });
 
+const ROLE_MODULES: Record<string,string[]> = {
+  "Admin": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"],
+  "General Manager": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"],
+  "Manager": ["dashboard","stock_register","stock_hold_management","quotation_management"],
+  "Accountant": ["price_list_management","retail_reports","common_excel_upload"],
+  "HR": ["price_list_management","employee_management","retail_reports","common_excel_upload"],
+  "DMS": ["price_list_management","retail_reports","common_excel_upload"],
+  "Executive": ["dashboard","stock_register","stock_hold_management","quotation_management","price_list_management","retail_reports"],
+  "Reception": ["dashboard","stock_register","stock_hold_management","quotation_management","price_list_management","retail_reports"],
+  "Driver": ["stock_register"]
+};
+function rolePermissionRows(role: string, userId: string, grantedBy: string, selectedModules?: string[]) {
+  const all = ROLE_MODULES[role] || [];
+  const allowed = selectedModules ? all.filter(m => selectedModules.includes(m)) : all;
+  const full = ["view","create","edit","delete","approve","manage_users","export","restore"];
+  const view = ["view"], manage = ["view","create","edit","delete","approve"];
+  const map: Record<string,string[]> = {};
+  if (role === "Admin" || role === "General Manager") for (const m of all) map[m] = [...full];
+  else if (role === "Manager") Object.assign(map,{dashboard:view,stock_register:manage,stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve"]});
+  else if (role === "Accountant") Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"]});
+  else if (role === "HR") Object.assign(map,{price_list_management:view,employee_management:["view","create","edit","manage_users"],retail_reports:view,common_excel_upload:["view","create"]});
+  else if (role === "DMS") Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"]});
+  else if (role === "Executive" || role === "Reception") Object.assign(map,{dashboard:view,stock_register:manage,stock_hold_management:["view","create"],quotation_management:["view","create","edit"],price_list_management:view,retail_reports:view});
+  else if (role === "Driver") Object.assign(map,{stock_register:view});
+  return allowed.filter(m => map[m]).map(module => ({user_id:userId,module,actions:map[module],granted_by:grantedBy}));
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -77,27 +104,10 @@ Deno.serve(async (req: Request) => {
     }, { onConflict: "user_id" });
     if (insertError) { await adminClient.auth.admin.deleteUser(userId); return json({ error: insertError.message }, 400); }
 
-    const allModules = ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"];
-    const fullActions = ["view","create","edit","delete","approve","manage_users","export","restore"];
-    const defaults: Record<string,string[]> = {};
-    const grant = (module: string, actions: string[]) => { defaults[module] = actions; };
-    const view = ["view"], create = ["view","create"], edit = ["view","create","edit"], manage = ["view","create","edit","delete","approve"];
-    if (role === "Admin" || role === "General Manager") {
-      for (const module of allModules) grant(module, fullActions);
-    } else if (role === "Manager") {
-      grant("dashboard",view); grant("stock_register",manage); grant("stock_hold_management",["view","create","approve"]); grant("quotation_management",["view","create","edit","approve"]);
-    } else if (role === "Accountant") {
-      grant("price_list_management",view); grant("retail_reports",view); grant("common_excel_upload",create);
-    } else if (role === "HR") {
-      grant("price_list_management",view); grant("employee_management",["view","create","edit","manage_users"]); grant("retail_reports",view); grant("common_excel_upload",create);
-    } else if (role === "DMS") {
-      grant("price_list_management",view); grant("retail_reports",view); grant("common_excel_upload",create);
-    } else if (role === "Executive" || role === "Reception") {
-      grant("dashboard",view); grant("stock_register",manage); grant("stock_hold_management",create); grant("quotation_management",edit); grant("price_list_management",view); grant("retail_reports",view);
-    } else if (role === "Driver") {
-      grant("stock_register",view);
-    }
-    const permissionRows = Object.entries(defaults).map(([module,actions])=>({user_id:userId,module,actions,granted_by:callerId}));
+    const requestedModules = Array.isArray(body.module_access) ? body.module_access.map(String) : undefined;
+    const allowedModules = ROLE_MODULES[role] || [];
+    if (requestedModules && requestedModules.some(m => !allowedModules.includes(m))) { await adminClient.auth.admin.deleteUser(userId); await adminClient.from("profiles").delete().eq("user_id",userId); return json({error:"Selected functions are not allowed for this role"},400); }
+    const permissionRows = rolePermissionRows(role,userId,callerId,requestedModules);
     if (permissionRows.length) {
       const { error: permissionError } = await adminClient.from("employee_permissions").upsert(permissionRows,{onConflict:"user_id,module"});
       if (permissionError) { await adminClient.auth.admin.deleteUser(userId); await adminClient.from("profiles").delete().eq("user_id",userId); return json({error:"User created but default permissions failed: "+permissionError.message},500); }
@@ -114,7 +124,7 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,designation").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "A Super Admin profile cannot be edited here" }, 403);
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -139,6 +149,19 @@ Deno.serve(async (req: Request) => {
     }
     const { error: updateError } = await adminClient.from("profiles").update(patch).eq("user_id", userId);
     if (updateError) return json({ error: updateError.message }, 400);
+    if (body.module_access !== undefined || patch.designation !== undefined) {
+      const role = String(patch.designation || target.designation || "");
+      const allowedModules = ROLE_MODULES[role] || [];
+      const selected = Array.isArray(body.module_access) ? [...new Set(body.module_access.map(String))] : allowedModules;
+      if (selected.some(m => !allowedModules.includes(m))) return json({error:"Selected functions are not allowed for this role"},400);
+      const { error: clearError } = await adminClient.from("employee_permissions").delete().eq("user_id",userId);
+      if (clearError) return json({error:"Profile updated but old permissions could not be cleared: "+clearError.message},500);
+      const permissionRows = rolePermissionRows(role,userId,callerId,selected);
+      if (permissionRows.length) {
+        const { error: permissionError } = await adminClient.from("employee_permissions").upsert(permissionRows,{onConflict:"user_id,module"});
+        if (permissionError) return json({error:"Profile updated but permissions could not be saved: "+permissionError.message},500);
+      }
+    }
     if (patch.status === "inactive") {
       const { error: banError } = await adminClient.auth.admin.updateUserById(userId, { ban_duration: "876000h" });
       if (banError) return json({ error: "Profile status updated but login deactivation failed: " + banError.message }, 500);
