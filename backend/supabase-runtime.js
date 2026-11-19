@@ -576,6 +576,8 @@
       if(search) rows=rows.filter(v=>[v.chassis_number,v.model,v.variant,v.colour,v.sc_name,v.customer_name,v.status,v.stage].some(x=>String(x||'').toLowerCase().includes(search)));
       if(statusFilter!=='All') rows=rows.filter(v=>String(v.status||'').trim().toLowerCase()===statusFilter.toLowerCase());
       if(stageFilter!=='All') rows=rows.filter(v=>String(v.stage||'').trim().toUpperCase()===stageFilter.toUpperCase());
+      const ageSort=$('stockAgeSort')?.value||'oldest';
+      rows.sort((a,b)=>{const ta=a.oem_invoice_date?new Date(a.oem_invoice_date).getTime():NaN,tb=b.oem_invoice_date?new Date(b.oem_invoice_date).getTime():NaN;const va=Number.isFinite(ta),vb=Number.isFinite(tb);if(!va&&!vb)return 0;if(!va)return 1;if(!vb)return -1;return ageSort==='newest'?tb-ta:ta-tb;});
       const body=$('stockTable').querySelector('tbody');
       const canHold=!canManageStock()&&roleLevel()<=30&&has('stock_hold_management','create');
       body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>':(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small" style="background:#dc2626;color:#fff;border-color:#dc2626" data-stock-hold="'+esc(v.id)+'">Hold</button>':''))+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
@@ -979,6 +981,7 @@
     const permittedDepartments=allowedDepartmentList();
     const stockFilter=$('stockDepartmentFilter');
     if(stockFilter){const current=stockFilter.value;stockFilter.innerHTML='<option>All Accessible Departments</option>'+permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');if(permittedDepartments.includes(current))stockFilter.value=current;stockFilter.onchange=()=>renderStock();}
+    $('stockAgeSort')?.addEventListener('change',()=>renderStock());
     const newVehicleDept=$('stockDepartmentForNewVehicle');
     if(newVehicleDept){newVehicleDept.innerHTML=permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');newVehicleDept.value=permittedDepartments[0]||'';}
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
