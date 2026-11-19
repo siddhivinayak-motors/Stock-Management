@@ -307,7 +307,15 @@
   async function audit(module,action,label,type=null,id=null,details={}) {
     if(!currentUser || currentProfile?.is_super_admin) return false;
     try {
-      const {error}=await db().rpc('log_activity',{p_module:module,p_action:action,p_label:label,p_record_type:type,p_record_id:id==null?null:String(id),p_details:details});
+      const {error}=await db().from('audit_logs').insert({
+        actor_id:currentUser.id,
+        actor_email:currentProfile?.email||currentUser.email||null,
+        actor_designation:currentProfile?.designation||null,
+        module,action,action_label:label,
+        record_type:type,
+        record_id:id==null?null:String(id),
+        details:details||{}
+      });
       if(error) throw error;
       return true;
     } catch(e){console.error('Audit write failed:',{module,action,label,error:e});return false;}
