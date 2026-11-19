@@ -62,7 +62,13 @@ Deno.serve(async (req: Request) => {
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email, password, email_confirm: true, user_metadata: { full_name: fullName },
     });
-    if (createError || !created.user) return json({ error: createError?.message || "User creation failed" }, 400);
+    if (createError || !created.user) {
+      const code = String((createError as { code?: string })?.code || "");
+      const message = code === "email_exists" || /already.*registered|already.*exists/i.test(createError?.message || "")
+        ? "આ Emailથી કર્મચારીનું Login પહેલેથી બનાવેલું છે. Employee Directoryમાં તે નામ પર ક્લિક કરીને Edit કરો."
+        : (createError?.message || "User creation failed");
+      return json({ error: message, code: code || "create_failed" }, code === "email_exists" ? 409 : 400);
+    }
     const userId = created.user.id;
     const { error: insertError } = await adminClient.from("profiles").upsert({
       user_id: userId, full_name: fullName, email, employee_code: null, phone: null,
