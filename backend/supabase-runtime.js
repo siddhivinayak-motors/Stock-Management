@@ -556,7 +556,7 @@
   const EMPLOYEE_MENU_GROUPS = [
     {title:'Department Functions',items:[
       ['stock_register','Stock Register'],['stock_hold_management','Stock Hold Management'],
-      ['quotation_management','Quotation'],['quotation_management','Quotation Management']
+      ['quotation_management','Quotation + Quotation Management']
     ]},
     {title:'Workspace',items:[
       ['price_list_management','Price List'],['employee_management','Employee Management'],
