@@ -183,16 +183,53 @@
     window.plData=by;window.plHistory=versions.map(v=>({version:v.version_label,dept:v.department,file:v.source_file||'',date:v.published_at,rows:v.row_count}));
     if(typeof window.plRender==='function') window.plRender();
   }
-  async function publishPriceList(rowsByDepartment,sourceFile='') {
-    if(!has('price_list_management','create')) throw new Error('No permission to publish price lists.');
-    for(const [department,rows] of Object.entries(rowsByDepartment)){
-      if(!['Personal','EV','Commercial','LLM'].includes(department)||!rows.length) continue;
-      const version=await call(db().from('price_list_versions').insert({version_label:'V'+Date.now(),department,source_file:sourceFile,row_count:rows.length,published_by:currentUser.id}).select().single());
-      const payload=rows.map(r=>({version_id:version.id,department,vehicle:r.vehicle,variant:r.variant||'',colour:r.colour||'',ex_showroom:Number(r.exShowroom??r.ex_showroom??0),rto:Number(r.rto||0),other_data:r}));
-      await call(db().from('price_list_items').insert(payload));
+  async function publishPriceList(rowsByDepartment,sourceFile='',fileObjects=[]) {
+    if(!has('price_list_management','create')) throw new Error('No permission to upload price lists.');
+    const storagePaths=[];
+    for(const file of fileObjects){
+      const dept=file.department;
+      const safeName=String(file.name||'price-list.xlsx').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(-120);
+      const path=dept+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'-'+safeName;
+      const {error}=await db().storage.from('price-list-files').upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
+      if(error)throw error;
+      storagePaths.push(path);
     }
-    await loadPriceLists();await audit('price_list_management','create','Published price list','price_list_version',null);
+    const allFileRefs=storagePaths.length?storagePaths.join(' | '):sourceFile;
+    for(const [department,rows] of Object.entries(rowsByDepartment)){
+      if(!['Personal','EV','Commercial','LLM'].includes(department)||!rows.length)continue;
+      const deptFiles=fileObjects.filter(f=>f.department===department).map(f=>f.name);
+      const version=await call(db().from('price_list_versions').insert({
+        version_label:'V'+new Date().toISOString().replace(/[-:.TZ]/g,'').slice(0,14),
+        department,source_file:deptFiles.join(', ')||sourceFile,row_count:rows.length,published_by:currentUser.id
+      }).select().single());
+      const batch=await call(db().from('price_list_import_batches').insert({
+        department,version_label:version.version_label,source_file:(deptFiles.join(', ')||sourceFile)+' | '+allFileRefs,
+        status:'published',total_rows:rows.length,valid_rows:rows.length,duplicate_rows:0,error_rows:0,
+        uploaded_by:currentUser.id,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString(),
+        published_version_id:version.id,review_note:'Published from Price List upload screen.'
+      }).select().single());
+      for(let i=0;i<rows.length;i+=500){
+        const chunk=rows.slice(i,i+500);
+        const items=chunk.map((r,j)=>({
+          batch_id:batch.id,row_number:i+j+1,vehicle:r.vehicle,variant:r.variant||'',colour:r.colour||'',
+          ex_showroom:Number(r.exShowroom||0),rto:Number(r.rto||0),
+          source_payload:{...r,department}
+        }));
+        await call(db().from('price_list_import_items').insert(items));
+      }
+      for(let i=0;i<rows.length;i+=500){
+        const payload=rows.slice(i,i+500).map(r=>({
+          version_id:version.id,department,vehicle:r.vehicle,variant:r.variant||'',colour:r.colour||'',
+          ex_showroom:Number(r.exShowroom||0),rto:Number(r.rto||0),
+          other_data:{...r,department,source_files:deptFiles}
+        }));
+        await call(db().from('price_list_items').insert(payload));
+      }
+    }
+    await loadPriceLists();
+    await audit('price_list_management','create','Uploaded and published price list','price_list_version',null,{source_file:sourceFile,storage_paths:storagePaths,departments:Object.keys(rowsByDepartment)});
   }
+
   async function loadEmployees() {
     if(!has('employee_management','view')&&!currentProfile?.is_super_admin) return;
     let rows=[],from=0,chunk=1000;
@@ -885,6 +922,8 @@
       try { localStorage.removeItem(quoteStoreKey); localStorage.removeItem(DEPT_QUOTE_KEY); } catch(_e) {}
       // Don't migrate browser records automatically; only explicit new Supabase records are used.
     installScreenHooks();
+    $('plFiles')?.addEventListener('change',()=>window.plPreview());
+    const plHead=document.querySelector('.pl-head-actions');if(plHead)plHead.style.flexDirection='row';
     try { await refreshIdentity(); } catch(e){ console.error(e); }
     if(currentUser) await startApp(); else showLogin();
     db().auth.onAuthStateChange(async(_event,session)=>{
@@ -900,4 +939,130 @@
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
   else init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();});
+  // Live Price List workspace: Excel parsing, secure Storage archive, Supabase publishing and filters.
+  const plNorm = v => String(v??'').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const plAmount = v => {
+    if(typeof v==='number')return Number.isFinite(v)?v:0;
+    const n=Number(String(v??'').replace(/[,₹$\\s]/g,'').replace(/[^0-9.-]/g,''));
+    return Number.isFinite(n)?n:0;
+  };
+  const plFind = (row,aliases) => {
+    const keys=Object.keys(row||{}),wanted=aliases.map(plNorm);
+    for(const key of keys)if(wanted.includes(plNorm(key)))return row[key];
+    for(const key of keys){const k=plNorm(key);if(wanted.some(a=>a.length>4&&(k.includes(a)||a.includes(k))))return row[key];}
+    return '';
+  };
+  const plDepartment = file => {
+    const n=String(file.name||'').toLowerCase();
+    if(/\\bev\\b|electric/.test(n))return 'EV';
+    if(/commercial|prosper/.test(n))return 'Commercial';
+    if(/\\bllm\\b|light.?motor/.test(n))return 'LLM';
+    if(/personal|suv|thar|xuv|scorpio|bolero/.test(n))return 'Personal';
+    const answer=prompt('Choose department for '+file.name+':\\n1. Personal\\n2. EV\\n3. Commercial\\n4. LLM','1');
+    return ({'1':'Personal','2':'EV','3':'Commercial','4':'LLM'})[String(answer||'').trim()]||'';
+  };
+  window.plPreview = async () => {
+    try{
+      if(!has('price_list_management','create'))throw new Error('Price List upload permission required.');
+      const files=[...($('plFiles')?.files||[])];
+      if(!files.length)throw new Error('Select one or more Excel price list files.');
+      const all=[],byDept={},fileObjects=[];
+      for(const file of files){
+        const department=plDepartment(file);
+        if(!department)throw new Error('Upload cancelled. Select a valid department for every file.');
+        file.department=department;
+        const buffer=await file.arrayBuffer(),workbook=XLSX.read(buffer,{type:'array',cellDates:true});
+        let sheetRows=0;
+        for(const sheetName of workbook.SheetNames){
+          const sheet=workbook.Sheets[sheetName];
+          const rawRows=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true});
+          const parsed=rawRows.map((raw,index)=>{
+            const vehicle=String(plFind(raw,['vehicle','vehicle model','model','model name','product'])||'').trim();
+            const variant=String(plFind(raw,['variant','variant description','variant desc','grade','trim'])||'').trim();
+            const colour=String(plFind(raw,['colour','color','exterior colour','exterior color'])||'').trim();
+            const exShowroom=plAmount(plFind(raw,['ex showroom','ex showroom price','ex showroom amount','exshowroom','basic price','basic amount']));
+            const tcs=plAmount(plFind(raw,['tcs','tax collected at source']));
+            const insurance=plAmount(plFind(raw,['insurance','insurance amount','motor insurance']));
+            const rto=plAmount(plFind(raw,['road tax rto','road tax','rto','registration','registration charges']));
+            const onRoadTotal=plAmount(plFind(raw,['on road total','on road price','onroad total','onroad price','total on road','grand total']));
+            const breakup={};
+            for(const [key,value] of Object.entries(raw||{})){
+              if(String(value??'').trim()!=='')breakup[String(key).trim()]=value instanceof Date?value.toISOString():value;
+            }
+            return {vehicle,variant,colour,exShowroom,tcs,insurance,rto,onRoadTotal,sheet:sheetName,rowNumber:index+2,source:file.name,breakup,raw:breakup};
+          }).filter(r=>r.vehicle||r.variant);
+          if(!parsed.length)continue;
+          sheetRows+=parsed.length;
+          byDept[department]=(byDept[department]||[]).concat(parsed);
+          all.push(...parsed);
+        }
+        if(!sheetRows)throw new Error('No vehicle/variant rows detected in '+file.name+'. Check the Excel header row.');
+        fileObjects.push(file);
+      }
+      if(!all.length)throw new Error('No price list rows found in the selected workbooks.');
+      const seen=new Set(),duplicates=[];
+      for(const r of all){const key=[r.department,r.vehicle,r.variant,r.colour].join('|').toLowerCase();if(seen.has(key))duplicates.push(key);seen.add(key);}
+      window.plPending={byDept,rows:all,files:files.map(f=>f.name),fileObjects,duplicates};
+      const preview=$('plUploadPreview');if(preview)preview.style.display='block';
+      if($('plPreviewSummary'))$('plPreviewSummary').textContent=all.length+' rows detected from '+files.length+' workbook(s). Review before publishing.';
+      if($('plPreviewWarnings'))$('plPreviewWarnings').textContent=duplicates.length+' duplicate vehicle / variant / colour rows detected. All source columns are retained in the price breakdown.';
+      const body=$('plPreviewRows');
+      if(body)body.innerHTML=all.slice(0,500).map(r=>'<tr><td>'+esc(r.source)+' · '+esc(r.sheet)+'</td><td>'+esc(r.vehicle)+'</td><td>'+esc(r.variant)+'</td><td>'+esc(r.department)+'</td><td>'+r.exShowroom.toLocaleString('en-IN')+'</td><td>'+r.onRoadTotal.toLocaleString('en-IN')+'</td></tr>').join('')||'<tr><td colspan="6" class="empty">No rows detected.</td></tr>';
+      notify('Preview ready: '+all.length+' price rows.');
+    }catch(e){console.error(e);notify(e.message||'Could not read Excel price list.');}
+  };
+  window.plPublish = async () => {
+    try{
+      const pending=window.plPending;if(!pending)throw new Error('Select Excel files and review the upload preview first.');
+      if(pending.duplicates.length&&!confirm(pending.duplicates.length+' duplicate rows found. Publish all rows anyway?'))return;
+      if(!confirm('Publish '+pending.rows.length+' price rows to Supabase and archive '+pending.fileObjects.length+' original Excel file(s)?'))return;
+      const grouped=pending.byDept;
+      await publishPriceList(grouped,pending.files.join(', '),pending.fileObjects);
+      window.plPending=null;
+      if($('plUploadPreview'))$('plUploadPreview').style.display='none';
+      if($('plFiles'))$('plFiles').value='';
+      notify('Price lists uploaded and published to Supabase.');
+    }catch(e){console.error(e);notify(e.message||'Price list upload failed.');}
+  };
+  window.plCancelPreview = () => {window.plPending=null;if($('plUploadPreview'))$('plUploadPreview').style.display='none';if($('plFiles'))$('plFiles').value='';};
+  window.plRefresh = async () => {try{if($('plRows'))$('plRows').innerHTML='<tr><td colspan="9" class="empty">Refreshing price lists…</td></tr>';await loadPriceLists();notify('Price list refreshed.');}catch(e){notify(e.message);}};
+  window.plStockFilterChanged = kind => {
+    const rows=Object.values(window.plData||{}).flat();
+    const vehicle=$('plStockVehicle')?.value||'';
+    if(kind==='vehicle'){
+      const variants=[...new Set(rows.filter(r=>!vehicle||r.vehicle===vehicle).map(r=>r.variant).filter(Boolean))].sort();
+      if($('plStockVariant'))$('plStockVariant').innerHTML='<option value="">All variants</option>'+variants.map(v=>'<option>'+esc(v)+'</option>').join('');
+      if($('plStockVariant'))$('plStockVariant').disabled=!variants.length;
+      if($('plStockColour')){$('plStockColour').innerHTML='<option value="">All colours</option>';$('plStockColour').disabled=true;}
+    }else if(kind==='variant'){
+      const variant=$('plStockVariant')?.value||'';
+      const colours=[...new Set(rows.filter(r=>(!vehicle||r.vehicle===vehicle)&&(!variant||r.variant===variant)).map(r=>r.colour).filter(Boolean))].sort();
+      if($('plStockColour'))$('plStockColour').innerHTML='<option value="">All colours</option>'+colours.map(c=>'<option>'+esc(c)+'</option>').join('');
+      if($('plStockColour'))$('plStockColour').disabled=!colours.length;
+    }
+    window.plRender();
+  };
+  window.plResetFilters = () => {['plStockVehicle','plStockVariant','plStockColour','plSearch'].forEach(id=>{if($(id))$(id).value='';});window.plRender();};
+  window.plRender = () => {
+    const rows=Object.entries(window.plData||{}).flatMap(([department,items])=>(items||[]).map(r=>({...r,department})));
+    const vehicles=[...new Set(rows.map(r=>r.vehicle).filter(Boolean))].sort();
+    const vehicle=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',colour=$('plStockColour')?.value||'';
+    const search=($('plSearch')?.value||'').trim().toLowerCase();
+    const v=$('plStockVehicle');
+    if(v){const selected=v.value;v.innerHTML='<option value="">All vehicles</option>'+vehicles.map(x=>'<option>'+esc(x)+'</option>').join('');v.value=vehicles.includes(selected)?selected:'';}
+    const filtered=rows.filter(r=>(!vehicle||r.vehicle===vehicle)&&(!variant||r.variant===variant)&&(!colour||r.colour===colour)&&(!search||[r.vehicle,r.variant,r.colour,r.department].join(' ').toLowerCase().includes(search)));
+    const money=n=>'₹'+plAmount(n).toLocaleString('en-IN',{maximumFractionDigits:2});
+    const body=$('plRows');
+    if(body)body.innerHTML=filtered.length?filtered.map(r=>{
+      const other=r.other_data||{},tcs=plAmount(r.tcs??other.tcs),insurance=plAmount(r.insurance??other.insurance),rto=plAmount(r.rto??r.road_tax??0),ex=plAmount(r.exShowroom??r.ex_showroom);
+      const total=plAmount(r.onRoadTotal??other.onRoadTotal??other.on_road_total)||ex+tcs+insurance+rto;
+      const parts=Object.entries(r.breakup||other.breakup||other.raw||{}).filter(([k,val])=>String(val??'').trim()!==''&&!['vehicle','model','variant','colour','color'].includes(plNorm(k)));
+      const detail=[['Ex-showroom',ex],['TCS',tcs],['Insurance',insurance],['Road Tax / RTO',rto],...parts.map(([k,val])=>[k,val])];
+      const breakup='<details class="pl-breakup"><summary>View breakup</summary><div class="pl-breakup-content">'+detail.map(([k,val])=>'<div class="pl-breakup-row"><span>'+esc(k)+'</span><b>'+esc(typeof val==='number'?money(val):String(val))+'</b></div>').join('')+'</div></details>';
+      return '<tr><td>'+esc(r.vehicle)+'</td><td>'+esc(r.variant||'—')+'</td><td>'+esc(r.colour||'—')+'</td><td>'+money(ex)+'</td><td>'+money(tcs)+'</td><td>'+money(insurance)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup+'</td></tr>';
+    }).join(''):'<tr><td colspan="9" class="empty">No price list rows found. Use Upload Price List to import Excel files.</td></tr>';
+    if($('plResultsSummary'))$('plResultsSummary').textContent=filtered.length+' variant price(s) · '+vehicles.length+' models available';
+    if($('plStockSummary'))$('plStockSummary').textContent=rows.length+' total price rows across all departments';
+  };
+
 })();
