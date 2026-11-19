@@ -30,11 +30,11 @@ function rolePermissionRows(role: string, userId: string, grantedBy: string, sel
   if (role === "Admin" || role === "General Manager") {
     for (const m of ALL_MODULES) map[m] = [...full];
   } else if (role === "Manager") {
-    Object.assign(map,{dashboard:view,stock_register:["view","create","edit","delete","export"],stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve","export"],common_excel_upload:["view","create"]});
+    Object.assign(map,{dashboard:view,stock_register:["view","create","edit","delete","export"],stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve","export"],employee_management:["view","create","edit","delete","manage_users"],common_excel_upload:["view","create"]});
   } else if (role === "Accountant") {
     Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"]});
   } else if (role === "HR") {
-    Object.assign(map,{price_list_management:view,employee_management:["view","create","edit","manage_users"],retail_reports:view,common_excel_upload:["view","create"]});
+    Object.assign(map,{price_list_management:view,employee_management:["view","create","edit","delete","manage_users"],retail_reports:view,common_excel_upload:["view","create"]});
   } else if (role === "DMS") {
     Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"]});
   } else if (role === "Executive" || role === "Reception") {
@@ -163,7 +163,7 @@ Deno.serve(async (req: Request) => {
     }, { onConflict: "user_id" });
     if (insertError) { await adminClient.auth.admin.deleteUser(userId); return json({ error: insertError.message }, 400); }
     const permissionRows = rolePermissionRows(role,userId,callerId,selectedModules)
-      .map((row:any)=>({...row,actions:isRoot?row.actions:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
+      .map((row:any)=>({...row,actions:isRoot?["view","create","edit","delete","approve","manage_users","export","restore"]:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
       .filter((row:any)=>row.actions.length>0);
     if(permissionRows.length){
       const {error:permissionSaveError}=await adminClient.from("employee_permissions").upsert(permissionRows,{onConflict:"user_id,module"});
@@ -273,7 +273,7 @@ Deno.serve(async (req: Request) => {
     const {error:clearError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId);
     if(clearError) return json({error:clearError.message},500);
     const requestedRows=rolePermissionRows(String(target.designation||""),userId,callerId,selected)
-      .map((row:any)=>({...row,actions:isRoot?row.actions:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
+      .map((row:any)=>({...row,actions:isRoot?["view","create","edit","delete","approve","manage_users","export","restore"]:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
       .filter((row:any)=>row.actions.length>0);
     const rows=[...protectedRows,...requestedRows];
     if(rows.length){
