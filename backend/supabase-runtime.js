@@ -153,6 +153,7 @@
     }
     const sel=$('permEmployee');if(sel) sel.innerHTML='<option value="">Select employee</option>'+rows.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name||x.email)+'</option>').join('');
     window.svEmployees=rows;
+    await renderEmployees();
   }
   async function savePermissions(userId,module,actions) {
     if(!has('employee_management','manage_users')) throw new Error('Not allowed to manage employee permissions.');
@@ -699,7 +700,7 @@
   // UI bindings for existing elements whose original handlers were demo-only.
   function installScreenHooks(){
     mapStockForm();
-    const newUser=$('view-employees')?.querySelector('.stat-grid .btn.primary');
+    const newUser=$('svNewEmployee')||$('view-employees')?.querySelector('.stat-grid .btn.primary');
     if(newUser)newUser.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();employeeDialog();},true);
     $('svChangePasswordForm')?.addEventListener('submit',async e=>{
       e.preventDefault();
@@ -782,7 +783,7 @@
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdSubmit=()=>submitHold().catch(e=>notify(e.message));
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,savePermissions,loadEmployees,loadAudit,loadImportHistory,previewReconciliation,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,savePermissions,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,previewReconciliation,audit};
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
   else init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();});
