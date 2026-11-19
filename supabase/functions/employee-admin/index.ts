@@ -23,19 +23,23 @@ const ROLE_MODULES: Record<string,string[]> = {
 };
 const ALL_MODULES = ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"];
 function rolePermissionRows(role: string, userId: string, grantedBy: string, selectedModules?: string[]) {
-  const all = ALL_MODULES;
-  const allowed = selectedModules ? all.filter(m => selectedModules.includes(m)) : [];
+  const selected = selectedModules || [];
   const full = ["view","create","edit","delete","approve","manage_users","export","restore"];
-  const view = ["view"], manage = ["view","create","edit","delete","approve"];
-  const map: Record<string,string[]> = {};
-  if (role === "Admin" || role === "General Manager") for (const m of all) map[m] = [...full];
-  else if (role === "Manager") Object.assign(map,{dashboard:view,stock_register:manage,stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve"]});
-  else if (role === "Accountant") Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"]});
-  else if (role === "HR") Object.assign(map,{price_list_management:view,employee_management:["view","create","edit","manage_users"],retail_reports:view,common_excel_upload:["view","create"]});
-  else if (role === "DMS") Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"]});
-  else if (role === "Executive" || role === "Reception") Object.assign(map,{dashboard:view,stock_register:manage,stock_hold_management:["view","create"],quotation_management:["view","create","edit"],price_list_management:view,retail_reports:view});
-  else if (role === "Driver") Object.assign(map,{stock_register:view});
-  return allowed.filter(m => map[m]).map(module => ({user_id:userId,module,actions:map[module],granted_by:grantedBy}));
+  const actions: Record<string,string[]> = {
+    dashboard:["view"],
+    stock_register:["view","create","edit","delete","export"],
+    stock_hold_management:["view","create","approve"],
+    price_list_management:["view","create","edit","delete","export"],
+    quotation_management:["view","create","edit","approve","export"],
+    employee_management:["view","create","edit","delete","manage_users"],
+    common_excel_upload:["view","create","export"],
+    backup_restore:["view","export","restore"],
+    audit_history:["view","export"],
+    retail_reports:["view","export"]
+  };
+  return selected.filter(m=>ALL_MODULES.includes(m)).map(module=>({
+    user_id:userId,module,actions:role==="Admin"||role==="General Manager"?full:actions[module],granted_by:grantedBy
+  }));
 }
 
 Deno.serve(async (req: Request) => {
