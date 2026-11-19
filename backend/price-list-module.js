@@ -153,3 +153,36 @@
  window.addEventListener('svm:ready',setup);
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){if(window.SVMBackend)setup()},{once:true});else if(window.SVMBackend)setup();
 })();
+
+/* Access-control refresh + immutable Super Admin UI override. */
+(function(){
+ 'use strict';
+ var channel=null, watchedUser='';
+ function applySuperAdminAccess(){
+  var api=window.SVMBackend,profile=api&&api.profile;
+  if(!profile||!profile.is_super_admin)return;
+  document.querySelectorAll('.sidebar [data-page], .sidebar [data-group], .sidebar .nav-section, [data-page]').forEach(function(el){
+   if(el.dataset.page==='password')return;
+   el.style.display='';
+  });
+  document.querySelectorAll('.quick[data-go]').forEach(function(el){el.style.display=''});
+ }
+ function watchOwnAccess(){
+  var api=window.SVMBackend;
+  if(!api||!api.client||!api.user)return;
+  var uid=api.user.id;
+  if(!uid||uid===watchedUser)return;
+  watchedUser=uid;
+  try{
+   var client=api.client();
+   channel=client.channel('employee-access-refresh-'+uid)
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'profiles',filter:'user_id=eq.'+uid},function(payload){
+     if(payload.new&&payload.new.user_id===uid)window.location.reload();
+    })
+    .subscribe();
+  }catch(err){console.warn('Employee access live refresh could not start:',err);}
+ }
+ function ready(){applySuperAdminAccess();watchOwnAccess();}
+ window.addEventListener('svm:ready',ready);
+ if(window.SVMBackend)ready();
+})();
