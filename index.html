@@ -785,6 +785,7 @@ const pageNames={'dashboard':'Dashboard','stock-personal':'Personal Stock Regist
 pageNames['backup-restore']='Backup & Restore';pageNames['stock-hold-central']='Central Stock Hold Management';pageNames['price-list']='Price List Management';pageNames['ev-quotation']='EV Quotation';pageNames['commercial-quotation']='Commercial Quotation';pageNames['llm-quotation']='LLM Quotation';pageNames['ev-management']='EV Quotation Management';pageNames['commercial-management']='Commercial Quotation Management';pageNames['llm-management']='LLM Quotation Management';
 let currentQuoteDepartment='Personal';
 function showPage(page){
+ if(page==='audit' && window.SVMBackend?.profile?.is_super_admin){toast('Audit History is not available for Super Admin.');return;}
  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
  const target=document.getElementById('view-'+page);
  if(target) target.classList.add('active'); else {document.getElementById('view-generic').classList.add('active');document.getElementById('genericTitle').textContent=pageNames[page]||'Workspace';document.getElementById('genericCardTitle').textContent=pageNames[page]||'Workspace'}
