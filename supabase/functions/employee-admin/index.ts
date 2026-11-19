@@ -49,48 +49,59 @@ Deno.serve(async (req: Request) => {
   if (action === "create_employee") {
     const email = String(body.email || "").trim().toLowerCase();
     const fullName = String(body.full_name || "").trim();
-    if (!email || !fullName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return json({ error: "Valid email and full name are required" }, 400);
-    }
-    const { data: invite, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName },
+    const password = String(body.password || "");
+    const role = String(body.designation || "").trim();
+    const roles = ["Super Admin","Admin","General Manager","Manager","Accountant","HR","DMS","Executive","Reception","Driver"];
+    const departments = Array.isArray(body.department_access) ? [...new Set(body.department_access.map(String))] : [];
+    const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
+    if (!email || !fullName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Valid email and full name are required" }, 400);
+    if (password.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
+    if (!roles.includes(role)) return json({ error: "Select a valid designation / role" }, 400);
+    if (role === "Super Admin") return json({ error: "The Super Admin account is unique and cannot be created from New User." }, 403);
+    if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
+    const { data: created, error: createError } = await adminClient.auth.admin.createUser({
+      email, password, email_confirm: true, user_metadata: { full_name: fullName },
     });
-    if (inviteError || !invite.user) return json({ error: inviteError?.message || "Invite failed" }, 400);
-
+    if (createError || !created.user) return json({ error: createError?.message || "User creation failed" }, 400);
+    const userId = created.user.id;
     const { error: insertError } = await adminClient.from("profiles").upsert({
-      user_id: invite.user.id,
-      full_name: fullName,
-      email,
-      employee_code: body.employee_code ? String(body.employee_code).trim() : null,
-      phone: body.phone ? String(body.phone).trim() : null,
-      designation: body.designation ? String(body.designation).trim() : null,
-      department: body.department ? String(body.department).trim() : null,
-      status: "active",
-      is_super_admin: false,
+      user_id: userId, full_name: fullName, email, employee_code: null, phone: null,
+      designation: role, department: departments[0], department_access: departments,
+      status: "active", is_super_admin: false,
     }, { onConflict: "user_id" });
-    if (insertError) {
-      await adminClient.auth.admin.deleteUser(invite.user.id);
-      return json({ error: insertError.message }, 400);
-    }
+    if (insertError) { await adminClient.auth.admin.deleteUser(userId); return json({ error: insertError.message }, 400); }
 
-    const rawPermissions = Array.isArray(body.permissions) ? body.permissions : [];
-    const validModules = new Set(["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"]);
-    const validActions = new Set(["view","create","edit","delete","approve","manage_users","export","restore"]);
-    const rows = rawPermissions.flatMap((item: any) => {
-      if (!item || !validModules.has(String(item.module))) return [];
-      const actions = Array.isArray(item.actions) ? item.actions.map(String).filter((a: string) => validActions.has(a)) : ["view"];
-      return [{ user_id: invite.user!.id, module: item.module, actions, granted_by: callerId }];
-    });
-    if (rows.length) {
-      const { error: permWriteError } = await adminClient.from("employee_permissions").upsert(rows, { onConflict: "user_id,module" });
-      if (permWriteError) return json({ error: "Employee invited, but permissions could not be saved: " + permWriteError.message, user_id: invite.user.id }, 500);
+    const allModules = ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"];
+    const fullActions = ["view","create","edit","delete","approve","manage_users","export","restore"];
+    const defaults: Record<string,string[]> = {};
+    const grant = (module: string, actions: string[]) => { defaults[module] = actions; };
+    const view = ["view"], create = ["view","create"], edit = ["view","create","edit"], manage = ["view","create","edit","delete","approve"];
+    if (role === "Admin" || role === "General Manager") {
+      for (const module of allModules) grant(module, fullActions);
+    } else if (role === "Manager") {
+      grant("dashboard",view); grant("stock_register",manage); grant("stock_hold_management",["view","create","approve"]); grant("quotation_management",["view","create","edit","approve"]);
+    } else if (role === "Accountant") {
+      grant("price_list_management",view); grant("retail_reports",view); grant("common_excel_upload",create);
+    } else if (role === "HR") {
+      grant("price_list_management",view); grant("employee_management",["view","create","edit","manage_users"]); grant("retail_reports",view); grant("common_excel_upload",create);
+    } else if (role === "DMS") {
+      grant("price_list_management",view); grant("retail_reports",view); grant("common_excel_upload",create);
+    } else if (role === "Executive" || role === "Reception") {
+      grant("dashboard",view); grant("stock_register",manage); grant("stock_hold_management",create); grant("quotation_management",edit); grant("price_list_management",view); grant("retail_reports",view);
+    } else if (role === "Driver") {
+      grant("stock_register",view);
+    }
+    const permissionRows = Object.entries(defaults).map(([module,actions])=>({user_id:userId,module,actions,granted_by:callerId}));
+    if (permissionRows.length) {
+      const { error: permissionError } = await adminClient.from("employee_permissions").upsert(permissionRows,{onConflict:"user_id,module"});
+      if (permissionError) { await adminClient.auth.admin.deleteUser(userId); await adminClient.from("profiles").delete().eq("user_id",userId); return json({error:"User created but default permissions failed: "+permissionError.message},500); }
     }
     await adminClient.from("audit_logs").insert({
-      actor_id: callerId, actor_email: authData.user.email, module: "employee_management",
-      action: "create", action_label: "Created employee invitation",
-      record_type: "profile", record_id: invite.user.id, details: { email },
+      actor_id: callerId, actor_email: authData.user.email, module:"employee_management",
+      action:"create", action_label:"Created employee account", record_type:"profile", record_id:userId,
+      details:{email,designation:role,department_access:departments},
     });
-    return json({ success: true, user_id: invite.user.id, email, message: "Invitation sent. Employee must set a password from the email link." }, 201);
+    return json({success:true,user_id:userId,email,designation:role,department_access:departments,message:"Employee account created. They can sign in immediately with this email and password."},201);
   }
 
   if (action === "update_employee") {
