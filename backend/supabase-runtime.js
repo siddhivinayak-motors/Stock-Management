@@ -730,7 +730,7 @@
         const {data:{session}}=await db().auth.getSession();
         const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'save_employee_permissions',user_id:profile.user_id,modules},headers:{Authorization:'Bearer '+session.access_token}});
         if(error)throw error;if(data?.error)throw new Error(data.error);
-        notify('Permissions saved. Unchecked menus have been removed.');close();
+        notify('Permissions saved to Supabase. Selected modules are now enabled; unchecked modules are removed.');close();
       }catch(e){$('svPermissionError').textContent=e.message||'Could not save permissions';button.disabled=false;button.textContent='Save Permissions';}
     };
   }
