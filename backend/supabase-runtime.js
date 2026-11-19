@@ -579,13 +579,19 @@
     ]}
   ];
   async function openEmployeePermissions(profile){
+    if(!currentUser||profile.user_id===currentUser.id){notify('You cannot change your own permissions. Ask your superior.');return;}
     if(profile.is_super_admin){notify('Super Admin permissions cannot be changed.');return;}
+    const roleLevel={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Driver':10};
+    const myRole=currentProfile?.is_super_admin?'Super Admin':String(currentProfile?.designation||'');
+    if((roleLevel[profile.designation]??0)>=(roleLevel[myRole]??0) && !currentProfile?.is_super_admin){notify('You can manage only employees below your designation.');return;}
+    const canGrantAll=!!currentProfile?.is_super_admin||myRole==='Admin';
+    const grantable=new Set(canGrantAll?EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])):([...permissions.entries()].filter(([m,a])=>a.includes('view')).map(([m])=>m)));
     const old=$('svPermissionDialog');if(old)old.remove();
     const current=await call(db().from('employee_permissions').select('module').eq('user_id',profile.user_id));
     const selected=new Set(current.map(x=>x.module));
     const wrap=document.createElement('div');wrap.id='svPermissionDialog';
     wrap.style.cssText='position:fixed;inset:0;z-index:99991;background:#15202dcc;display:grid;place-items:center;padding:18px';
-    const moduleRows=EMPLOYEE_MENU_GROUPS.map(group=>'<section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">'+group.title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">'+group.items.map(([module,label])=>'<label style="display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #edf0f3;border-radius:8px"><input type="checkbox" name="employee_module" value="'+module+'" '+(selected.has(module)?'checked':'')+'><span>'+label+'</span></label>').join('')+'</div></section>').join('');
+    const moduleRows=EMPLOYEE_MENU_GROUPS.map(group=>{const items=group.items.filter(([module])=>grantable.has(module));return items.length?'<section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">'+group.title+'</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px">'+items.map(([module,label])=>'<label style="display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #edf0f3;border-radius:8px"><input type="checkbox" name="employee_module" value="'+module+'" '+(selected.has(module)?'checked':'')+'><span>'+label+'</span></label>').join('')+'</div></section>':'';}).join('');
     const depts=(profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean)).join(' · ');
     wrap.innerHTML='<div style="width:min(680px,100%);max-height:90vh;overflow:auto;background:#fff;padding:22px;border-radius:14px;color:#253140"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div><h2 style="font-size:19px;margin:0 0 5px">Employee Permissions</h2><div style="font-size:13px;color:#64748b">'+esc(profile.full_name||profile.email)+'</div><div style="font-size:11px;color:#7b8794;margin-top:4px">Department access: '+esc(depts||'None')+'</div></div><button type="button" id="svPermissionClose" class="btn">✕</button></div><p style="font-size:12px;color:#64748b;margin:14px 0">Tick only the menus this employee should see. Untick and save to remove access. Department menus are additionally limited to the departments assigned above.</p><div id="svPermissionList">'+moduleRows+'</div><div id="svPermissionError" style="color:#c51c2a;font-size:12px;margin:8px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svPermissionCancel" class="btn">Cancel</button><button type="button" id="svPermissionSave" class="btn primary">Save Permissions</button></div></div>';
     document.body.appendChild(wrap);
