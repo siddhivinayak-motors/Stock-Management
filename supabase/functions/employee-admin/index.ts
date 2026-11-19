@@ -86,9 +86,10 @@ Deno.serve(async (req: Request) => {
   const action = String(body.action || "");
   const isRoot = profile.is_super_admin === true;
   const allowed = isRoot
-    || (action === "create_employee" && (canCreateResult.data === true || canManageResult.data === true))
-    || (["update_employee","deactivate_employee"].includes(action) && (canEditResult.data === true || canManageResult.data === true))
-    || (action === "delete_employee" && (canDeleteResult.data === true || canManageResult.data === true))
+    || (action === "create_employee" && canCreateResult.data === true)
+    || (action === "update_employee" && canEditResult.data === true)
+    || (action === "deactivate_employee" && canEditResult.data === true)
+    || (action === "delete_employee" && canDeleteResult.data === true)
     || (action === "save_employee_permissions" && canManageResult.data === true);
   const permissionError = canManageResult.error || canCreateResult.error || canEditResult.error || canDeleteResult.error;
   if (permissionError || !allowed) return json({ error: "You do not have the required permission for this employee action." }, 403);
