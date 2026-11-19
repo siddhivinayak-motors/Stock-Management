@@ -96,8 +96,7 @@ Deno.serve(async (req: Request) => {
     if (!roles.includes(role)) return json({ error: "Select a valid designation / role" }, 400);
     if (role === "Super Admin") return json({ error: "The Super Admin account is unique and cannot be created from New User." }, 403);
     if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
-    const allDepartmentRoles = ["Admin","General Manager","Accountant","HR","DMS","Driver"];
-    const finalDepartments = allDepartmentRoles.includes(role) ? ["Personal","EV","Commercial","LLM"] : departments;
+    const finalDepartments = departments;
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email, password, email_confirm: true, user_metadata: { full_name: fullName },
     });
@@ -146,9 +145,7 @@ Deno.serve(async (req: Request) => {
       const access = Array.isArray(body.department_access) ? body.department_access.map(String) : [];
       const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
       if (access.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Invalid department access" }, 400);
-      const role = String(patch.designation || target.designation || "");
-      const allDepartmentRoles = ["Admin","General Manager","Accountant","HR","DMS","Driver"];
-      const finalAccess = allDepartmentRoles.includes(role) ? ["Personal","EV","Commercial","LLM"] : [...new Set(access)];
+      const finalAccess = [...new Set(access)];
       if (!finalAccess.length) return json({error:"Select at least one department"},400);
       patch.department_access = finalAccess;
       patch.department = finalAccess[0];
