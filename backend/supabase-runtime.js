@@ -601,6 +601,7 @@
   window.permRender=()=>{renderPermissions().catch(e=>notify(e.message));};
   window.holdRender = async () => {
     try{
+      if(!has('stock_hold_management','view'))throw new Error('No hold register permission.');
       let rows=[],from=0,chunk=1000;
       while(true){
         const part=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}).range(from,from+chunk-1));
