@@ -177,10 +177,10 @@
     await audit('stock_register','create','Created vehicle','vehicle',row.id,{chassis_number:row.chassis_number});
     return row;
   }
-  async function updateVehicle(id,data) {
-    if(!has('stock_register','edit')) throw new Error('No stock edit permission.');
+  async function updateVehicle(id,data,viaImport=false) {
+    if(!has('stock_register','edit') && !(viaImport && has('common_excel_upload','create'))) throw new Error('No stock edit permission (or Common Excel Upload permission for exact-match reconciliation).');
     const row=await call(db().from('vehicles').update({...data,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',id).select().single());
-    await audit('stock_register','edit','Updated vehicle','vehicle',id);
+    await audit(viaImport?'common_excel_upload':'stock_register',viaImport?'create':'edit',viaImport?'Reconciled vehicle by exact chassis':'Updated vehicle','vehicle',id);
     return row;
   }
   async function deleteVehicle(id) {
@@ -291,9 +291,18 @@
       if(!has('common_excel_upload','create')&&!has('stock_register','create')) throw new Error('You do not have import permission.');
       const ready=stockPreviewRows.filter(x=>x.decision==='Import');
       if(!ready.length){notify('No importable rows.');return;}
-      if(!confirm('Import '+ready.length+' stock rows into Supabase?')) return;
       const file=$('stockReportFile')?.files?.[0];
-      const records=ready.map(x=>{
+      const vins=ready.map(x=>x.vin).filter(Boolean);
+      const existingSet=new Set();
+      for(let i=0;i<vins.length;i+=300){
+        const found=await call(db().from('vehicles').select('chassis_number').in('chassis_number',vins.slice(i,i+300)));
+        found.forEach(x=>existingSet.add(String(x.chassis_number||'').toLowerCase()));
+      }
+      const toImport=ready.filter(x=>!existingSet.has(String(x.vin||'').toLowerCase()));
+      const dbDuplicates=ready.length-toImport.length;
+      if(!toImport.length){notify('All importable VINs already exist in the database.');return;}
+      if(!confirm('Import '+toImport.length+' new stock rows into Supabase? '+dbDuplicates+' existing chassis duplicates will be skipped.')) return;
+      const records=toImport.map(x=>{
         const r=x.raw||{};
         const inv=plHeader(r,['oem invoicedate','oeminvoicedate','invoicedate']);
         let invoice=null;
@@ -313,12 +322,16 @@
           imported_at:new Date().toISOString(),created_by:currentUser.id
         };
       });
-      const {data,error}=await db().from('vehicles').insert(records).select('id');
-      if(error) throw error;
-      await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Import',department:null,imported_rows:data.length,skipped_rows:stockPreviewRows.length-ready.length,error_rows:0,created_by:currentUser.id}));
-      await audit('common_excel_upload','create','Imported stock report','stock_import_batch',null,{count:data.length,file:file?.name||''});
-      stockPreviewRows=[];await renderStock();
-      notify(data.length+' vehicles imported into Supabase.');
+      let importedCount=0;
+      for(let i=0;i<records.length;i+=300){
+        const {data,error}=await db().from('vehicles').insert(records.slice(i,i+300)).select('id');
+        if(error)throw error;
+        importedCount+=data.length;
+      }
+      await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Import',department:null,imported_rows:importedCount,skipped_rows:stockPreviewRows.length-importedCount,error_rows:0,created_by:currentUser.id}));
+      await audit('common_excel_upload','create','Imported stock report','stock_import_batch',null,{count:importedCount,database_duplicates:dbDuplicates,file:file?.name||''});
+      stockPreviewRows=[];await renderStock();await loadImportHistory();
+      notify(importedCount+' vehicles imported; '+dbDuplicates+' existing VIN duplicates skipped.');
     }catch(e){console.error(e);notify(e.message);}
   };
   async function renderStock(){
@@ -460,7 +473,7 @@
           if(variant)patch.variant=String(variant).trim();
           if(colour)patch.colour=String(colour).trim();
           if(customer)patch.customer_name=String(customer).trim();
-          if(Object.keys(patch).length){await updateVehicle(item.matched.id,patch);updated++;}
+          if(Object.keys(patch).length){await updateVehicle(item.matched.id,patch,true);updated++;}
         }
         await call(db().from('stock_import_batches').insert({file_name:file.name,department,imported_rows:updated,skipped_rows:normalized.length-updated,error_rows:0,created_by:currentUser.id}));
         await audit('common_excel_upload','create','Applied exact chassis reconciliation','stock_import_batch',null,{source,department,updated,rows:normalized.length});
