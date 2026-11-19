@@ -505,48 +505,6 @@
     const body=$('view-upload')?.querySelector('.card:last-child .table-wrap tbody');if(!body)return;
     body.innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.file_name)+'</td><td><span class="pill green">Imported</span></td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td></tr>').join(''):'<tr><td colspan="6" class="empty">No import history yet.</td></tr>';
   }
-  async function previewReconciliation(){
-    const panel=$('view-upload');if(!panel)return;
-    if(!has('common_excel_upload','create'))throw new Error('You do not have reconciliation import permission.');
-    const fields=panel.querySelectorAll('.form-grid .field');
-    const source=fields[0]?.value||'Tally Main Stock',department=fields[1]?.value||'Personal',file=fields[2]?.files?.[0];
-    if(!file)throw new Error('Select a reconciliation workbook.');
-    const rows=await readWorkbook(file);
-    const existing=await call(db().from('vehicles').select('id,chassis_number,model,variant,stage,status').eq('department',department));
-    const byVin=new Map(existing.map(x=>[String(x.chassis_number||'').toLowerCase(),x]));
-    const normalized=rows.map(r=>{
-      const vin=String(plHeader(r,['chassisnumber','chassis number','vin'])||'').trim();
-      const matched=vin?byVin.get(vin.toLowerCase()):null;
-      return {vin,matched,raw:r,decision:!vin?'Manual Review — missing full chassis':matched?'Matched':'Stock Arrange — unmatched chassis'};
-    });
-    let preview=$('svReconcilePreview');
-    if(!preview){preview=document.createElement('div');preview.id='svReconcilePreview';preview.className='notice';panel.querySelector('.card .card-body')?.appendChild(preview);}
-    preview.dataset.source=source;preview.dataset.department=department;preview.dataset.file=file.name;
-    preview._rows=normalized;
-    preview.innerHTML='<b>'+esc(source)+' · '+esc(department)+'</b> · Rows '+normalized.length+' · Matched '+normalized.filter(x=>x.matched).length+' · Unmatched/manual review '+normalized.filter(x=>!x.matched).length+'<div style="margin-top:10px;max-height:300px;overflow:auto"><table class="data-table"><thead><tr><th>Full Chassis</th><th>Current Model</th><th>Workbook Model</th><th>Decision</th></tr></thead><tbody>'+normalized.map(x=>'<tr><td>'+esc(x.vin||'—')+'</td><td>'+esc(x.matched?.model||'—')+'</td><td>'+esc(plHeader(x.raw,['model','vehicle'])||'—')+'</td><td>'+esc(x.decision)+'</td></tr>').join('')+'</tbody></table></div><button type="button" id="svReconcileCommit" class="btn primary" style="margin-top:10px">Apply exact chassis matches</button>';
-    $('svReconcileCommit').onclick=async()=>{
-      try{
-        if(!confirm('Apply '+normalized.filter(x=>x.matched).length+' exact full chassis matches to '+source+' rows? Unmatched rows will not change stock.'))return;
-        let updated=0;
-        for(const item of normalized){
-          if(!item.matched)continue;
-          const p=item.raw, patch={};
-          const model=plHeader(p,['model','vehicle']),variant=plHeader(p,['variant']);
-          const colour=plHeader(p,['colour','color']),customer=plHeader(p,['customername','customer']);
-          if(model)patch.model=String(model).trim();
-          if(variant)patch.variant=String(variant).trim();
-          if(colour)patch.colour=String(colour).trim();
-          if(customer)patch.customer_name=String(customer).trim();
-          if(Object.keys(patch).length){await updateVehicle(item.matched.id,patch,true);updated++;}
-        }
-        await call(db().from('stock_import_batches').insert({file_name:file.name,department,imported_rows:updated,skipped_rows:normalized.length-updated,error_rows:0,created_by:currentUser.id}));
-        await audit('common_excel_upload','create','Applied exact chassis reconciliation','stock_import_batch',null,{source,department,updated,rows:normalized.length});
-        await loadImportHistory();await renderStock();notify(updated+' exact chassis matches updated. Unmatched rows remain unchanged.');
-      }catch(e){notify(e.message);}
-    };
-    return {rows:normalized.length,matched:normalized.filter(x=>x.matched).length};
-  }
-
   async function renderEmployees(){
     if(!has('employee_management','view')&&!currentProfile?.is_super_admin) return;
     let rows=[],from=0,chunk=1000;
