@@ -757,7 +757,8 @@
   async function init() {
     if(!window.supabase?.createClient) throw new Error('Supabase JavaScript SDK failed to load.');
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    // Supabase is the source of truth; remove local demo workspace caches on startup.\n    ['sv_quote_records_clean_v2','sv_quotes_by_department_clean_v3','svm_clean_workspace_v2'].forEach(k=>{try{localStorage.removeItem(k);}catch(_e){}});
+    // Supabase is the source of truth; remove local demo workspace caches on startup.
+    ['sv_quote_records_clean_v2','sv_quotes_by_department_clean_v3','svm_clean_workspace_v2'].forEach(k=>{try{localStorage.removeItem(k);}catch(_e){}});
       try { localStorage.removeItem(quoteStoreKey); localStorage.removeItem(DEPT_QUOTE_KEY); } catch(_e) {}
       // Don't migrate browser records automatically; only explicit new Supabase records are used.
     installScreenHooks();
