@@ -998,7 +998,7 @@
     const originalImportPreview=window.stockImportPreview;
     // Keep the original workbook preview parser; only its commit action is replaced above.
     if($('stockSearch'))$('stockSearch').addEventListener('input',()=>renderStock());
-    $('view-stock')?.querySelector('.toolbar select')?.addEventListener('change',()=>renderStock());
+    $('stockStageFilter')?.addEventListener('change',()=>renderStock());
     $('view-stock')?.querySelector('.page-head button')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();renderStock();},true);
     void originalImportPreview;
   }
