@@ -65,6 +65,10 @@
     const roleLabel=document.querySelector('.user-role');
     if(roleLabel) roleLabel.textContent=currentProfile?.is_super_admin?'SUPER ADMIN':String(currentProfile?.designation||'EMPLOYEE').toUpperCase();
     // Keep the app shell intact; enforce module and department access on the actual navigation items.
+    try{await refreshDashboard();}catch(e){console.error('Dashboard data refresh failed:',e);notify('Dashboard data could not be refreshed: '+(e.message||e));}
+    const dashRefresh=document.querySelector('#view-dashboard .page-head .btn, #view-dashboard button[onclick*="Dashboard refreshed"]');
+    if(dashRefresh&&!dashRefresh.dataset.liveRefreshBound){dashRefresh.dataset.liveRefreshBound='1';dashRefresh.onclick=()=>refreshDashboard().then(()=>notify('Dashboard updated')).catch(e=>notify(e.message));}
+
     const viewMap={
       'view-dashboard':'dashboard','view-stock':'stock_register','view-quotation':'quotation_management',
       'view-quotation-management':'quotation_management',
@@ -214,6 +218,27 @@
   }
   async function audit(module,action,label,type=null,id=null,details={}) {
     try { await db().rpc('log_activity',{p_module:module,p_action:action,p_label:label,p_record_type:type,p_record_id:id==null?null:String(id),p_details:details}); } catch(e){console.warn('Audit write failed',e);}
+  }
+  async function refreshDashboard(){
+    const cards=[...document.querySelectorAll('#view-dashboard .department-kpi[data-department]')];
+    const assigned=new Set((currentProfile?.is_super_admin?['Personal','EV','Commercial','LLM']:(currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean))).map(x=>String(x).toLowerCase()));
+    cards.forEach(card=>{card.style.display=assigned.has(String(card.dataset.department||'').toLowerCase())?'':'none';});
+    const visibleDepartments=['Personal','EV','Commercial','LLM'].filter(d=>assigned.has(d.toLowerCase()));
+    if(!visibleDepartments.length)return;
+    const rows=await call(db().from('vehicles').select('department,stage').in('department',visibleDepartments));
+    const norm=v=>String(v||'').trim().toUpperCase();
+    for(const card of cards){
+      const dept=card.dataset.department;
+      if(!assigned.has(String(dept||'').toLowerCase()))continue;
+      const list=rows.filter(x=>String(x.department||'').toLowerCase()===String(dept).toLowerCase());
+      const total=list.length,open=list.filter(x=>norm(x.stage)==='OPEN').length,hold=list.filter(x=>norm(x.stage)==='HOLD').length,retail=list.filter(x=>norm(x.stage)==='RETAIL').length;
+      const totalNode=card.querySelector('.kpi-total strong');
+      if(totalNode)totalNode.textContent=String(total).padStart(2,'0');
+      const vals=card.querySelectorAll('.dashboard-status-item .status-value');
+      if(vals[0])vals[0].textContent=String(open).padStart(2,'0');
+      if(vals[1])vals[1].textContent=String(hold).padStart(2,'0');
+      if(vals[2])vals[2].textContent=String(retail).padStart(2,'0');
+    }
   }
   async function loadVehicles(department='Personal') {
     if(!has('stock_register','view')) throw new Error('No stock view permission.');
