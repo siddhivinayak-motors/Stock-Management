@@ -477,7 +477,7 @@
       search?.addEventListener('input',()=>renderAuditRows());
       actionSelect?.addEventListener('change',()=>renderAuditRows());
       const buttons=toolbar?.querySelectorAll('button')||[];
-      if(buttons[0])buttons[0].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();loadAudit().catch(x=>notify(x.message));},true);
+      if(buttons[0])buttons[0].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();downloadAuditCsv();},true);
       if(buttons[1])buttons[1].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.print();},true);
     }
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
