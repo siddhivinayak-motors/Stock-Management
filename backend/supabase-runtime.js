@@ -553,7 +553,11 @@
   window.permRender=()=>{renderPermissions().catch(e=>notify(e.message));};
   window.holdRender = async () => {
     try{
-      const rows=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}));
+      let rows=[],from=0,chunk=1000;
+      while(true){
+        const part=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}).range(from,from+chunk-1));
+        rows.push(...part);if(part.length<chunk)break;from+=chunk;
+      }
       holdItems=rows.map(x=>({...x,id:x.id,date:x.created_at,dept:x.department,approver:x.approver_id||'—',approvedAt:x.approved_at||'—'}));
       const f=$('holdStatusFilter')?.value||'All',d=$('holdDeptFilter')?.value||'All Departments';
       const filtered=holdItems.filter(x=>(f==='All'||x.status===f||(f==='On Hold'&&x.status==='Approved'))&&(d==='All Departments'||x.dept===d));
