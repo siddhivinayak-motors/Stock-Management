@@ -25,20 +25,25 @@ const ALL_MODULES = ["dashboard","stock_register","stock_hold_management","price
 function rolePermissionRows(role: string, userId: string, grantedBy: string, selectedModules?: string[]) {
   const selected = selectedModules || [];
   const full = ["view","create","edit","delete","approve","manage_users","export","restore"];
-  const actions: Record<string,string[]> = {
-    dashboard:["view"],
-    stock_register:["view","create","edit","delete","export"],
-    stock_hold_management:["view","create","approve"],
-    price_list_management:["view","create","edit","delete","export"],
-    quotation_management:["view","create","edit","approve","export"],
-    employee_management:["view","create","edit","delete","manage_users"],
-    common_excel_upload:["view","create","export"],
-    backup_restore:["view","export","restore"],
-    audit_history:["view","export"],
-    retail_reports:["view","export"]
-  };
+  const view = ["view"];
+  const map: Record<string,string[]> = {};
+  if (role === "Admin" || role === "General Manager") {
+    for (const m of ALL_MODULES) map[m] = [...full];
+  } else if (role === "Manager") {
+    Object.assign(map,{dashboard:view,stock_register:["view","create","edit","delete","export"],stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve","export"]});
+  } else if (role === "Accountant") {
+    Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"]});
+  } else if (role === "HR") {
+    Object.assign(map,{price_list_management:view,employee_management:["view","create","edit","manage_users"],retail_reports:view,common_excel_upload:["view","create"]});
+  } else if (role === "DMS") {
+    Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"]});
+  } else if (role === "Executive" || role === "Reception") {
+    Object.assign(map,{dashboard:view,stock_register:["view","create","edit"],stock_hold_management:["view","create"],quotation_management:["view","create","edit"],price_list_management:view,retail_reports:view});
+  } else if (role === "Driver") {
+    Object.assign(map,{stock_register:view});
+  }
   return selected.filter(m=>ALL_MODULES.includes(m)).map(module=>({
-    user_id:userId,module,actions:role==="Admin"||role==="General Manager"?full:actions[module],granted_by:grantedBy
+    user_id:userId,module,actions:map[module]||view,granted_by:grantedBy
   }));
 }
 
