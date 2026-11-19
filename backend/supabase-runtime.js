@@ -505,8 +505,7 @@
       const role=$('svEditRole').value,selectedModules=[...(ROLE_MODULES_UI[role]||[])];
       const moduleField=wrap.querySelector('fieldset:has(input[name="module_access"])');
       if(moduleField)moduleField.outerHTML=moduleAccessMarkup(role,selectedModules);
-      const allDepartments=['Admin','General Manager','Accountant','HR','DMS','Driver'].includes(role);
-      wrap.querySelectorAll('input[name="department_access"]').forEach(c=>{if(allDepartments)c.checked=true;c.disabled=allDepartments;});
+      wrap.querySelectorAll('input[name="department_access"]').forEach(c=>c.disabled=false);
     };
     applyEditRole();
     $('svEditRole').addEventListener('change',applyEditRole);
@@ -543,7 +542,7 @@
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
     const roleSelect=$('svNewRole'),checks=[...wrap.querySelectorAll('input[name="department_access"]')];
-    const applyRole=()=>{const role=roleSelect.value,all=['Super Admin','Admin','General Manager','Accountant','HR','DMS','Driver'].includes(role);checks.forEach(c=>{c.checked=all;c.disabled=all;});$('svRoleHint').textContent=all?'This role receives all four departments by default.':role==='Manager'||role==='Executive'||role==='Reception'?'Select one or more departments for this employee.':'Select department access.';};
+    const applyRole=()=>{$('svRoleHint').textContent='Select only the departments this employee is allowed to access.';checks.forEach(c=>c.disabled=false);};
     roleSelect.addEventListener('change',applyRole);
     $('svEmployeeForm').onsubmit=async e=>{
       e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
