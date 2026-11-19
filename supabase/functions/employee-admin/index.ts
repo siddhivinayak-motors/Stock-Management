@@ -258,9 +258,11 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "You cannot delete your own account" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin,deleted_at").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,deleted_at,designation,department").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "The Super Admin account is protected and cannot be deleted" }, 403);
+    if (!canManageDepartment(target.department||"")) return json({error:"You can delete employees only in your assigned department."},403);
+    if (!isRoot && (ROLE_LEVEL[String(target.designation||"")]??0)>=callerLevel) return json({error:"You can delete only employees below your own designation."},403);
     if (target.deleted_at) return json({ error: "This employee is already deleted" }, 409);
     const { error: updateError } = await adminClient.from("profiles")
       .update({ status: "inactive", deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -283,9 +285,11 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,designation,department").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "A Super Admin cannot be deactivated by this action" }, 403);
+    if (!canManageDepartment(target.department||"")) return json({error:"You can deactivate employees only in your assigned department."},403);
+    if (!isRoot && (ROLE_LEVEL[String(target.designation||"")]??0)>=callerLevel) return json({error:"You can deactivate only employees below your own designation."},403);
     const { error: updateError } = await adminClient.from("profiles")
       .update({ status: "inactive", updated_at: new Date().toISOString() }).eq("user_id", userId);
     if (updateError) return json({ error: updateError.message }, 400);
