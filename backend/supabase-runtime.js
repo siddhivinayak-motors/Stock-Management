@@ -324,6 +324,39 @@
       notify('Price list published to Supabase.');
     }catch(e){console.error(e);notify(e.message);}
   };
+  window.stockImportPreview = async () => {
+    try{
+      const file=$('stockReportFile')?.files?.[0];if(!file){notify('Select a stock report');return;}
+      if(!has('common_excel_upload','create')&&!has('stock_register','create'))throw new Error('You do not have stock import permission.');
+      const rows=await readWorkbook(file);
+      const existing=[];
+      for(let from=0;;from+=1000){
+        const part=await call(db().from('vehicles').select('chassis_number').range(from,from+999));
+        existing.push(...part);if(part.length<1000)break;
+      }
+      const seen=new Set(existing.map(x=>String(x.chassis_number||'').trim().toLowerCase()));
+      const map={PERSONAL:'Personal',BEV:'EV',PROSPER:'Commercial',LMM:'LLM'};
+      stockPreviewRows=rows.map(r=>{
+        const segment=String(plHeader(r,['segmentcode','segment'])||'').trim().toUpperCase();
+        const dateRaw=plHeader(r,['oem invoicedate','oeminvoicedate','invoicedate']);
+        const dt=dateRaw instanceof Date?dateRaw:(typeof dateRaw==='number'&&window.XLSX?(()=>{const z=XLSX.SSF.parse_date_code(dateRaw);return z?new Date(z.y,z.m-1,z.d):new Date('invalid')})():new Date(dateRaw));
+        const vin=String(plHeader(r,['vin'])||'').trim(),chassis=String(plHeader(r,['chassisnumber','chassis'])||'').trim();
+        const fullVin=vin||chassis;let decision='Import',department=map[segment]||'';
+        if(!department)decision='Manual Review: Unknown Segment';
+        else if(!dateRaw||isNaN(dt.getTime()))decision='Review: Invalid OEM Invoice Date';
+        else if(dt<new Date('2025-01-01T00:00:00'))decision='Skip: Before 2025';
+        else if(!fullVin)decision='Review: Missing VIN/Chassis';
+        else if(seen.has(fullVin.toLowerCase()))decision='Duplicate';
+        else seen.add(fullVin.toLowerCase());
+        return {vin:fullVin,model:String(plHeader(r,['model'])||''),variant:String(plHeader(r,['variantdesc','variant'])||''),segment,date:dateRaw?String(dateRaw):'',department,decision,raw:r};
+      });
+      const count=k=>stockPreviewRows.filter(x=>x.decision===k).length;
+      const review=stockPreviewRows.filter(x=>x.decision.startsWith('Review')||x.decision.startsWith('Manual')).length;
+      const summary='Rows: '+rows.length+' · Importable: '+count('Import')+' · Skipped (old date): '+stockPreviewRows.filter(x=>x.decision.startsWith('Skip')).length+' · Duplicates: '+count('Duplicate')+' · Review: '+review;
+      $('stockImportSummary').style.display='block';$('stockImportSummary').textContent=summary;
+      $('stockImportRows').innerHTML=stockPreviewRows.slice(0,400).map(x=>'<tr><td>'+esc(x.vin)+'</td><td>'+esc(x.model)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.segment)+'</td><td>'+esc(x.date)+'</td><td>'+esc(x.department)+'</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No rows found</td></tr>';
+    }catch(e){console.error(e);notify(e.message);}
+  };
   window.stockImportCommit = async () => {
     try{
       if(!Array.isArray(stockPreviewRows)||!stockPreviewRows.length){notify('Preview a report first');return;}
