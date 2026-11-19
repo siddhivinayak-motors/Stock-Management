@@ -524,6 +524,13 @@
   };
   window.holdSubmit = () => submitHold().catch(e=>notify(e.message));
   window.holdDecision = (id,decision) => decideHold(id,decision).catch(e=>notify(e.message));
+  window.openDepartmentStock = (department) => {
+    currentStockDepartment=department||'Personal';
+    if($('stockPageTitle'))$('stockPageTitle').textContent=currentStockDepartment+' — Stock Register';
+    if($('stockPageSubtitle'))$('stockPageSubtitle').textContent=currentStockDepartment+' · Live operational workspace';
+    if(typeof window.showPage==='function')window.showPage('stock');
+    renderStock();
+  };
   window.appBackup = async () => {
     try{
       if(!has('backup_restore','export'))throw new Error('Backup permission required.');
