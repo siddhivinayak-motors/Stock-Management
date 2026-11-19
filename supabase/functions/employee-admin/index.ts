@@ -99,7 +99,7 @@ Deno.serve(async (req: Request) => {
   };
   const callerRole=profile.is_super_admin?"Super Admin":String(profile.designation||"");
   const callerLevel=ROLE_LEVEL[callerRole]??0;
-  const isOrgAdmin=isRoot||callerRole==="Admin"||callerRole==="General Manager";
+  const isOrgAdmin=isRoot||callerRole==="Admin"||callerRole==="General Manager"||callerRole==="HR";
   const callerDepartmentScope=new Set(
     (Array.isArray(profile.department_access)&&profile.department_access.length?profile.department_access:[profile.department].filter(Boolean))
       .map((d:string)=>String(d).toLowerCase())
