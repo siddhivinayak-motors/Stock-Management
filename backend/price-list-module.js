@@ -92,10 +92,10 @@
  }
  async function parseFiles(files){
   if(!window.XLSX)throw new Error('Excel reader could not load. Reload the page with internet access and try again.');
-  var stock=window.svPriceListStockRows||[],all=[],warnings=[],sheets=0;
-  for(var i=0;i<files.length;i++){var file=files[i],buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true});for(var s=0;s<wb.SheetNames.length;s++){var name=wb.SheetNames[s],matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:true}),parsed=parseSheet(matrix,file.name,name,stock);sheets++;if(parsed.items.length)all=all.concat(parsed.items);else warnings.push(file.name+' / '+name+': '+parsed.warning);if(parsed.skippedColumns)warnings.push(file.name+' / '+name+': '+parsed.skippedColumns+' numeric column(s) without a variant name were skipped')}}
+  var stock=window.svPriceListStockRows||[],all=[],warnings=[],sheets=0,fileObjects=[];
+  for(var i=0;i<files.length;i++){var file=files[i],fileDepartments=new Set(),buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true});for(var s=0;s<wb.SheetNames.length;s++){var name=wb.SheetNames[s],matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:true}),parsed=parseSheet(matrix,file.name,name,stock);sheets++;if(parsed.items.length){all=all.concat(parsed.items);parsed.items.forEach(function(x){fileDepartments.add(x.department)})}else warnings.push(file.name+' / '+name+': '+parsed.warning);if(parsed.skippedColumns)warnings.push(file.name+' / '+name+': '+parsed.skippedColumns+' numeric column(s) without a variant name were skipped')}file.priceListDepartments=Array.from(fileDepartments);fileObjects.push(file)}
   var seen=new Set(),duplicates=[];all.forEach(function(x){var k=norm(x.department+'|'+x.vehicle)+'|'+norm(clean(x.variant).toUpperCase().replace(/\+/g,' PLUS '));if(seen.has(k))duplicates.push(x.vehicle+' / '+x.variant);seen.add(k)});
-  return {rows:all,files:files.map(function(f){return f.name}),sheets:sheets,warnings:warnings,duplicates:duplicates};
+  return {rows:all,files:files.map(function(f){return f.name}),fileObjects:fileObjects,sheets:sheets,warnings:warnings,duplicates:duplicates};
  }
  function getRows(){var by=window.plData||{},out=[];Object.keys(by).forEach(function(k){(by[k]||[]).forEach(function(x){out.push(x)})});return out}
  function getStock(){return window.svPriceListStockRows||[]}
@@ -137,14 +137,14 @@
   var btn=$('plUploadButton');if(btn){btn.disabled=true;btn.textContent='Reading Excel…'}
   try{pending=await parseFiles(files);if(!pending.rows.length)throw new Error('No price rows were detected. Check the workbook layout.');var groups={};pending.rows.forEach(function(x){(groups[x.department]||(groups[x.department]=[])).push(x)});$('plUploadPreview').style.display='';$('plPreviewSummary').textContent=pending.rows.length+' variants detected across '+pending.files.length+' file(s) and '+pending.sheets+' worksheet(s). Automatic department mapping: '+Object.keys(groups).map(function(k){return k+' ('+groups[k].length+')'}).join(' · ')+'.';$('plPreviewWarnings').textContent=(pending.warnings.length?pending.warnings.length+' sheet(s) had no price rows. ':'')+(pending.duplicates.length?pending.duplicates.length+' duplicate model/variant pair(s) detected. ':'')+'Preview only — database has not been changed.';showPreview(pending.rows);status('Upload preview ready. Review the detected models and variants below.')}
   catch(e){pending=null;$('plUploadPreview').style.display='none';status(e.message||String(e),true)}
-  finally{if(btn){btn.disabled=false;btn.textContent='＋  Upload Price Lists'}}
+  finally{if(btn){btn.disabled=false;btn.textContent='＋  Upload Price List'}}
  }
  async function publish(){
   if(!pending){status('Preview Excel files before saving.',true);return}if(pending.duplicates.length){status('Duplicate model / variant rows detected. Resolve duplicates in the Excel files before saving.',true);return}var api=window.SVMBackend,btn=$('plPublishButton');
   if(!api||!api.publishPriceList){status('Secure backend is not ready. Refresh and try again.',true);return}
   if(!api.has('price_list_management','create')){status('You do not have permission to upload price lists.',true);return}
   var groups={};pending.rows.forEach(function(x){(groups[x.department]||(groups[x.department]=[])).push(x)});if(btn){btn.disabled=true;btn.textContent='Saving…'}
-  try{await api.publishPriceList(groups,pending.files.join('; '));pending=null;$('plUploadPreview').style.display='none';$('plFiles').value='';await refresh();status('Price lists saved successfully.')}
+  try{await api.publishPriceList(groups,pending.files.join('; '),pending.fileObjects);pending=null;$('plUploadPreview').style.display='none';$('plFiles').value='';await refresh();status('Price lists saved successfully.')}
   catch(e){status(e.message||String(e),true)}finally{if(btn){btn.disabled=false;btn.textContent='Save Price Lists'}}
  }
  function cancelPreview(){pending=null;if($('plUploadPreview'))$('plUploadPreview').style.display='none';if($('plFiles'))$('plFiles').value='';status('Upload preview cancelled.')}
