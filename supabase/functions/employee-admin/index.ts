@@ -253,7 +253,7 @@ Deno.serve(async (req: Request) => {
     if (banError) return json({ error: "Employee archived but login blocking failed: " + banError.message }, 500);
     const { error: permissionDeleteError } = await adminClient.from("employee_permissions").delete().eq("user_id",userId);
     if (permissionDeleteError) return json({error:"Employee archived but permissions cleanup failed: "+permissionDeleteError.message},500);
-    const { error: auditError } = if (!isRoot) await adminClient.from("audit_logs").insert({
+    const { error: auditError } = isRoot ? { error: null } : await adminClient.from("audit_logs").insert({
       actor_id: callerId, actor_email: authData.user.email, module: "employee_management",
       action: "delete", action_label: "Deleted employee account (archived)",
       record_type: "profile", record_id: userId, details: { email: target.email, method: "soft_delete" },
