@@ -62,6 +62,15 @@
     if($('svAuthGate')) $('svAuthGate').remove();
     const label=$('userName')||document.querySelector('.user-name');
     if(label) label.textContent=currentProfile.full_name||currentUser.email;
+    // Keep the app shell intact; enforce module access on the actual view sections.
+    const viewMap={
+      'view-dashboard':'dashboard','view-stock':'stock_register','view-quotation':'quotation_management',
+      'view-quotation-management':'quotation_management','view-stock-import':'common_excel_upload',
+      'view-upload':'common_excel_upload','view-stock-hold-central':'stock_hold_management',
+      'view-price-list':'price_list_management','view-employees':'employee_management',
+      'view-audit':'audit_history','view-reports':'retail_reports','view-backup-restore':'backup_restore'
+    };
+    Object.entries(viewMap).forEach(([id,module])=>{const node=$(id);if(node)node.style.display=has(module,'view')?'':'none';});
     document.querySelectorAll('[data-page]').forEach(n=>{
       const page=n.dataset.page||'';
       const m=page.startsWith('stock')?'stock_register':
