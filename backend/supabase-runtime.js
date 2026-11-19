@@ -449,7 +449,12 @@
     if(!has('employee_management','manage_users')) throw new Error('You do not have Manage Users permission.');
     const {data:{session}}=await db().auth.getSession();
     const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'create_employee',...fields},headers:{Authorization:'Bearer '+session.access_token}});
-    if(error) throw error;
+    if(error){
+      let message=error.message||'Employee account creation failed.';
+      try{const payload=await error.context?.clone?.().json();if(payload?.error)message=payload.error;}catch{}
+      if(/email_exists|already.*registered|already.*exists/i.test(message))message='આ Emailથી કર્મચારીનું Login પહેલેથી બનાવેલું છે. Employee Directoryમાં તે નામ પર ક્લિક કરીને Edit કરો.';
+      throw new Error(message);
+    }
     if(data?.error) throw new Error(data.error);
     await loadEmployees();return data;
   }
