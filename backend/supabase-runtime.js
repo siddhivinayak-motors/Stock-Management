@@ -1046,7 +1046,6 @@
     });
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
-    window.holdSubmit=()=>submitHold().catch(e=>notify(e.message));
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
     window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadPriceListStock,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,audit};
     window.dispatchEvent(new Event('svm:ready'));
