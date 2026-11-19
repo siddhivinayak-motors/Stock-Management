@@ -749,7 +749,7 @@
     const input=(name,label,value,type='text')=>'<label style="display:block;font-size:13px;font-weight:650">'+label+'<input '+(type==='tel'?'type="tel" inputmode="numeric" maxlength="10"':'type="text"')+' name="'+name+'" class="field" value="'+esc(value||'')+'" style="width:100%;margin-top:5px"></label>';
     const selected=profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean);
     const departments='<fieldset style="border:1px solid #dce2e9;border-radius:8px;padding:10px"><legend style="font-size:13px;font-weight:650">Department Access</legend>'+['Personal','EV','Commercial','LLM'].map(x=>'<label style="display:inline-flex;gap:5px;align-items:center;margin:5px 10px 5px 0"><input type="checkbox" name="department_access" value="'+x+'" '+(selected.includes(x)?'checked':'')+'>'+x+'</label>').join('')+'</fieldset>';
-    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Employee Details</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+input('full_name','Employee Name',profile.full_name)+input('phone','Mobile Number',profile.phone,'tel')+'<label style="display:block;font-size:13px;font-weight:650">New Password (leave blank to keep current)<input type="password" name="password" minlength="6" autocomplete="new-password" class="field" style="width:100%;margin-top:5px"></label><label style="display:block;font-size:13px;font-weight:650">Designation / Role<select name="designation" id="svEditRole" class="field" style="width:100%;margin-top:5px">'+Object.keys(ROLE_MODULES_UI).concat(['Super Admin']).map(x=>'<option value="'+x+'" '+(profile.designation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label>'+departments+'<label style="display:block;font-size:13px;font-weight:650">Account Status<select name="status" class="field" style="width:100%;margin-top:5px"><option value="active" '+(profile.status==='active'?'selected':'')+'>Active</option><option value="inactive" '+(profile.status!=='active'?'selected':'')+'>Inactive</option></select></label><label style="display:block;font-size:13px;font-weight:650">Email (read only)<input class="field" value="'+esc(profile.email||'')+'" readonly style="width:100%;margin-top:5px"></label></div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button type="button" id="svEmployeeDelete" class="btn" style="border-color:#efb7bc;color:#b4232c;background:#fff7f7">Delete User</button><div style="display:flex;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Save Changes</button></div></div></form>';
+    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Employee Details</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+input('full_name','Employee Name',profile.full_name)+input('phone','Mobile Number',profile.phone,'tel')+'<label style="display:block;font-size:13px;font-weight:650">New Password (leave blank to keep current)<input type="password" name="password" minlength="6" autocomplete="new-password" class="field" style="width:100%;margin-top:5px"></label><label style="display:block;font-size:13px;font-weight:650">Designation / Role<select name="designation" id="svEditRole" class="field" style="width:100%;margin-top:5px">'+Object.keys(ROLE_MODULES_UI).concat(['Super Admin']).map(x=>'<option value="'+x+'" '+(profile.designation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label>'+departments+'<label style="display:block;font-size:13px;font-weight:650">Account Status<select name="status" class="field" style="width:100%;margin-top:5px"><option value="active" '+(profile.status==='active'?'selected':'')+'>Active</option><option value="inactive" '+(profile.status!=='active'?'selected':'')+'>Inactive</option></select></label><label style="display:block;font-size:13px;font-weight:650">City<select name="city" class="field" style="width:100%;margin-top:5px"><option value="">Select City</option>'+['Bhavnagar','Amreli','Botad','Rajula'].map(x=>'<option value="'+x+'" '+(profile.city===x?'selected':'')+' >'+x+'</option>').join('')+'</select></label><label style="display:block;font-size:13px;font-weight:650">Email (read only)<input class="field" value="'+esc(profile.email||'')+'" readonly style="width:100%;margin-top:5px"></label></div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button type="button" id="svEmployeeDelete" class="btn" style="border-color:#efb7bc;color:#b4232c;background:#fff7f7">Delete User</button><div style="display:flex;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Save Changes</button></div></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
     const applyEditRole=()=>{
@@ -876,6 +876,8 @@
     }
     const section=$('view-employees');if(!section)return;
     rows=rows.filter(p=>!p.deleted_at);
+    const designationFilter=section.querySelector('#svEmployeeDesignationFilter')?.value||'';
+    const cityFilter=section.querySelector('#svEmployeeCityFilter')?.value||'';
     if(currentProfile?.designation==='Manager'){
       const managerDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
       rows=rows.filter(p=>{
@@ -883,6 +885,18 @@
         return employeeDepartments.some(d=>managerDepartments.has(d));
       });
     }
+    const roleOrder={'Super Admin':0,'Admin':1,'General Manager':2,'Manager':3,'Accountant':4,'HR':5,'DMS':6,'Executive':7,'Reception':8,'Receptionist':8,'Driver':9};
+    const cityOrder={'Bhavnagar':0,'Amreli':1,'Botad':2,'Rajula':3};
+    rows.sort((a,b)=>{
+      const ar=a.is_super_admin?'Super Admin':(a.designation||''),br=b.is_super_admin?'Super Admin':(b.designation||'');
+      const rank=(roleOrder[ar]??99)-(roleOrder[br]??99);if(rank)return rank;
+      if(ar==='Manager'&&br==='Manager'){
+        const city=(cityOrder[a.city]??99)-(cityOrder[b.city]??99);if(city)return city;
+      }
+      return String(a.full_name||'').localeCompare(String(b.full_name||''));
+    });
+    if(designationFilter)rows=rows.filter(p=>(p.is_super_admin?'Super Admin':(p.designation||''))===designationFilter);
+    if(cityFilter)rows=rows.filter(p=>p.city===cityFilter);
     const cards=section.querySelectorAll('.stat-grid .stat-value');
     if(cards[0])cards[0].textContent=rows.length;
     if(cards[1])cards[1].textContent=rows.filter(p=>p.status==='active').length;
@@ -894,7 +908,7 @@
       const access=p.is_super_admin?'Personal · EV · Commercial · LLM':((p.department_access?.length?p.department_access:[p.department].filter(Boolean)).join(' · ')||'—');
       const canEditThis=has('employee_management','edit')&&!p.is_super_admin&&p.user_id!==currentUser.id;
       const canManageThis=has('employee_management','manage_users')&&!p.is_super_admin&&p.user_id!==currentUser.id;
-      return '<tr><td>'+(canEditThis?'<button type="button" class="btn small" data-edit="'+esc(p.user_id)+'" style="padding:2px 0;background:transparent;border:0;color:#26384d;text-decoration:underline;font-weight:750">'+esc(p.full_name||'—')+'</button>':esc(p.full_name||'—'))+'</td><td>'+esc(p.phone||'—')+'<br><span class="muted">'+esc(p.email||'')+'</span></td><td>'+esc(designation)+'</td><td>'+esc(access)+'</td><td><span class="pill '+(p.status==='active'?'green':'red')+'">'+esc(p.status||'inactive')+'</span></td><td>'+(canManageThis?'<button type="button" class="btn small" data-permissions="'+esc(p.user_id)+'">Permissions</button>':'—')+'</td></tr>';
+      return '<tr><td>'+(canEditThis?'<button type="button" class="btn small" data-edit="'+esc(p.user_id)+'" style="padding:2px 0;background:transparent;border:0;color:#26384d;text-decoration:underline;font-weight:750">'+esc(p.full_name||'—')+'</button>':esc(p.full_name||'—'))+'</td><td>'+esc(p.phone||'—')+'<br><span class="muted">'+esc(p.email||'')+'</span></td><td>'+esc(designation==='Reception'?'Receptionist':designation)+'</td><td>'+esc(p.city||'—')+'</td><td>'+esc(access)+'</td><td><span class="pill '+(p.status==='active'?'green':'red')+'">'+esc(p.status||'inactive')+'</span></td><td>'+(canManageThis?'<button type="button" class="btn small" data-permissions="'+esc(p.user_id)+'">Permissions</button>':'—')+'</td></tr>';
     }).join(''):'<tr><td colspan="6" class="empty">No employees yet.</td></tr>';
     table?.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>{
       const p=rows.find(x=>x.user_id===btn.dataset.edit);if(p)editEmployeeDialog(p).catch(e=>notify(e.message));
