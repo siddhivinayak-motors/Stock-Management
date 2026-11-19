@@ -242,12 +242,6 @@ Deno.serve(async (req: Request) => {
     if (!canManageDepartment(target.department||"")) return json({error:"You can change permissions only for employees in your assigned department."},403);
     const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
     if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
-    const {error:profileUpdateError}=await adminClient.from("profiles").update({
-      department:requestedDepartments[0]||null,
-      department_access:requestedDepartments,
-      dashboard_shortcuts:requestedShortcuts
-    }).eq("user_id",userId);
-    if(profileUpdateError)return json({error:profileUpdateError.message},500);
     const selected = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
     if(selected.some(m=>!ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
     const forbidden=selected.filter((m:string)=>!canGrantModule(m));
@@ -267,6 +261,13 @@ Deno.serve(async (req: Request) => {
       if(saveError) return json({error:saveError.message},500);
     }
     if (!isRoot) await adminClient.from("audit_logs").insert({actor_id:callerId,actor_email:authData.user.email,module:"employee_management",action:"edit",action_label:"Updated employee menu permissions",record_type:"profile",record_id:userId,details:{modules:selected,departments:requestedDepartments,dashboard_shortcuts:requestedShortcuts}});
+    // Publish the profile update last: subscribed employee clients reload only after every permission row is saved.
+    const {error:profileUpdateError}=await adminClient.from("profiles").update({
+      department:requestedDepartments[0]||null,
+      department_access:requestedDepartments,
+      dashboard_shortcuts:requestedShortcuts
+    }).eq("user_id",userId);
+    if(profileUpdateError)return json({error:profileUpdateError.message},500);
     return json({success:true,modules:selected,departments:requestedDepartments,dashboard_shortcuts:requestedShortcuts,message:"Employee access saved"});
   }
 
