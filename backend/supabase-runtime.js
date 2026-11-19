@@ -316,12 +316,42 @@
     if(!$('stockTable')) return;
     try{
       const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
+      const canEdit=has('stock_register','edit'),canDelete=has('stock_register','delete');
       let rows=await loadVehicles(dept);
       const search=($('stockSearch')?.value||'').trim().toLowerCase();
+      const stageFilter=$('view-stock')?.querySelector('.toolbar select')?.value||'All stages and statuses';
       if(search) rows=rows.filter(v=>[v.chassis_number,v.model,v.variant,v.colour,v.sc_name,v.customer_name,v.status,v.stage].some(x=>String(x||'').toLowerCase().includes(search)));
+      if(stageFilter!=='All stages and statuses') rows=rows.filter(v=>v.stage===stageFilter||v.status===stageFilter);
       const body=$('stockTable').querySelector('tbody');
-      body.innerHTML=rows.length?rows.map(v=>'<tr><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+ (v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td></tr>').join(''):'<tr><td colspan="11" class="empty">No stock records yet.</td></tr>';
+      body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button> ':'')+(canDelete?'<button class="btn small" data-stock-delete="'+esc(v.id)+'">Delete</button>':'')+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
+      body.querySelectorAll('[data-stock-edit]').forEach(b=>b.onclick=()=>editVehicleDialog(rows.find(x=>x.id===b.dataset.stockEdit)));
+      body.querySelectorAll('[data-stock-delete]').forEach(b=>b.onclick=async()=>{
+        if(!confirm('Delete this stock vehicle? This action is permanent.'))return;
+        try{await deleteVehicle(b.dataset.stockDelete);await renderStock();notify('Vehicle deleted.');}catch(e){notify(e.message);}
+      });
+      const head=$('stockTable').querySelector('thead tr');
+      if(head&&head.children.length===11){const th=document.createElement('th');th.textContent='Actions';head.appendChild(th);}
     }catch(e){console.error(e);notify(e.message);}
+  }
+  function editVehicleDialog(vehicle){
+    if(!vehicle)return;
+    const existing=$('svVehicleDialog');if(existing)existing.remove();
+    const labels={chassis_number:'Chassis Number',excel_number:'Excel Number',model:'Model',variant:'Variant',seating:'Seating',colour:'Colour',manufacturing_year:'Manufacturing Year',oem_invoice_date:'OEM Invoice Date',engine_number:'Engine Number',sc_name:'SC Name',customer_name:'Customer Name',status:'Status',stage:'Stage',place:'Place'};
+    const wrap=document.createElement('div');wrap.id='svVehicleDialog';
+    wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
+    const fields=Object.entries(labels).map(([k,label])=>'<label style="display:block;font-size:12px;font-weight:650">'+label+'<input class="field" name="'+k+'" value="'+esc(vehicle[k]??'')+'" '+(k==='chassis_number'?'readonly':'')+'></label>').join('');
+    wrap.innerHTML='<form id="svVehicleEditForm" style="width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Stock Vehicle</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+fields+'</div><div id="svVehicleEditError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svVehicleEditCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Save Changes</button></div></form>';
+    document.body.appendChild(wrap);
+    $('svVehicleEditCancel').onclick=()=>wrap.remove();
+    $('svVehicleEditForm').onsubmit=async e=>{
+      e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
+      try{
+        const values=Object.fromEntries(new FormData(e.target).entries());
+        if(values.manufacturing_year)values.manufacturing_year=Number(values.manufacturing_year);else values.manufacturing_year=null;
+        Object.keys(values).forEach(k=>{if(values[k]==='')values[k]=null;});
+        await updateVehicle(vehicle.id,values);wrap.remove();await renderStock();notify('Stock vehicle updated.');
+      }catch(ex){$('svVehicleEditError').textContent=ex.message;button.disabled=false;}
+    };
   }
   function mapStockForm(){
     const form=$('vehicleForm');if(!form) return;
@@ -501,6 +531,8 @@
     const originalImportPreview=window.stockImportPreview;
     // Keep the original workbook preview parser; only its commit action is replaced above.
     if($('stockSearch'))$('stockSearch').addEventListener('input',()=>renderStock());
+    $('view-stock')?.querySelector('.toolbar select')?.addEventListener('change',()=>renderStock());
+    $('view-stock')?.querySelector('.page-head button')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();renderStock();},true);
     void originalImportPreview;
   }
   async function init() {
