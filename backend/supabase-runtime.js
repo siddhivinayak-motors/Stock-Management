@@ -604,9 +604,9 @@
   const ROLE_MODULES_UI={
     'Admin':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'],
     'General Manager':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'],
-    'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management'],
+    'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','price_list_management','common_excel_upload','backup_restore','retail_reports'],
     'Accountant':['price_list_management','retail_reports','common_excel_upload'],
-    'HR':['price_list_management','employee_management','retail_reports','common_excel_upload'],
+    'HR':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','retail_reports'],
     'DMS':['price_list_management','retail_reports','common_excel_upload'],
     'Executive':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports'],
     'Reception':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports'],
@@ -710,8 +710,9 @@
     const roleLevel={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Driver':10};
     const myRole=currentProfile?.is_super_admin?'Super Admin':String(currentProfile?.designation||'');
     if((roleLevel[profile.designation]??0)>=(roleLevel[myRole]??0) && !currentProfile?.is_super_admin){notify('You can manage only employees below your designation.');return;}
-    const canGrantAll=!!currentProfile?.is_super_admin||myRole==='Admin';
-    const grantable=new Set(canGrantAll?EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])):([...permissions.entries()].filter(([m,a])=>a.includes('view')).map(([m])=>m)));
+    const canGrantAll=!!currentProfile?.is_super_admin||myRole==='Admin'||myRole==='General Manager';
+    const canGrantOperational=myRole==='Manager'||myRole==='HR';
+    const grantable=new Set(EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])).filter(m=>m!=='audit_history'||canGrantAll).filter(m=>canGrantAll||canGrantOperational));
     const old=$('svPermissionDialog');if(old)old.remove();
     const current=await call(db().from('employee_permissions').select('module').eq('user_id',profile.user_id));
     const selected=new Set(current.map(x=>x.module));
