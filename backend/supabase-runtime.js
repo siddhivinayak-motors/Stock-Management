@@ -675,11 +675,41 @@
   }
   window.applyRetailMonth=()=>loadRetailReport();
 
+  async function changeOwnPassword(currentPassword,newPassword){
+    if(!currentUser?.email) throw new Error('You must be signed in to change your password.');
+    if(!currentPassword||!newPassword) throw new Error('Enter your current and new password.');
+    if(newPassword.length<8) throw new Error('New password must be at least 8 characters.');
+    if(currentPassword===newPassword) throw new Error('New password must be different from the current password.');
+    // Re-authenticate so the current password is actually verified before changing credentials.
+    const {data,error:reauthError}=await db().auth.signInWithPassword({email:currentUser.email,password:currentPassword});
+    if(reauthError||!data?.user||data.user.id!==currentUser.id) throw new Error('Current password is incorrect.');
+    const {error:updateError}=await db().auth.updateUser({password:newPassword});
+    if(updateError) throw updateError;
+    await audit('employee_management','edit','Changed own password','auth_account',currentUser.id,{method:'self_service'});
+    const form=$('svChangePasswordForm');
+    if(form) form.reset();
+    notify('Password changed successfully.');
+  }
+
   // UI bindings for existing elements whose original handlers were demo-only.
   function installScreenHooks(){
     mapStockForm();
     const newUser=$('view-employees')?.querySelector('.stat-grid .btn.primary');
     if(newUser)newUser.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();employeeDialog();},true);
+    $('svChangePasswordForm')?.addEventListener('submit',async e=>{
+      e.preventDefault();
+      const form=e.currentTarget,button=form.querySelector('button[type="submit"]');
+      const error=$('svChangePasswordError');
+      const current=$('svCurrentPassword')?.value||'';
+      const next=$('svNewPassword')?.value||'';
+      const confirmPassword=$('svConfirmPassword')?.value||'';
+      if(error)error.textContent='';
+      if(next!==confirmPassword){if(error)error.textContent='New password and confirmation do not match.';return;}
+      if(button){button.disabled=true;button.textContent='Updating…';}
+      try{await changeOwnPassword(current,next);}
+      catch(ex){if(error)error.textContent=ex.message||'Could not change password.';}
+      finally{if(button){button.disabled=false;button.textContent='Change Password';}}
+    });
     $('permEmployee')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
     $('permModule')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
     const uploadView=$('view-upload');
@@ -772,7 +802,7 @@
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdSubmit=()=>submitHold().catch(e=>notify(e.message));
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,savePermissions,loadEmployees,loadAudit,loadImportHistory,previewReconciliation,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,savePermissions,loadEmployees,loadAudit,loadImportHistory,previewReconciliation,audit};
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
   else init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();});
