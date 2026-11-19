@@ -92,7 +92,11 @@
 
   async function loadHolds() {
     if(!has('stock_hold_management','view')) return;
-    const rows=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}));
+    let rows=[],from=0,chunk=1000;
+    while(true){
+      const part=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}).range(from,from+chunk-1));
+      rows.push(...part);if(part.length<chunk)break;from+=chunk;
+    }
     window.holdItems=rows;
     if(typeof window.holdRender==='function') window.holdRender();
   }
