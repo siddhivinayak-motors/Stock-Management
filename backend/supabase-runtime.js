@@ -227,10 +227,13 @@
   window.saveQuote = async (printAfter=false) => {
     try {
       const q=getQuotePayload(); if(!q) return;
+      const allocatedNumber=await call(db().rpc('next_quote_number'));
+      q.no=allocatedNumber;
+      if($('quoteNumber'))$('quoteNumber').textContent=allocatedNumber;
       const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
       const model=$('qVehicle').value.trim(),variant=$('qVariant').value.trim();
       const payload={
-        quote_number:q.no,department:dept,quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
+        quote_number:allocatedNumber,department:dept,quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
         customer_name:q.customer,phone:q.phone,address:$('qAddress')?.value||'',
         vehicle_count:Number($('qVehicleNos')?.value||1),hypo:$('qHypo')?.value||'',
         model,car_description:$('qCarDesc')?.value||'',variant,colour:$('qColour')?.value||'',
