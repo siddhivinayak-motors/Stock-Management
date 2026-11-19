@@ -582,6 +582,8 @@
       const gen=uploadView.querySelector('.card .card-body button.btn.primary');
       if(gen)gen.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();previewReconciliation().catch(x=>notify(x.message));},true);
     }
+    $('saveQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(false);},true);
+    $('savePrintQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(true);},true);
     const auditView=$('view-audit');
     if(auditView){
       const toolbar=auditView.querySelector('.toolbar');
@@ -612,7 +614,7 @@
   async function init() {
     if(!window.supabase?.createClient) throw new Error('Supabase JavaScript SDK failed to load.');
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    const oldStore=localStorage.getItem(quoteStoreKey);
+    // Supabase is the source of truth; remove local demo workspace caches on startup.\n    ['sv_quote_records_clean_v2','sv_quotes_by_department_clean_v3','svm_clean_workspace_v2'].forEach(k=>{try{localStorage.removeItem(k);}catch(_e){}});
       try { localStorage.removeItem(quoteStoreKey); localStorage.removeItem(DEPT_QUOTE_KEY); } catch(_e) {}
       // Don't migrate browser records automatically; only explicit new Supabase records are used.
     installScreenHooks();
@@ -622,9 +624,8 @@
       if(!session){currentUser=null;currentProfile=null;permissions.clear();showLogin();return;}
       try{await refreshIdentity();await startApp();}catch(e){console.error(e);showLogin();}
     });
-    const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();signOut().catch(err=>notify(err.message));},true);}
-    const originalHoldRender=window.holdRender;
-    window.holdRender=async()=>{try{await loadHolds();if(originalHoldRender)originalHoldRender();}catch(e){console.error(e);notify(e.message);}};
+    const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
+    // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdSubmit=()=>submitHold().catch(e=>notify(e.message));
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
     window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,savePermissions,loadEmployees,loadAudit,loadImportHistory,previewReconciliation,audit};
