@@ -101,12 +101,15 @@ Deno.serve(async (req: Request) => {
   const callerLevel=ROLE_LEVEL[callerRole]??0;
   const isOrgAdmin=isRoot||callerRole==="Admin"||callerRole==="General Manager";
   const callerDepartmentScope=new Set(
-    (callerRole==="Manager"
-      ? [profile.department].filter(Boolean)
-      : (Array.isArray(profile.department_access)&&profile.department_access.length?profile.department_access:[profile.department].filter(Boolean))
-    ).map((d:string)=>String(d).toLowerCase())
+    (Array.isArray(profile.department_access)&&profile.department_access.length?profile.department_access:[profile.department].filter(Boolean))
+      .map((d:string)=>String(d).toLowerCase())
   );
   const canManageDepartment=(department:string)=>isOrgAdmin||callerDepartmentScope.has(String(department||"").toLowerCase());
+  const canManageTargetDepartments=(target:any)=>{
+    const targetDepartments=Array.isArray(target.department_access)&&target.department_access.length
+      ? target.department_access : [target.department].filter(Boolean);
+    return isOrgAdmin || targetDepartments.some((d:string)=>callerDepartmentScope.has(String(d).toLowerCase()));
+  };
   const {data:callerPermRows,error:callerPermError}=await callerClient
     .from("employee_permissions").select("module,actions").eq("user_id",callerId);
   if(callerPermError)return json({error:"Could not verify your permission limits"},500);
@@ -129,16 +132,18 @@ Deno.serve(async (req: Request) => {
     const targetLevel = ROLE_LEVEL[role] ?? 0;
     if (!isRoot && targetLevel >= callerLevel) return json({ error: "You can create only employees below your own designation." }, 403);
     if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
-    const selectedModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
-    if (selectedModules.some(m => !ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
+    const selectedWorkspaceModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
+    if (selectedWorkspaceModules.some(m => !ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
+    // Department access automatically includes stock register, stock hold and quotation functions.
+    const selectedModules = [...new Set([...selectedWorkspaceModules,...(departments.length?["stock_register","stock_hold_management","quotation_management"]:[])])];
     const forbiddenModules = selectedModules.filter(m => !canGrantModule(m));
     if (forbiddenModules.length) return json({error:"You cannot grant permissions you do not have: "+forbiddenModules.join(", ")},403);
     const selectedShortcuts = Array.isArray(body.dashboard_shortcuts) ? [...new Set(body.dashboard_shortcuts.map(String))] : [];
-    const allowedShortcuts = new Set(["quotation","price-list","employees","audit","reports","upload"]);
+    const allowedShortcuts = new Set(["quick-access"]);
     if (selectedShortcuts.some(x => !allowedShortcuts.has(x))) return json({error:"Invalid dashboard shortcut"},400);
     if (selectedShortcuts.includes("audit") && !canGrantModule("audit_history")) return json({error:"You cannot grant Audit History shortcut."},403);
     if (!isOrgAdmin && departments.some((d:string)=>!canManageDepartment(d))) return json({error:"You can create employees only in your assigned department."},403);
-    if (callerRole==="Manager" && (departments.length!==1 || departments[0]!==String(profile.department||""))) return json({error:"A Manager can create employees only in their primary department: "+String(profile.department||"not assigned")},403);
+    if (callerRole==="Manager" && departments.some((d:string)=>!canManageDepartment(d))) return json({error:"A Manager can assign only departments in their own Department Access."},403);
     const finalDepartments = departments;
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email, password, email_confirm: true, user_metadata: { full_name: fullName },
@@ -181,7 +186,7 @@ Deno.serve(async (req: Request) => {
       .select("user_id,email,is_super_admin,designation,department,department_access").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "A Super Admin profile cannot be edited here" }, 403);
-    if (!canManageDepartment(target.department||"")) return json({error:"You can manage employees only in your assigned department."},403);
+    if (!canManageTargetDepartments(target)) return json({error:"You can manage employees only in your assigned department."},403);
     if (!isRoot && (ROLE_LEVEL[String(target.designation||"")]??0)>=callerLevel) return json({error:"You can manage only employees below your own designation."},403);
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of ["full_name","employee_code","phone","designation","department"]) {
@@ -200,7 +205,7 @@ Deno.serve(async (req: Request) => {
       const finalAccess = [...new Set(access)];
       if (!finalAccess.length) return json({error:"Select at least one department"},400);
       if (!isOrgAdmin && finalAccess.some((d:string)=>!canManageDepartment(d))) return json({error:"You cannot assign access outside your own department."},403);
-      if (callerRole==="Manager" && (finalAccess.length!==1 || finalAccess[0]!==String(profile.department||""))) return json({error:"A Manager can assign only their own department."},403);
+      if (callerRole==="Manager" && finalAccess.some((d:string)=>!canManageDepartment(d))) return json({error:"A Manager can assign only departments in their own Department Access."},403);
       patch.department_access = finalAccess;
       patch.department = finalAccess[0];
     }
@@ -249,12 +254,12 @@ Deno.serve(async (req: Request) => {
     const validDepartments=new Set(["Personal","EV","Commercial","LLM"]);
     if(requestedDepartments.some((d:string)=>!validDepartments.has(d)))return json({error:"Invalid department selection"},400);
     if(!isOrgAdmin&&requestedDepartments.some((d:string)=>!canManageDepartment(d)))return json({error:"You cannot assign departments outside your own access."},403);
-    if(callerRole==="Manager"&&(requestedDepartments.length>1||requestedDepartments.some((d:string)=>d!==String(profile.department||""))))return json({error:"A Manager can assign only their own department."},403);
+    if(callerRole==="Manager"&&requestedDepartments.some((d:string)=>!canManageDepartment(d)))return json({error:"A Manager can assign only departments in their own Department Access."},403);
     const requestedShortcuts=Array.isArray(body.dashboard_shortcuts)?[...new Set(body.dashboard_shortcuts.map(String))]:[];
-    const allowedShortcuts=new Set(["quotation","price-list","employees","audit","reports","upload"]);
+    const allowedShortcuts=new Set(["quick-access"]);
     if(requestedShortcuts.some((x:string)=>!allowedShortcuts.has(x)))return json({error:"Invalid dashboard shortcut"},400);
     if(requestedShortcuts.includes("audit")&&!canGrantModule("audit_history"))return json({error:"You cannot grant Audit History shortcut."},403);
-    if (!canManageDepartment(target.department||"")) return json({error:"You can change permissions only for employees in your assigned department."},403);
+    if (!canManageTargetDepartments(target)) return json({error:"You can change permissions only for employees in your assigned department."},403);
     const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
     if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
     const selected = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
@@ -290,10 +295,10 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "You cannot delete your own account" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin,deleted_at,designation,department").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,deleted_at,designation,department,department_access").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "The Super Admin account is protected and cannot be deleted" }, 403);
-    if (!canManageDepartment(target.department||"")) return json({error:"You can delete employees only in your assigned department."},403);
+    if (!canManageTargetDepartments(target)) return json({error:"You can delete employees only in your assigned department."},403);
     if (!isRoot && (ROLE_LEVEL[String(target.designation||"")]??0)>=callerLevel) return json({error:"You can delete only employees below your own designation."},403);
     if (target.deleted_at) return json({ error: "This employee is already deleted" }, 409);
     const { error: updateError } = await adminClient.from("profiles")
@@ -317,10 +322,10 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin,designation,department").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,designation,department,department_access").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "A Super Admin cannot be deactivated by this action" }, 403);
-    if (!canManageDepartment(target.department||"")) return json({error:"You can deactivate employees only in your assigned department."},403);
+    if (!canManageTargetDepartments(target)) return json({error:"You can deactivate employees only in your assigned department."},403);
     if (!isRoot && (ROLE_LEVEL[String(target.designation||"")]??0)>=callerLevel) return json({error:"You can deactivate only employees below your own designation."},403);
     const { error: updateError } = await adminClient.from("profiles")
       .update({ status: "inactive", updated_at: new Date().toISOString() }).eq("user_id", userId);
