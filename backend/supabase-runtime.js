@@ -302,7 +302,7 @@
     const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
     const csv=[cols.join(','),...rows.map(r=>cols.map(c=>q(typeof r[c]==='object'?JSON.stringify(r[c]):r[c])).join(','))].join('\r\n');
     const a=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-    a.href=url;a.download='Siddhivinayak-Audit-'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(url);
+    a.href=url;a.download='Siddhivinayak-Audit-'+new Date().toISOString().slice(0,10)+'.csv';a.click();URL.revokeObjectURL(url);void audit('audit_history','export','Exported audit history as CSV');
   }
   async function audit(module,action,label,type=null,id=null,details={}) {
     if(!currentUser || currentProfile?.is_super_admin) return false;
@@ -1046,7 +1046,7 @@
       actionSelect?.addEventListener('change',()=>renderAuditRows());
       const buttons=toolbar?.querySelectorAll('button')||[];
       if(buttons[0])buttons[0].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();downloadAuditCsv();},true);
-      if(buttons[1])buttons[1].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.print();},true);
+      if(buttons[1])buttons[1].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();void audit('audit_history','export','Printed audit history');window.print();},true);
     }
     const permittedDepartments=allowedDepartmentList();
     const stockFilter=$('stockDepartmentFilter');
