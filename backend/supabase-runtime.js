@@ -348,7 +348,7 @@
   }
   async function updateVehicle(id,data,viaImport=false) {
     if(!canManageStock()&&!viaImport) throw new Error('Executive and junior roles cannot edit stock.');
-    if(!has('stock_register','edit') && !(viaImport && has('common_excel_upload','create'))) throw new Error('No stock edit permission (or Common Excel Upload permission for exact-match reconciliation).');
+    if(viaImport&&!has('common_excel_upload','create')) throw new Error('Common Excel Upload permission required.');
     const row=await call(db().from('vehicles').update({...data,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',id).select().single());
     await audit(viaImport?'common_excel_upload':'stock_register',viaImport?'create':'edit',viaImport?'Reconciled vehicle by exact chassis':'Updated vehicle','vehicle',id);
     return row;
@@ -564,7 +564,7 @@
     if(!$('stockTable')) return;
     try{
       const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
-      const canEdit=canManageStock()&&has('stock_register','edit'),canDelete=canManageStock()&&has('stock_register','delete');
+      const canEdit=canManageStock(),canDelete=canManageStock()&&has('stock_register','delete');
       const deptFilter=$('stockDepartmentFilter');
       const selectedDept=dept==='All'?(deptFilter?.value||'All Accessible Departments'):dept;
       let rows=await loadVehicles(dept==='All'&&selectedDept!=='All Accessible Departments'?selectedDept:dept);
@@ -621,6 +621,8 @@
   }
   function mapStockForm(){
     const form=$('vehicleForm');if(!form) return;
+    const addButton=$('addVehicle');
+    if(addButton){addButton.style.display=canManageStock()?'':'none';addButton.disabled=!canManageStock();}
     const fields=[...form.querySelectorAll('.form-grid .field input, .form-grid .field select, .form-grid .field textarea')];
     const names=['chassis_number','excel_number','model','variant','seating','colour','manufacturing_year','oem_invoice_date','engine_number','sc_name','customer_name','status','stage','place'];
     fields.forEach((el,i)=>{if(names[i]){el.dataset.backendField=names[i];el.id='svVehicleField_'+names[i];}});
@@ -629,6 +631,7 @@
     if(save) save.addEventListener('click',async e=>{
       e.preventDefault();e.stopImmediatePropagation();
       try{
+        if(!canManageStock())throw new Error('Executive and junior roles cannot add stock vehicles.');
         const deptPicker=$('stockDepartmentForNewVehicle');
         const selectedDepartment=currentStockDepartment==='All'?(deptPicker?.value||''):currentStockDepartment;
         if(!selectedDepartment||!allowedDepartmentList().includes(selectedDepartment)) throw new Error('Select a department you are authorized to access.');
@@ -982,6 +985,7 @@
     const stockFilter=$('stockDepartmentFilter');
     if(stockFilter){const current=stockFilter.value;stockFilter.innerHTML='<option>All Accessible Departments</option>'+permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');if(permittedDepartments.includes(current))stockFilter.value=current;stockFilter.onchange=()=>renderStock();}
     $('stockAgeSort')?.addEventListener('change',()=>renderStock());
+    const addButton=$('addVehicle');if(addButton){addButton.style.display=canManageStock()?'':'none';addButton.disabled=!canManageStock();}
     const newVehicleDept=$('stockDepartmentForNewVehicle');
     if(newVehicleDept){newVehicleDept.innerHTML=permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');newVehicleDept.value=permittedDepartments[0]||'';}
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
