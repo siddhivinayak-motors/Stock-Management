@@ -867,7 +867,37 @@ function getQuotePayload(){
  if(!model||!customer||phone.length!==10){toast('Enter vehicle model, customer name and valid 10-digit mobile');return null}
  const items=[];
  charges.querySelectorAll('.charge-row').forEach(r=>{const name=r.querySelector('select').value;const amount=Number(r.querySelector('.amount').value)||0;items.push({name,amount,discount:name==='Discount'})});
- return {no:document.getElementById('quoteNumber').textContent,customer,phone,vehicle:model+(variant?' · '+variant:''),chassis:document.getElementById('qChassis').value.trim(),by:'Rakesh Anjara',total:totals.total,subtotal:totals.subtotal,discount:totals.discount,status:'PENDING',prints:0,date:new Date().toLocaleDateString('en-IN'),items};
+ const amountWords=numberWordsIndian(totals.total);
+ const terms=[
+  "All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.",
+  "Kindly insist for receipt of all payments made.",
+  "Subject to availability of stock and colour.",
+  "Price prevailing at the time of delivery shall be applicable.",
+  "Prices are subject to change without any notice.",
+  "Subject to Bhavnagar jurisdiction."
+ ];
+ const bank={accountName:"SIDDHIVINAYAK MOTORS PVT. LTD.",bank:"State Bank of India",account:"33349775105",ifsc:"SBIN0060231",branch:"Chitra, Bhavnagar"};
+ return {
+  no:document.getElementById('quoteNumber').textContent,customer,phone,
+  address:document.getElementById('qAddress')?.value.trim()||'',
+  vehicle:model+(variant?' · '+variant:''),model,variant,
+  carDescription:document.getElementById('qCarDesc')?.value.trim()||'',
+  colour:document.getElementById('qColour')?.value.trim()||'',
+  vehicleNos:Number(document.getElementById('qVehicleNos')?.value||1),
+  hypo:document.getElementById('qHypo')?.value.trim()||'',
+  chassis:document.getElementById('qChassis').value.trim(),
+  salesPerson:document.getElementById('qSalesPerson')?.value.trim()||'',
+  contactPerson:document.getElementById('qContactPerson')?.value.trim()||'PRATIK BADHEKA (SALES MANAGER)',
+  contactMobile:document.getElementById('qContactMobile')?.value.trim()||'9879100031',
+  email:document.getElementById('qEmail')?.value.trim()||'SALES.B@SIDDHIVINAYAKMOTORS.COM',
+  branchAddress:document.getElementById('qBranchAddress')?.value.trim()||'Press Quarter, Near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004',
+  helpline:document.getElementById('qHelpline')?.value.trim()||'9925139389',
+  pan:document.getElementById('qPan')?.value.trim()||'AAMCS1007J',
+  gstin:document.getElementById('qGstin')?.value.trim()||'24AAMCS1007J1ZI',
+  by:'Rakesh Anjara',total:totals.total,subtotal:totals.subtotal,discount:totals.discount,
+  amountWords,terms,bank,status:'PENDING',prints:0,
+  date:document.getElementById('qDate')?.value||new Date().toISOString().slice(0,10),items
+ };
 }
 function printQuoteDocument(q){
  const escPrint=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -878,7 +908,18 @@ function printQuoteDocument(q){
  const discountRows=discounts.map(x=>'<tr class="discount"><td class="sr">−</td><td>'+escPrint(x.name||'Discount')+'</td><td class="amount">− '+money(x.amount)+'</td></tr>').join('');
  const w=window.open('','_blank','width=900,height=900');
  if(!w){toast('Allow pop-ups to print quotation');return}
- const printDate=q.date||new Date().toLocaleDateString('en-IN');
+ const rawDate=q.date||new Date().toISOString().slice(0,10);
+ const parsedDate=new Date(rawDate+'T00:00:00');
+ const printDate=Number.isNaN(parsedDate.getTime())?rawDate:parsedDate.toLocaleDateString('en-IN');
+ const terms=Array.isArray(q.terms)&&q.terms.length?q.terms:[
+  'All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.',
+  'Kindly insist for receipt of all payments made.',
+  'Subject to availability of stock and colour.',
+  'Price prevailing at the time of delivery shall be applicable.',
+  'Prices are subject to change without any notice.',
+  'Subject to Bhavnagar jurisdiction.'
+ ];
+ const bank=q.bank||{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'};
  const address='Press Quarter, Near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004';
  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Quotation ${escPrint(q.no)}</title>
  <style>
@@ -925,10 +966,12 @@ function printQuoteDocument(q){
  <section class="meta">
   <div class="field"><div class="label">Customer Name</div><div class="value">${escPrint(q.customer)}</div></div>
   <div class="field"><div class="label">Mobile Number</div><div class="value">${escPrint(q.phone)}</div></div>
-  <div class="field"><div class="label">Vehicle / Model</div><div class="value">${escPrint(q.vehicle)}</div></div>
+  <div class="field"><div class="label">Customer Address</div><div class="value">${escPrint(q.address||'—')}</div></div>
+  <div class="field"><div class="label">Vehicle Nos. / Hypothecation</div><div class="value">${escPrint(q.vehicleNos||1)} / ${escPrint(q.hypo||'—')}</div></div>
+  <div class="field"><div class="label">Model / Variant</div><div class="value">${escPrint(q.model||q.vehicle||'—')} / ${escPrint(q.variant||'—')}</div></div>
+  <div class="field"><div class="label">Car Description / Colour</div><div class="value">${escPrint(q.carDescription||'—')} / ${escPrint(q.colour||'—')}</div></div>
   <div class="field"><div class="label">Chassis Number</div><div class="value">${escPrint(q.chassis||'—')}</div></div>
-  <div class="field"><div class="label">Quotation Status</div><div class="value">${q.status==='APPROVED'?'APPROVED':'SUBMITTED'}</div></div>
-  <div class="field"><div class="label">Prepared By</div><div class="value">${escPrint(q.by||'Siddhivinayak Motors')}</div></div>
+  <div class="field"><div class="label">Prepared By / Status</div><div class="value">${escPrint(q.by||'Siddhivinayak Motors')} / ${q.status==='APPROVED'?'APPROVED':'SUBMITTED'}</div></div>
  </section>
  <table><thead><tr><th class="sr">SR.</th><th>PARTICULARS</th><th class="amount">AMOUNT (₹)</th></tr></thead><tbody>${itemRows}${discountRows}</tbody></table>
  <section class="totals">
@@ -936,19 +979,12 @@ function printQuoteDocument(q){
   <div class="total-row"><span>Discount</span><b>− ${money(q.discount)}</b></div>
   <div class="total-row grand"><span>NET PAYABLE</span><span>${money(q.total)}</span></div>
  </section>
- <div class="words">Amount shown is based on the particulars listed above.</div>
+ <div class="words">Amount in words: <b>${escPrint(q.amountWords||'Amount not available')}</b></div>
  <section class="bottom">
-  <div><h2>TERMS &amp; CONDITIONS</h2><ol>
-   <li>All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.</li>
-   <li>Kindly insist for receipt of all payments made.</li>
-   <li>Subject to availability of stock and colour.</li>
-   <li>Price prevailing at the time of delivery shall be applicable.</li>
-   <li>Prices are subject to change without any notice.</li>
-   <li>Subject to Bhavnagar jurisdiction.</li>
-  </ol></div>
-  <div><h2>RTGS DETAILS</h2><p><b>Account Name:</b> SIDDHIVINAYAK MOTORS PVT. LTD.<br><b>Bank:</b> State Bank of India<br><b>Account Number:</b> 33349775105<br><b>IFSC:</b> SBIN0060231<br><b>Branch:</b> Chitra, Bhavnagar</p></div>
+  <div><h2>TERMS &amp; CONDITIONS</h2><ol>${terms.map(t=>'<li>'+escPrint(t)+'</li>').join('')}</ol></div>
+  <div><h2>RTGS DETAILS</h2><p><b>Account Name:</b> ${escPrint(bank.accountName||'')}<br><b>Bank:</b> ${escPrint(bank.bank||'')}<br><b>Account Number:</b> ${escPrint(bank.account||'')}<br><b>IFSC:</b> ${escPrint(bank.ifsc||'')}<br><b>Branch:</b> ${escPrint(bank.branch||'')}</p></div>
  </section>
- <section class="signrow"><div class="company-note"><b>PAN:</b> AAMCS1007J<br><b>GSTIN/UIN:</b> 24AAMCS1007J1ZI<br><b>Contact:</b> 9925139389</div><div class="signbox"><div class="signline"></div>For SIDDHIVINAYAK MOTORS PVT. LTD.<br>Authorised Signatory</div></section>
+ <section class="signrow"><div class="company-note"><b>PAN:</b> ${escPrint(q.pan||'')}<br><b>GSTIN/UIN:</b> ${escPrint(q.gstin||'')}<br><b>Contact Person:</b> ${escPrint(q.contactPerson||'')}<br><b>Mobile:</b> ${escPrint(q.contactMobile||'')}<br><b>Email:</b> ${escPrint(q.email||'')}<br><b>Helpline:</b> ${escPrint(q.helpline||'')}<br>${escPrint(q.branchAddress||'')}</div><div class="signbox"><div class="signline"></div>For SIDDHIVINAYAK MOTORS PVT. LTD.<br>Authorised Signatory</div></section>
  <div class="footer">E. &amp; O. E. · Subject to stock availability and applicable terms.</div>
  </main><script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350)}<\/script></body></html>`);
  w.document.close();
