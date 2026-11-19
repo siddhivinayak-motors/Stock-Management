@@ -75,6 +75,8 @@
    for(var cc=col+1;cc<variantRow.length;cc++)vals.push(num(dr[cc]));
    if(vals.some(function(x){return x!==null}))vals.forEach(function(value,index){if(value===null)return;var abs=col+1+index;if(!byCol[abs])byCol[abs]=[];byCol[abs].push({label:label,value:value})});
   }
+  var skippedColumns=0;
+  for(var sc=col+1;sc<variantRow.length;sc++){if(!clean(variantRow[sc])&&rows.slice(headerIndex+1).some(function(r){return num((r||[])[sc])!==null}))skippedColumns++;}
   var items=[];
   for(var vc=col+1;vc<variantRow.length;vc++){
    var variant=clean(variantRow[vc]);if(!variant)continue;var components=byCol[vc]||[];if(!components.length)continue;
@@ -83,12 +85,12 @@
    var vehicle=modelFromSheet(title,variant),department=departmentFor(fileName,vehicle,stockRows);
    items.push({department:department,vehicle:vehicle,variant:variant,colour:'',exShowroom:ex,rto:rto,other:0,onRoadTotal:total,tcs:tcs,insurance:insurance,components:components,sourceFile:fileName,sourceSheet:sheetName,effectiveDate:eff,customerType:customer,variantCode:(variant.match(/\b(NCH|C11|C7)\s*$/i)||[])[1]||''});
   }
-  return {items:items,warning:items.length?'':'No price columns found'};
+  return {items:items,warning:items.length?'':'No price columns found',skippedColumns:skippedColumns};
  }
  async function parseFiles(files){
   if(!window.XLSX)throw new Error('Excel reader could not load. Reload the page with internet access and try again.');
   var stock=window.svPriceListStockRows||[],all=[],warnings=[],sheets=0;
-  for(var i=0;i<files.length;i++){var file=files[i],buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true});for(var s=0;s<wb.SheetNames.length;s++){var name=wb.SheetNames[s],matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:true}),parsed=parseSheet(matrix,file.name,name,stock);sheets++;if(parsed.items.length)all=all.concat(parsed.items);else warnings.push(file.name+' / '+name+': '+parsed.warning)}}
+  for(var i=0;i<files.length;i++){var file=files[i],buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true});for(var s=0;s<wb.SheetNames.length;s++){var name=wb.SheetNames[s],matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:true}),parsed=parseSheet(matrix,file.name,name,stock);sheets++;if(parsed.items.length)all=all.concat(parsed.items);else warnings.push(file.name+' / '+name+': '+parsed.warning);if(parsed.skippedColumns)warnings.push(file.name+' / '+name+': '+parsed.skippedColumns+' numeric column(s) without a variant name were skipped')}}
   var seen=new Set(),duplicates=[];all.forEach(function(x){var k=norm(x.department+'|'+x.vehicle+'|'+x.variant);if(seen.has(k))duplicates.push(x.vehicle+' / '+x.variant);seen.add(k)});
   return {rows:all,files:files.map(function(f){return f.name}),sheets:sheets,warnings:warnings,duplicates:duplicates};
  }
