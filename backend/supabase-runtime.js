@@ -563,7 +563,7 @@
       const selectedDept=dept==='All'?(deptFilter?.value||'All Accessible Departments'):dept;
       let rows=await loadVehicles(dept==='All'&&selectedDept!=='All Accessible Departments'?selectedDept:dept);
       const search=($('stockSearch')?.value||'').trim().toLowerCase();
-      const stageFilter=$('view-stock')?.querySelector('.toolbar select')?.value||'All stages and statuses';
+      const stageFilter=$('stockStageFilter')?.value||'All stages and statuses';
       if(search) rows=rows.filter(v=>[v.chassis_number,v.model,v.variant,v.colour,v.sc_name,v.customer_name,v.status,v.stage].some(x=>String(x||'').toLowerCase().includes(search)));
       if(stageFilter!=='All stages and statuses') rows=rows.filter(v=>v.stage===stageFilter||v.status===stageFilter);
       const body=$('stockTable').querySelector('tbody');
