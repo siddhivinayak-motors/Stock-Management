@@ -30,7 +30,7 @@ function rolePermissionRows(role: string, userId: string, grantedBy: string, sel
   if (role === "Admin" || role === "General Manager") {
     for (const m of ALL_MODULES) map[m] = [...full];
   } else if (role === "Manager") {
-    Object.assign(map,{dashboard:view,stock_register:["view","create","edit","delete","export"],stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve","export"]});
+    Object.assign(map,{dashboard:view,stock_register:["view","create","edit","delete","export"],stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve","export"],common_excel_upload:["view","create"]});
   } else if (role === "Accountant") {
     Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"]});
   } else if (role === "HR") {
@@ -95,8 +95,9 @@ Deno.serve(async (req: Request) => {
   const {data:callerPermRows,error:callerPermError}=await callerClient
     .from("employee_permissions").select("module,actions").eq("user_id",callerId);
   if(callerPermError)return json({error:"Could not verify your permission limits"},500);
+  const callerActions=new Map((callerPermRows||[]).map((r:any)=>[r.module,r.actions||[]]));
   const callerModules=new Set((callerPermRows||[]).filter((r:any)=>(r.actions||[]).includes("view")).map((r:any)=>r.module));
-  const canGrantModule=(module:string)=>isRoot||isAdmin||callerModules.has(module);
+  const canGrantModule=(module:string)=>isRoot||isAdmin||(module==="common_excel_upload"?(callerActions.get(module)||[]).includes("create"):callerModules.has(module));
   if (action === "create_employee") {
     const email = String(body.email || "").trim().toLowerCase();
     const fullName = String(body.full_name || "").trim();
