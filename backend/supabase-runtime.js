@@ -128,7 +128,6 @@
       const module=quickModules[card.dataset.go];
       card.style.display=module&&shortcutAccess.has(card.dataset.go)&&has(module,'view')?'':'none';
     });
-    const hasAnyModule=['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'].some(m=>has(m,'view'));
     if(!hasAnyModule){
       document.querySelectorAll('.sidebar [data-page], .sidebar [data-group], .sidebar .nav-section').forEach(item=>{
         if(item.dataset.page==='password')return;
