@@ -456,14 +456,13 @@
   };
   window.resetAllExceptEmployees = () => notify('For safety, operational reset is disabled until a server-side, audited reset workflow is configured.');
   async function loadRetailReport(){
-    const month=$('retailMonth')?.value;
-    if(!month)return;
-    const start=month+'-01';const end=new Date(new Date(start+'T00:00:00').getFullYear(),new Date(start+'T00:00:00').getMonth()+1,1).toISOString().slice(0,10);
-    const rows=await call(db().from('vehicles').select('*').eq('status','Delivered').gte('oem_invoice_date',start).lt('oem_invoice_date',end));
-    if($('retailPeriod'))$('retailPeriod').textContent=month;
-    if($('retailRows'))$('retailRows').innerHTML=rows.map(v=>'<tr><td>'+esc(v.chassis_number)+'</td><td>'+esc(v.model)+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td></tr>').join('')||'<tr><td colspan="4">No delivered vehicles in this period.</td></tr>';
+    // Retail Date is a separate sales event. OEM Invoice Date is not a valid substitute.
+    if($('retailRows'))$('retailRows').innerHTML='<tr><td colspan="7" class="empty">Retail sales date data is not yet connected. This report is disabled rather than using OEM invoice dates as retail dates.</td></tr>';
+    const cards=$('view-reports')?.querySelectorAll('.retail-kpi strong');
+    cards?.forEach(x=>x.textContent='—');
+    notify('Retail reporting needs an approved retail-sale source and retail date field.');
   }
-  window.applyRetailMonth=()=>loadRetailReport().catch(e=>notify(e.message));
+  window.applyRetailMonth=()=>loadRetailReport();
 
   // UI bindings for existing elements whose original handlers were demo-only.
   function installScreenHooks(){
