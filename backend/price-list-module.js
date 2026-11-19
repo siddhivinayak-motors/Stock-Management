@@ -29,8 +29,8 @@
  }
  function variantMatch(stockValue,priceValue){
   var rawA=clean(stockValue).toUpperCase(),rawB=clean(priceValue).toUpperCase();
-  var critical=[/(?:^|[^A-Z0-9])(MT|AT)(?:$|[^A-Z0-9])/i,/(?:^|[^A-Z0-9])(2WD|4WD)(?:$|[^A-Z0-9])/i,/(?:^|[^A-Z0-9])([4679]\\s*STR)(?:$|[^A-Z0-9])/i,/(?:^|[^A-Z0-9])(CNG|DSL|DIESEL|PETROL|GASOLINE|G|D|P)(?:$|[^A-Z0-9])/i];
-  for(var i=0;i<critical.length;i++){var ma=rawA.match(critical[i]),mb=rawB.match(critical[i]);if(ma&&mb&&ma[1].replace(/\\s/g,'')!==mb[1].replace(/\\s/g,''))return false}
+  var critical=[/(?:^|[^A-Z0-9])(MT|AT)(?:$|[^A-Z0-9])/i,/(?:^|[^A-Z0-9])(2WD|4WD)(?:$|[^A-Z0-9])/i,/(?:^|[^A-Z0-9])([4679]\s*STR)(?:$|[^A-Z0-9])/i,/(?:^|[^A-Z0-9])(CNG|DSL|DIESEL|PETROL|GASOLINE|G|D|P)(?:$|[^A-Z0-9])/i];
+  for(var i=0;i<critical.length;i++){var ma=rawA.match(critical[i]),mb=rawB.match(critical[i]);if(ma&&mb&&ma[1].replace(/\s/g,'')!==mb[1].replace(/\s/g,''))return false}
   var a=variantKey(rawA),b=variantKey(rawB);if(!a||!b)return true;if(a===b||a.indexOf(b)>=0||b.indexOf(a)>=0)return true;
   var aa=a.match(/[A-Z]+|[0-9]+/g)||[],bb=b.match(/[A-Z]+|[0-9]+/g)||[],common=aa.filter(function(x){return bb.indexOf(x)>=0});
   return common.length>=Math.min(2,Math.ceil(Math.min(aa.length,bb.length)*0.65));
@@ -94,7 +94,7 @@
   if(!window.XLSX)throw new Error('Excel reader could not load. Reload the page with internet access and try again.');
   var stock=window.svPriceListStockRows||[],all=[],warnings=[],sheets=0;
   for(var i=0;i<files.length;i++){var file=files[i],buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true});for(var s=0;s<wb.SheetNames.length;s++){var name=wb.SheetNames[s],matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:true}),parsed=parseSheet(matrix,file.name,name,stock);sheets++;if(parsed.items.length)all=all.concat(parsed.items);else warnings.push(file.name+' / '+name+': '+parsed.warning);if(parsed.skippedColumns)warnings.push(file.name+' / '+name+': '+parsed.skippedColumns+' numeric column(s) without a variant name were skipped')}}
-  var seen=new Set(),duplicates=[];all.forEach(function(x){var k=norm(x.department+'|'+x.vehicle)+'|'+norm(clean(x.variant).toUpperCase().replace(/\\+/g,' PLUS '));if(seen.has(k))duplicates.push(x.vehicle+' / '+x.variant);seen.add(k)});
+  var seen=new Set(),duplicates=[];all.forEach(function(x){var k=norm(x.department+'|'+x.vehicle)+'|'+norm(clean(x.variant).toUpperCase().replace(/\+/g,' PLUS '));if(seen.has(k))duplicates.push(x.vehicle+' / '+x.variant);seen.add(k)});
   return {rows:all,files:files.map(function(f){return f.name}),sheets:sheets,warnings:warnings,duplicates:duplicates};
  }
  function getRows(){var by=window.plData||{},out=[];Object.keys(by).forEach(function(k){(by[k]||[]).forEach(function(x){out.push(x)})});return out}
