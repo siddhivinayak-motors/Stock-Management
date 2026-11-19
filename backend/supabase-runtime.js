@@ -174,6 +174,273 @@
     return call(db().from('quotations').select('*,quotation_items(*)').eq('department',department).order('created_at',{ascending:false}));
   }
 
+
+  // --- Bind the existing screens and controls to persistent Supabase records ---
+  const moduleEnum = (label) => MODULES[label] || label;
+  const toQuoteView = (row) => ({
+    id:row.id,no:row.quote_number,customer:row.customer_name,phone:row.phone||'',
+    vehicle:[row.model,row.variant].filter(Boolean).join(' · '),chassis:row.chassis||'',
+    by:row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'Employee',
+    total:Number(row.total||0),subtotal:Number(row.subtotal||0),discount:Number(row.discount||0),
+    status:String(row.status||'Pending').toUpperCase(),prints:Number(row.print_count||0),
+    date:row.quote_date,items:(row.quotation_items||[]).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount}))
+  });
+  async function reloadQuoteList() {
+    if(!has('quotation_management','view')) return;
+    const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
+    const rows=await loadQuotations(dept);
+    quoteRecords=rows.map(toQuoteView);
+    if(typeof renderQuoteManagement==='function') renderQuoteManagement();
+    if(typeof updateQuoteNumber==='function') updateQuoteNumber();
+  }
+  window.saveQuote = async (printAfter=false) => {
+    try {
+      const q=getQuotePayload(); if(!q) return;
+      const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
+      const model=$('qVehicle').value.trim(),variant=$('qVariant').value.trim();
+      const payload={
+        quote_number:q.no,department:dept,quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
+        customer_name:q.customer,phone:q.phone,address:$('qAddress')?.value||'',
+        vehicle_count:Number($('qVehicleNos')?.value||1),hypo:$('qHypo')?.value||'',
+        model,car_description:$('qCarDesc')?.value||'',variant,colour:$('qColour')?.value||'',
+        chassis:q.chassis,sales_person:$('qSalesPerson')?.value||'',
+        contact_person:$('qContactPerson')?.value||'',contact_mobile:$('qContactMobile')?.value||'',
+        email:$('qEmail')?.value||'',branch_address:$('qBranchAddress')?.value||'',
+        helpline:$('qHelpline')?.value||'',pan:$('qPan')?.value||'',gstin:$('qGstin')?.value||'',
+        subtotal:q.subtotal,discount:q.discount,total:q.total,
+        amount_words:$('qAmountWords')?.textContent||'',created_by:currentUser.id,updated_by:currentUser.id
+      };
+      const saved=await call(db().from('quotations').insert(payload).select().single());
+      const itemRows=q.items.map((x,i)=>({quotation_id:saved.id,line_no:i+1,particulars:x.name,amount:x.amount,is_discount:x.discount}));
+      if(itemRows.length) await call(db().from('quotation_items').insert(itemRows));
+      await audit('quotation_management','create','Saved quotation','quotation',saved.id,{quote_number:q.no});
+      await reloadQuoteList();
+      notify('Quotation saved to Supabase.');
+      if(printAfter) window.printSavedQuote(quoteRecords.findIndex(x=>x.id===saved.id));
+    } catch(e){console.error(e);notify(e.message||'Could not save quotation.');}
+  };
+  window.saveRecords = () => {}; // Quotation records now live in Supabase, not localStorage.
+  window.loadDepartmentQuotes = () => { reloadQuoteList().catch(e=>{console.error(e);notify(e.message);}); };
+  window.approveQuote = async (i) => {
+    try{
+      const q=quoteRecords[i];if(!q?.id) return;
+      if(!has('quotation_management','approve')) throw new Error('You do not have approval permission.');
+      await call(db().from('quotations').update({status:'Approved',approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id));
+      await audit('quotation_management','approve','Approved quotation','quotation',q.id);
+      await reloadQuoteList();notify('Quotation approved.');
+    }catch(e){notify(e.message);}
+  };
+  window.printSavedQuote = async (i) => {
+    try{
+      const q=quoteRecords[i];if(!q) return;
+      if(q.id){
+        const row=await call(db().from('quotations').update({print_count:(q.prints||0)+1}).eq('id',q.id).select().single());
+        q.prints=Number(row.print_count||0);
+        if(typeof renderQuoteManagement==='function') renderQuoteManagement();
+      }
+      printQuoteDocument(q);
+    }catch(e){notify(e.message);}
+  };
+  window.plPublish = async () => {
+    try{
+      if(!plPending){notify('Preview a price list first');return;}
+      if(plPending.duplicates.length&&!confirm('Duplicate entries exist. Continue publishing?')) return;
+      if(!confirm('Publish '+plPending.rows.length+' price list rows to Supabase?')) return;
+      const grouped={};
+      for(const [dept,rows] of Object.entries(plPending.byDept)) grouped[dept]=rows;
+      await publishPriceList(grouped,plPending.files.join(', '));
+      plPending=null;
+      if($('plPreviewMsg')) $('plPreviewMsg').style.display='none';
+      notify('Price list published to Supabase.');
+    }catch(e){console.error(e);notify(e.message);}
+  };
+  window.stockImportCommit = async () => {
+    try{
+      if(!Array.isArray(stockPreviewRows)||!stockPreviewRows.length){notify('Preview a report first');return;}
+      if(!has('common_excel_upload','create')&&!has('stock_register','create')) throw new Error('You do not have import permission.');
+      const ready=stockPreviewRows.filter(x=>x.decision==='Import');
+      if(!ready.length){notify('No importable rows.');return;}
+      if(!confirm('Import '+ready.length+' stock rows into Supabase?')) return;
+      const file=$('stockReportFile')?.files?.[0];
+      const records=ready.map(x=>{
+        const r=x.raw||{};
+        const inv=plHeader(r,['oem invoicedate','oeminvoicedate','invoicedate']);
+        let invoice=null;
+        if(inv instanceof Date) invoice=inv.toISOString().slice(0,10);
+        else if(inv && !isNaN(Date.parse(inv))) invoice=new Date(inv).toISOString().slice(0,10);
+        return {
+          department:x.department,chassis_number:x.vin,model:x.model||'Unknown',variant:x.variant||'',
+          excel_number:String(plHeader(r,['excelnumber','excelno'])||''),
+          seating:String(plHeader(r,['seating','seat'])||''),
+          colour:String(plHeader(r,['colour','color'])||''),
+          manufacturing_year:Number(plHeader(r,['manufacturingyear','mfgyear','year'])||0)||null,
+          oem_invoice_date:invoice,
+          engine_number:String(plHeader(r,['enginenumber','engine'])||''),
+          sc_name:String(plHeader(r,['scname','salesconsultant'])||''),
+          customer_name:String(plHeader(r,['customername','customer'])||''),
+          status:'Received / In Stock',stage:'OPEN',source:'stock_report_import',
+          imported_at:new Date().toISOString(),created_by:currentUser.id
+        };
+      });
+      const {data,error}=await db().from('vehicles').insert(records).select('id');
+      if(error) throw error;
+      await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Import',department:null,imported_rows:data.length,skipped_rows:stockPreviewRows.length-ready.length,error_rows:0,created_by:currentUser.id}));
+      await audit('common_excel_upload','create','Imported stock report','stock_import_batch',null,{count:data.length,file:file?.name||''});
+      stockPreviewRows=[];await renderStock();
+      notify(data.length+' vehicles imported into Supabase.');
+    }catch(e){console.error(e);notify(e.message);}
+  };
+  async function renderStock(){
+    if(!$('stockTable')) return;
+    try{
+      const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
+      const rows=await loadVehicles(dept);
+      const body=$('stockTable').querySelector('tbody');
+      body.innerHTML=rows.length?rows.map(v=>'<tr><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+ (v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td></tr>').join(''):'<tr><td colspan="11" class="empty">No stock records yet.</td></tr>';
+    }catch(e){console.error(e);notify(e.message);}
+  }
+  function mapStockForm(){
+    const form=$('vehicleForm');if(!form) return;
+    const fields=[...form.querySelectorAll('.form-grid .field')];
+    const names=['chassis_number','excel_number','model','variant','seating','colour','manufacturing_year','oem_invoice_date','engine_number','sc_name','customer_name','status','stage','place'];
+    fields.forEach((el,i)=>{if(names[i])el.dataset.backendField=names[i];});
+    const save=form.querySelector('button.primary');
+    if(save) save.addEventListener('click',async e=>{
+      e.preventDefault();e.stopImmediatePropagation();
+      try{
+        const obj={department:currentStockDepartment||'Personal'};
+        fields.forEach(el=>{const k=el.dataset.backendField;if(k)obj[k]=el.value||null;});
+        if(!obj.chassis_number||!obj.model) throw new Error('Chassis Number and Model are required.');
+        if(obj.manufacturing_year)obj.manufacturing_year=Number(obj.manufacturing_year);
+        await saveVehicle(obj);form.style.display='none';form.querySelectorAll('input').forEach(x=>x.value='');await renderStock();notify('Vehicle saved to Supabase.');
+      }catch(ex){notify(ex.message);}
+    },true);
+  }
+  async function createEmployee(fields){
+    if(!has('employee_management','manage_users')) throw new Error('You do not have Manage Users permission.');
+    const {data:{session}}=await db().auth.getSession();
+    const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'create_employee',...fields},headers:{Authorization:'Bearer '+session.access_token}});
+    if(error) throw error;
+    if(data?.error) throw new Error(data.error);
+    await loadEmployees();return data;
+  }
+  function employeeDialog(){
+    const old=$('svEmployeeDialog');if(old)old.remove();
+    const wrap=document.createElement('div');wrap.id='svEmployeeDialog';
+    wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
+    wrap.innerHTML='<form id="svEmployeeForm" style="width:min(520px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Create Employee Login</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>Full Name<input required name="full_name" class="field"></label><label>Email<input required type="email" name="email" class="field"></label><label>Employee Code<input name="employee_code" class="field"></label><label>Mobile<input name="phone" class="field"></label><label>Designation<input name="designation" class="field"></label><label>Department<input name="department" class="field"></label></div><p style="font-size:12px;color:#6f7c8b">An invitation email will be sent. Employee creates their own password using that link.</p><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Send Invite</button></div></form>';
+    document.body.appendChild(wrap);
+    $('svEmployeeCancel').onclick=()=>wrap.remove();
+    $('svEmployeeForm').onsubmit=async e=>{
+      e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
+      try{
+        const fd=new FormData(e.target);const fields=Object.fromEntries(fd.entries());
+        const result=await createEmployee(fields);wrap.remove();notify('Invitation sent to '+result.email);await renderEmployees();
+      }catch(ex){$('svEmployeeError').textContent=ex.message;button.disabled=false;}
+    };
+  }
+  async function renderEmployees(){
+    if(!has('employee_management','view')&&!currentProfile?.is_super_admin) return;
+    const rows=await call(db().from('profiles').select('*').order('full_name'));
+    const section=$('view-employees');if(!section)return;
+    const table=section.querySelector('.card .table-wrap tbody');
+    if(table) table.innerHTML=rows.length?rows.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.email)+'<br>'+esc(p.phone||'')+'</td><td>'+esc(p.designation||'—')+'</td><td>'+esc(p.department||'—')+'</td><td>'+esc(p.status)+'</td><td>'+new Date(p.created_at).toLocaleDateString()+'</td><td>'+(p.is_super_admin?'Super Admin':p.status==='active'?'<button class="btn small" data-deactivate="'+esc(p.user_id)+'">Deactivate</button>':'Inactive')+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">No employees yet.</td></tr>';
+    table?.querySelectorAll('[data-deactivate]').forEach(btn=>btn.addEventListener('click',async()=>{
+      if(!confirm('Deactivate this employee login?'))return;
+      try{const {data:{session}}=await db().auth.getSession();const {data,error}=await db().functions.invoke('employee-admin',{body:{action:'deactivate_employee',user_id:btn.dataset.deactivate},headers:{Authorization:'Bearer '+session.access_token}});if(error)throw error;if(data?.error)throw new Error(data.error);await renderEmployees();notify('Employee deactivated.');}catch(ex){notify(ex.message);}
+    }));
+    const countEl=section.querySelector('.stat-grid .stat-value');if(countEl)countEl.textContent=rows.length;
+  }
+  async function renderPermissions(){
+    if(!has('employee_management','view')&&!currentProfile?.is_super_admin)return;
+    const employee=$('permEmployee')?.value,tbody=$('permRows');if(!tbody)return;
+    if(!employee){tbody.innerHTML='<tr><td colspan="3">Select an employee to view permissions.</td></tr>';return;}
+    const rows=await call(db().from('employee_permissions').select('*').eq('user_id',employee));
+    tbody.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(employee)+'</td><td>'+esc(x.module)+'</td><td>'+esc((x.actions||[]).join(', '))+'</td></tr>').join(''):'<tr><td colspan="3">No permissions assigned.</td></tr>';
+  }
+  window.permSave = async () => {
+    try{
+      const user=$('permEmployee')?.value,module=moduleEnum($('permModule')?.value);
+      const actions=[...document.querySelectorAll('#permChecks input:checked')].map(x=>x.value);
+      if(!user)throw new Error('Select an employee.');
+      await savePermissions(user,module,actions);
+      await renderPermissions();notify('Permissions saved to Supabase.');
+    }catch(e){notify(e.message);}
+  };
+  window.permRender=()=>{renderPermissions().catch(e=>notify(e.message));};
+  window.holdRender = async () => {
+    try{
+      const rows=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}));
+      holdItems=rows.map(x=>({...x,id:x.id,date:x.created_at,dept:x.department,approver:x.approver_id||'—',approvedAt:x.approved_at||'—'}));
+      const f=$('holdStatusFilter')?.value||'All',d=$('holdDeptFilter')?.value||'All Departments';
+      const filtered=holdItems.filter(x=>(f==='All'||x.status===f||(f==='On Hold'&&x.status==='Approved'))&&(d==='All Departments'||x.dept===d));
+      $('holdRows').innerHTML=filtered.length?filtered.map(x=>'<tr><td>'+new Date(x.date).toLocaleDateString()+'</td><td>'+esc(x.dept)+'</td><td>'+esc(x.vehicle)+'</td><td>'+esc(x.variant||'—')+'</td><td>'+esc(x.vin)+'</td><td>'+esc(x.executive||'—')+'</td><td>'+esc(x.reason)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.approver)+'<br>'+esc(x.approvedAt)+'</td><td>'+(x.status==='Pending'?'<button class="btn small" data-hold-approve="'+esc(x.id)+'">Approve</button> <button class="btn small" data-hold-reject="'+esc(x.id)+'">Reject</button>':'—')+'</td></tr>').join(''):'<tr><td colspan="10">No matching requests.</td></tr>';
+      $('holdPendingCount').textContent=rows.filter(x=>x.status==='Pending').length;
+      $('holdApprovedCount').textContent=rows.filter(x=>x.status==='Approved').length;
+      $('holdRejectedCount').textContent=rows.filter(x=>x.status==='Rejected').length;
+      $('holdOnCount').textContent=rows.filter(x=>x.status==='Approved').length;
+      $('holdRows').querySelectorAll('[data-hold-approve]').forEach(b=>b.onclick=()=>decideHold(b.dataset.holdApprove,'Approved').catch(e=>notify(e.message)));
+      $('holdRows').querySelectorAll('[data-hold-reject]').forEach(b=>b.onclick=()=>decideHold(b.dataset.holdReject,'Rejected').catch(e=>notify(e.message)));
+    }catch(e){console.error(e);notify(e.message);}
+  };
+  window.holdSubmit = () => submitHold().catch(e=>notify(e.message));
+  window.holdDecision = (id,decision) => decideHold(id,decision).catch(e=>notify(e.message));
+  window.appBackup = async () => {
+    try{
+      if(!has('backup_restore','export'))throw new Error('Backup permission required.');
+      const tables=['profiles','employee_permissions','vehicles','quotations','quotation_items','price_list_versions','price_list_items','stock_holds','stock_import_batches','audit_logs'];
+      const payload={format:'SVM-SUPABASE-BACKUP',version:1,createdAt:new Date().toISOString(),project:'tvpaxdvqvwpblcfssgsj',data:{}};
+      for(const t of tables) payload.data[t]=await call(db().from(t).select('*').limit(10000));
+      const a=document.createElement('a'),url=URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+      a.href=url;a.download='Siddhivinayak-Supabase-Backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();URL.revokeObjectURL(url);
+      await audit('backup_restore','export','Downloaded database backup');
+    }catch(e){notify(e.message);}
+  };
+  window.appRestore = async () => {
+    try{
+      if(!has('backup_restore','restore'))throw new Error('Restore permission required.');
+      const file=$('backupFile')?.files?.[0];if(!file)throw new Error('Select a backup JSON file.');
+      const payload=JSON.parse(await file.text());
+      if(payload.format!=='SVM-SUPABASE-BACKUP'||!payload.data)throw new Error('Invalid backup format.');
+      if(!confirm('Restore records from this backup? Existing rows with matching IDs may be updated.'))return;
+      const order=['vehicles','quotations','quotation_items','price_list_versions','price_list_items','stock_holds','stock_import_batches'];
+      for(const t of order){const rows=payload.data[t]||[];if(rows.length)await call(db().from(t).upsert(rows));}
+      await audit('backup_restore','restore','Restored operational backup');
+      notify('Operational data restore completed.');
+    }catch(e){notify(e.message);}
+  };
+  window.resetAllExceptEmployees = () => notify('For safety, operational reset is disabled until a server-side, audited reset workflow is configured.');
+  async function loadRetailReport(){
+    const month=$('retailMonth')?.value;
+    if(!month)return;
+    const start=month+'-01';const end=new Date(new Date(start+'T00:00:00').getFullYear(),new Date(start+'T00:00:00').getMonth()+1,1).toISOString().slice(0,10);
+    const rows=await call(db().from('vehicles').select('*').eq('status','Delivered').gte('oem_invoice_date',start).lt('oem_invoice_date',end));
+    if($('retailPeriod'))$('retailPeriod').textContent=month;
+    if($('retailRows'))$('retailRows').innerHTML=rows.map(v=>'<tr><td>'+esc(v.chassis_number)+'</td><td>'+esc(v.model)+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td></tr>').join('')||'<tr><td colspan="4">No delivered vehicles in this period.</td></tr>';
+  }
+  window.applyRetailMonth=()=>loadRetailReport().catch(e=>notify(e.message));
+
+  // UI bindings for existing elements whose original handlers were demo-only.
+  function installScreenHooks(){
+    mapStockForm();
+    const newUser=$('view-employees')?.querySelector('.stat-grid .btn.primary');
+    if(newUser)newUser.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();employeeDialog();},true);
+    $('permEmployee')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
+    $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
+    $('holdDeptFilter')?.addEventListener('change',()=>window.holdRender());
+    document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>{
+      const p=b.dataset.page||'';
+      if(p.startsWith('stock'))setTimeout(()=>renderStock(),0);
+      if(p.includes('quotation'))setTimeout(()=>reloadQuoteList(),0);
+      if(p.includes('employee'))setTimeout(()=>renderEmployees().catch(e=>notify(e.message)),0);
+    }));
+    const originalOpen=window.openDepartmentStock;
+    if(originalOpen)window.openDepartmentStock=function(...args){const x=originalOpen.apply(this,args);setTimeout(()=>renderStock(),0);return x;};
+    const originalImportPreview=window.stockImportPreview;
+    // Keep the original workbook preview parser; only its commit action is replaced above.
+    if($('stockSearch'))$('stockSearch').addEventListener('input',()=>renderStock());
+    void originalImportPreview;
+  }
   async function init() {
     if(!window.supabase?.createClient) throw new Error('Supabase JavaScript SDK failed to load.');
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
