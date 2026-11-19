@@ -853,12 +853,13 @@
       $('holdPendingCount').textContent=rows.filter(x=>x.status==='Pending').length;
       $('holdApprovedCount').textContent=rows.filter(x=>x.status==='Approved').length;
       $('holdRejectedCount').textContent=rows.filter(x=>x.status==='Rejected').length;
-      $('holdOnCount').textContent=rows.filter(x=>x.status==='Approved').length;
+      let currentlyOnHold=0;
+      if(permitted.length){const {count,error}=await db().from('vehicles').select('id',{count:'exact',head:true}).in('department',permitted).eq('stage','HOLD');if(error)throw error;currentlyOnHold=count||0;}
+      $('holdOnCount').textContent=currentlyOnHold;
       $('holdRows').querySelectorAll('[data-hold-approve]').forEach(b=>b.onclick=()=>decideHold(b.dataset.holdApprove,'Approved').catch(e=>notify(e.message)));
       $('holdRows').querySelectorAll('[data-hold-reject]').forEach(b=>b.onclick=()=>decideHold(b.dataset.holdReject,'Rejected').catch(e=>notify(e.message)));
     }catch(e){console.error(e);notify(e.message);}
   };
-  window.holdSubmit = () => submitHold().catch(e=>notify(e.message));
   window.holdDecision = (id,decision) => decideHold(id,decision).catch(e=>notify(e.message));
   window.openDepartmentStock = (department) => {
     currentStockDepartment=department||'Personal';
