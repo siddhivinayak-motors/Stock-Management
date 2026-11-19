@@ -289,11 +289,17 @@
   const moduleEnum = (label) => MODULES[label] || label;
   const toQuoteView = (row) => ({
     id:row.id,no:row.quote_number,department:row.department,customer:row.customer_name,phone:row.phone||'',
+    address:row.address||'',vehicleNos:String(row.vehicle_count??1),hypo:row.hypo||'',
+    model:row.model||'',carDescription:row.car_description||'',variant:row.variant||'',colour:row.colour||'',
     vehicle:[row.model,row.variant].filter(Boolean).join(' · '),chassis:row.chassis||'',
-    by:row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'Employee',
+    salesPerson:row.sales_person||'',by:row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'Employee',
+    contactPerson:row.contact_person||'',contactMobile:row.contact_mobile||'',email:row.email||'',
+    branchAddress:row.branch_address||'',helpline:row.helpline||'',pan:row.pan||'',gstin:row.gstin||'',
     total:Number(row.total||0),subtotal:Number(row.subtotal||0),discount:Number(row.discount||0),
+    amountWords:row.amount_words||'',terms:Array.isArray(row.terms)?row.terms:[],
+    bank:row.bank_details&&typeof row.bank_details==='object'?row.bank_details:{},
     status:String(row.status||'Pending').toUpperCase(),prints:Number(row.print_count||0),
-    date:row.quote_date,items:(row.quotation_items||[]).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount}))
+    date:row.quote_date,items:(row.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount}))
   });
   window.renderQuoteManagement = () => {
     const body=$('quoteManagementRows');if(!body)return;
@@ -329,7 +335,8 @@
         email:$('qEmail')?.value||'',branch_address:$('qBranchAddress')?.value||'',
         helpline:$('qHelpline')?.value||'',pan:$('qPan')?.value||'',gstin:$('qGstin')?.value||'',
         subtotal:q.subtotal,discount:q.discount,total:q.total,
-        amount_words:$('qAmountWords')?.textContent||'',created_by:currentUser.id,updated_by:currentUser.id
+        amount_words:q.amountWords||'',terms:q.terms||[],bank_details:q.bank||{},
+        created_by:currentUser.id,updated_by:currentUser.id
       };
       const saved=await call(db().from('quotations').insert(payload).select().single());
       const itemRows=q.items.map((x,i)=>({quotation_id:saved.id,line_no:i+1,particulars:x.name,amount:x.amount,is_discount:x.discount}));
