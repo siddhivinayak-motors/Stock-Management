@@ -491,6 +491,40 @@ td{padding:15px 16px;line-height:1.5}
  .stat-value{font-size:21px}
 }
 
+
+/* Simplified Price List workspace */
+.pl-head-actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;min-width:180px}
+.pl-main-card{padding:0}
+.pl-filter-grid{display:grid;grid-template-columns:1.05fr 1.05fr 1fr 1.5fr auto;gap:11px;align-items:end;padding:17px 18px;border-bottom:1px solid var(--line);background:#fff}
+.pl-filter-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.pl-filter-field>span{font-size:11px;font-weight:750;color:#45515e}
+.pl-filter-field select,.pl-filter-field input{width:100%;min-width:0;height:42px;border:1px solid #dfe5ec;border-radius:9px;padding:0 11px;background:#fff;color:#303b47;font-size:12px;outline:none}
+.pl-filter-field select:focus,.pl-filter-field input:focus{border-color:#e51e2a;box-shadow:0 0 0 3px #e51e2a12}
+.pl-filter-field select:disabled{background:#f6f7f9;color:#9aa3ad}
+.pl-reset-btn{height:42px}
+.pl-results-bar{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 18px;color:#6f7c8b;font-size:11px}
+.pl-results-bar #plResultsSummary{font-weight:750;color:#34404d}
+.pl-table-wrap{max-height:calc(100vh - 360px);min-height:180px}
+.pl-table{min-width:980px}
+.pl-table th{position:sticky;top:0;z-index:1}
+.pl-table td{vertical-align:middle}
+.pl-table td:nth-child(n+3):nth-child(-n+7){font-variant-numeric:tabular-nums;text-align:right}
+.pl-table td:first-child{font-weight:750;color:#273341}
+.pl-breakup{min-width:110px}
+.pl-breakup summary{cursor:pointer;color:#c51e28;font-size:11px;font-weight:750;list-style:none;white-space:nowrap}
+.pl-breakup summary::-webkit-details-marker{display:none}
+.pl-breakup[open]{position:relative}
+.pl-breakup-content{position:absolute;right:0;top:23px;z-index:8;width:min(330px,80vw);max-height:320px;overflow:auto;background:#fff;border:1px solid #e2e7ee;border-radius:10px;padding:10px 12px;box-shadow:0 10px 30px #18243320}
+.pl-breakup-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #f0f2f5;font-size:11px}
+.pl-breakup-row:last-child{border-bottom:0}
+.pl-upload-preview{margin-top:14px;overflow:hidden}
+.pl-preview-table{min-width:760px}
+.pl-preview-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 17px;border-top:1px solid var(--line);font-size:11px;color:#7b8794}
+.pl-inline-status{font-size:11px;color:#6f7c8b;padding:0 2px;margin-top:8px;min-height:14px}
+.pl-inline-status.error{color:#bd1520}
+@media(max-width:1050px){.pl-filter-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pl-search-field{grid-column:span 2}.pl-reset-btn{grid-column:span 2}}
+@media(max-width:680px){.pl-head-actions{min-width:126px}.pl-head-actions .btn{padding:9px 10px;font-size:10px}.pl-filter-grid{grid-template-columns:1fr 1fr;padding:13px}.pl-search-field{grid-column:1/-1}.pl-reset-btn{grid-column:1/-1}.pl-results-bar{padding:10px 13px}.pl-table-wrap{max-height:none}.pl-preview-footer{align-items:flex-start;flex-direction:column}}
+
 </style>
 </head>
 <body>
@@ -705,30 +739,36 @@ td{padding:15px 16px;line-height:1.5}
 <div class="footer-note">Siddhivinayak Mahindra · Stock Management System · Responsive UI concept</div>
 
 <section class="view" id="view-price-list">
- <div class="page-head"><div><div class="eyebrow">MASTER DATA</div><h1>Price List Management</h1><div class="subtitle">Department-wise price list upload, validation and version tracking</div></div><button class="btn" onclick="plRender()">⟳ &nbsp;Refresh</button></div>
- <div class="department-kpi-grid" style="margin-bottom:18px">
-  <button class="department-kpi personal-kpi" onclick="plSetDept('Personal')"><span class="kpi-label">PERSONAL</span><span class="kpi-total"><strong id="plCountPersonal">0</strong><small>Price Rows</small></span></button>
-  <button class="department-kpi" onclick="plSetDept('EV')"><span class="kpi-label">EV</span><span class="kpi-total"><strong id="plCountEV">0</strong><small>Price Rows</small></span></button>
-  <button class="department-kpi" onclick="plSetDept('Commercial')"><span class="kpi-label">COMMERCIAL</span><span class="kpi-total"><strong id="plCountCommercial">0</strong><small>Price Rows</small></span></button>
-  <button class="department-kpi" onclick="plSetDept('LLM')"><span class="kpi-label">LLM</span><span class="kpi-total"><strong id="plCountLLM">0</strong><small>Price Rows</small></span></button>
- </div>
- <div class="card" style="padding:20px;margin-bottom:16px">
-  <div class="card-head"><div><h3 id="plHeading">Personal Price List</h3><p>Upload a workbook, review its preview, then explicitly approve the update.</p></div><span class="pill orange">Preview before publish</span></div>
-  <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
-   <label>Department<select id="plDept" class="field"><option>Personal</option><option>EV</option><option>Commercial</option><option>LLM</option></select></label>
-   <label>Vehicle / Model<input id="plVehicleFilter" class="field" placeholder="Search vehicle or model" oninput="plRender()"></label>
-   <label>Colour<input id="plColourFilter" class="field" placeholder="Filter colour" oninput="plRender()"></label>
-   <label>Variant<input id="plVariantFilter" class="field" placeholder="Filter variant" oninput="plRender()"></label>
+ <div class="page-head">
+  <div><div class="eyebrow">PRICE LOOKUP</div><h1>Price List</h1><div class="subtitle">Find vehicle prices quickly by model, variant, colour or direct search.</div></div>
+  <div class="pl-head-actions">
+   <button class="btn" type="button" onclick="plRefresh()">⟳ &nbsp;Refresh</button>
+   <button class="btn primary" type="button" id="plUploadButton" onclick="document.getElementById('plFiles').click()">＋ &nbsp;Upload Price Lists</button>
+   <input id="plFiles" type="file" accept=".xlsx,.xls" multiple hidden>
   </div>
-  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:16px 0">
-   <input id="plFiles" type="file" accept=".xlsx,.xls,.csv" multiple class="field" style="max-width:340px">
-   <button class="btn primary" onclick="plPreview()">Preview Upload</button>
-   <button class="btn" onclick="plPublish()">Approve &amp; Publish</button>
-  </div>
-  <div id="plPreviewMsg" class="notice" style="display:none"></div>
-  <div class="table-wrap"><table class="data-table"><thead><tr><th>Vehicle / Model</th><th>Variant</th><th>Colour</th><th>Ex-Showroom</th><th>RTO</th><th>Other / Total</th></tr></thead><tbody id="plRows"><tr><td colspan="6" class="muted">No price list imported yet. Upload and preview a workbook.</td></tr></tbody></table></div>
  </div>
- <div class="card" style="padding:20px"><h3>Price List Version History</h3><div class="table-wrap"><table class="data-table"><thead><tr><th>Version</th><th>Department</th><th>File</th><th>Imported</th><th>Rows</th></tr></thead><tbody id="plHistory"><tr><td colspan="5">No published versions yet.</td></tr></tbody></table></div></div>
+ <div class="card pl-main-card">
+  <div class="pl-filter-grid">
+   <label class="pl-filter-field"><span>Vehicle</span><select id="plStockVehicle" onchange="plStockFilterChanged('vehicle')"><option value="">All vehicles</option></select></label>
+   <label class="pl-filter-field"><span>Variant</span><select id="plStockVariant" onchange="plStockFilterChanged('variant')" disabled><option value="">All variants</option></select></label>
+   <label class="pl-filter-field"><span>Colour</span><select id="plStockColour" onchange="plRender()" disabled><option value="">All colours</option></select></label>
+   <label class="pl-filter-field pl-search-field"><span>Search any model / variant</span><input id="plSearch" type="search" placeholder="Type vehicle or variant name..." oninput="plRender()"></label>
+   <button class="btn pl-reset-btn" type="button" onclick="plResetFilters()">Reset</button>
+  </div>
+  <div class="pl-results-bar"><span id="plResultsSummary">Loading price lists…</span><span id="plStockSummary"></span></div>
+  <div class="table-wrap pl-table-wrap">
+   <table class="data-table pl-table">
+    <thead><tr><th>Vehicle / Model</th><th>Variant</th><th>Ex-Showroom</th><th>TCS</th><th>Insurance</th><th>Road Tax / RTO</th><th>On-Road Total</th><th>Breakup</th></tr></thead>
+    <tbody id="plRows"><tr><td colspan="8" class="empty">Loading price list…</td></tr></tbody>
+   </table>
+  </div>
+ </div>
+ <div class="card pl-upload-preview" id="plUploadPreview" style="display:none">
+  <div class="card-head"><div><div class="card-title">Upload Preview</div><div class="card-desc" id="plPreviewSummary">Review all detected workbooks and variants before saving.</div></div><span class="pill orange">Not saved yet</span></div>
+  <div class="table-wrap"><table class="data-table pl-preview-table"><thead><tr><th>File / Sheet</th><th>Vehicle</th><th>Variant</th><th>Department (automatic)</th><th>Ex-Showroom</th><th>On-Road Total</th></tr></thead><tbody id="plPreviewRows"></tbody></table></div>
+  <div class="pl-preview-footer"><span id="plPreviewWarnings"></span><div><button class="btn" type="button" onclick="plCancelPreview()">Cancel</button> <button class="btn primary" id="plPublishButton" type="button" onclick="plPublish()">Save Price Lists</button></div></div>
+ </div>
+ <div class="pl-inline-status" id="plInlineStatus" role="status" aria-live="polite"></div>
 </section>
 
 
@@ -1291,4 +1331,5 @@ document.getElementById('charges').addEventListener('change',calc);
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
 <script src="./backend/supabase-runtime.js"></script>
+<script src="./backend/price-list-module.js"></script>
 </body></html>
