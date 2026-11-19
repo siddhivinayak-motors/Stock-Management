@@ -51,11 +51,11 @@
     const el=document.createElement('div');el.id='svAuthGate';
     el.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(15,20,29,.76);display:grid;place-items:center;padding:20px;font-family:inherit';
     el.innerHTML='<div style="width:min(420px,100%);background:#fff;border-radius:16px;padding:28px;box-shadow:0 24px 80px #0005;color:#1d2733"><div id="svLoginLogoWrap" style="display:flex;justify-content:center;align-items:center;margin:0 auto 18px;min-height:76px"><img id="svLoginBrandLogo" alt="Siddhivinayak Motors Pvt. Ltd. official logo" style="display:block;width:min(100%,168px);height:76px;object-fit:contain" onerror="this.style.display=\'none\';this.parentElement.style.display=\'none\'"></div><div style="font-size:20px;font-weight:800;margin-bottom:6px;text-align:center;text-transform:uppercase;letter-spacing:.35px">Siddhivinayak Mahindra</div><div style="color:#6f7c8b;margin-bottom:22px;text-align:center;letter-spacing:1.2px;font-size:11px">STOCK MANAGEMENT SYSTEM</div><form id="svLoginForm"><label style="display:block;font-weight:650;margin:12px 0 6px">Email address</label><input id="svLoginEmail" type="email" autocomplete="username" required style="width:100%;padding:12px;border:1px solid #dce2e9;border-radius:8px"><label style="display:block;font-weight:650;margin:14px 0 6px">Password</label><input id="svLoginPassword" type="password" autocomplete="current-password" required style="width:100%;padding:12px;border:1px solid #dce2e9;border-radius:8px"><div id="svLoginError" style="color:#c51c2a;font-size:12px;margin:10px 0;min-height:16px"></div><button id="svLoginSubmit" type="submit" style="width:100%;padding:12px;border:0;border-radius:8px;background:#e51e2a;color:#fff;font-weight:750">Sign in</button><button id="svForgotPassword" type="button" style="margin-top:12px;border:0;background:transparent;color:#34404d;text-decoration:underline">Forgot password?</button></form></div>';
+    document.body.appendChild(el);
     const appLogo=document.querySelector('.brand-logo img');
     const loginLogo=$('svLoginBrandLogo');
     if(appLogo?.getAttribute('src')) loginLogo.src=appLogo.getAttribute('src');
     else $('svLoginLogoWrap').style.display='none';
-    document.body.appendChild(el);
     $('svLoginForm').addEventListener('submit',async e=>{
       e.preventDefault();const btn=$('svLoginSubmit'),err=$('svLoginError');btn.disabled=true;btn.textContent='Signing in…';err.textContent='';
       try {
