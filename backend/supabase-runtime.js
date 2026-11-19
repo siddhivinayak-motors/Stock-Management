@@ -909,7 +909,7 @@
       const canEditThis=has('employee_management','edit')&&!p.is_super_admin&&p.user_id!==currentUser.id;
       const canManageThis=has('employee_management','manage_users')&&!p.is_super_admin&&p.user_id!==currentUser.id;
       return '<tr><td>'+(canEditThis?'<button type="button" class="btn small" data-edit="'+esc(p.user_id)+'" style="padding:2px 0;background:transparent;border:0;color:#26384d;text-decoration:underline;font-weight:750">'+esc(p.full_name||'—')+'</button>':esc(p.full_name||'—'))+'</td><td>'+esc(p.phone||'—')+'<br><span class="muted">'+esc(p.email||'')+'</span></td><td>'+esc(designation==='Reception'?'Receptionist':designation)+'</td><td>'+esc(p.city||'—')+'</td><td>'+esc(access)+'</td><td><span class="pill '+(p.status==='active'?'green':'red')+'">'+esc(p.status||'inactive')+'</span></td><td>'+(canManageThis?'<button type="button" class="btn small" data-permissions="'+esc(p.user_id)+'">Permissions</button>':'—')+'</td></tr>';
-    }).join(''):'<tr><td colspan="6" class="empty">No employees yet.</td></tr>';
+    }).join(''):'<tr><td colspan="7" class="empty">No employees yet.</td></tr>';
     table?.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>{
       const p=rows.find(x=>x.user_id===btn.dataset.edit);if(p)editEmployeeDialog(p).catch(e=>notify(e.message));
     }));
