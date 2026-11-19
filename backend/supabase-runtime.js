@@ -357,9 +357,16 @@
       if(!has('common_excel_upload','create'))throw new Error('You do not have Excel Upload permission.');
       const rows=await readWorkbook(file);
       const existing=[];
-      for(let from=0;;from+=1000){const part=await call(db().from('vehicles').select('chassis_number').range(from,from+999));existing.push(...part);if(part.length<1000)break;}
-      const seen=new Set(existing.map(x=>String(x.chassis_number||'').trim().toUpperCase()));
-      const map={PERSONAL:'Personal',BEV:'EV',PROSPER:'Commercial',LMM:'LLM'};
+      for(let from=0;;from+=1000){const part=await call(db().from('vehicles').select('chassis_number,excel_number').range(from,from+999));existing.push(...part);if(part.length<1000)break;}
+      const seenChassis=new Set(existing.map(x=>String(x.chassis_number||'').trim().toUpperCase()).filter(Boolean));
+      const seenVin=new Set(existing.map(x=>String(x.excel_number||'').trim().toUpperCase()).filter(Boolean));
+      const mapSegment=segment=>{
+        if(segment==='PERSONAL'||segment.startsWith('PERSONAL'))return 'Personal';
+        if(segment==='BEV'||segment==='EV'||segment.includes('ELECTRIC'))return 'EV';
+        if(segment==='PROSPER'||segment.includes('PROSPER'))return 'Commercial';
+        if(segment==='LMM'||segment.startsWith('LMM'))return 'LLM';
+        return '';
+      };
       const toDateValue=value=>{
         if(value instanceof Date&&!isNaN(value))return value;
         if(typeof value==='number'&&window.XLSX){const z=XLSX.SSF.parse_date_code(value);if(z)return new Date(z.y,z.m-1,z.d);}
@@ -368,8 +375,9 @@
       };
       stockPreviewRows=rows.filter(r=>Object.values(r||{}).some(v=>v!==null&&v!==undefined&&String(v).trim()!=='')).map(r=>{
         const segment=String(plHeader(r,['segmentcode','segment'])||'').trim().toUpperCase();
-        const department=map[segment]||'';
+        const department=mapSegment(segment);
         const chassis=String(plHeader(r,['chassisnumber','chassis'])||'').trim().toUpperCase();
+        const vin=String(plHeader(r,['vin'])||'').trim().toUpperCase();
         const date=plHeader(r,['oeminvoicedate','invoicedate']);
         const invoiceDate=toDateValue(date);
         let decision='Import';
@@ -377,9 +385,10 @@
         else if(!chassis)decision='Review: Missing Chassis Number';
         else if(!invoiceDate)decision='Review: Missing Invoice Date';
         else if(invoiceDate.getFullYear()<2025)decision='Skip: Before 2025';
-        else if(seen.has(chassis))decision='Duplicate — Skip';
-        else seen.add(chassis);
-        return {chassis,vin:String(plHeader(r,['vin'])||'').trim(),model:String(plHeader(r,['model'])||''),variant:String(plHeader(r,['variantdesc','variant'])||''),segment,department,status:String(plHeader(r,['vehiclestatus','status'])||'Received'),stockType:String(plHeader(r,['stocktype'])||''),date,raw:r,decision};
+        else if(seenChassis.has(chassis))decision='Duplicate Chassis — Skip';
+        else if(vin&&seenVin.has(vin))decision='Duplicate VIN — Skip';
+        else {seenChassis.add(chassis);if(vin)seenVin.add(vin);}
+        return {chassis,vin,model:String(plHeader(r,['model'])||''),variant:String(plHeader(r,['variantdesc','variant'])||''),segment,department,status:String(plHeader(r,['vehiclestatus','status'])||'Received'),stockType:String(plHeader(r,['stocktype'])||''),date,raw:r,decision};
       });
       const count=k=>stockPreviewRows.filter(x=>x.decision===k).length;
       const review=stockPreviewRows.filter(x=>x.decision.startsWith('Review')).length;
@@ -407,7 +416,12 @@
         return {department:x.department,chassis_number:x.chassis,excel_number:x.vin||null,model:x.model||'Unknown',variant:x.variant||null,seating:String(plHeader(r,['seating','seat'])||'')||null,colour:String(plHeader(r,['colour','color'])||'')||null,oem_invoice_date:invoice,engine_number:String(plHeader(r,['enginenumber','engine'])||'')||null,sc_name:String(plHeader(r,['scname','salesconsultant'])||'')||null,customer_name:String(plHeader(r,['customername','customer'])||'')||null,status:x.status||'Received',stage:stockType==='ALLOTED'||stockType==='ALLOTTED'?'ALLOTED':'OPEN',place:String(plHeader(r,['physicallocation','dealerlocationname'])||'')||null,source:'standard_stock_report',imported_at:new Date().toISOString(),created_by:currentUser.id};
       });
       let imported=0;
-      for(let i=0;i<records.length;i+=200){const batch=records.slice(i,i+200);const {data,error}=await db().from('vehicles').upsert(batch,{onConflict:'chassis_number',ignoreDuplicates:true}).select('id');if(error)throw error;imported+=data?.length||0;}
+      for(let i=0;i<records.length;i+=200){
+        const batch=records.slice(i,i+200);
+        const {count,error}=await db().from('vehicles').upsert(batch,{onConflict:'chassis_number',ignoreDuplicates:true,count:'exact'});
+        if(error)throw error;
+        imported+=count??batch.length;
+      }
       const skipped=stockPreviewRows.length-imported;
       const byDepartment=['Personal','EV','Commercial','LLM'];
       for(const dept of byDepartment){
