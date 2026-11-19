@@ -142,7 +142,11 @@
   }
   async function loadEmployees() {
     if(!has('employee_management','view')&&!currentProfile?.is_super_admin) return;
-    const rows=await call(db().from('profiles').select('*').order('full_name'));
+    let rows=[],from=0,chunk=1000;
+    while(true){
+      const part=await call(db().from('profiles').select('*').order('full_name').range(from,from+chunk-1));
+      rows.push(...part);if(part.length<chunk)break;from+=chunk;
+    }
     const sel=$('permEmployee');if(sel) sel.innerHTML='<option value="">Select employee</option>'+rows.map(x=>'<option value="'+esc(x.user_id)+'">'+esc(x.full_name||x.email)+'</option>').join('');
     window.svEmployees=rows;
   }
@@ -520,7 +524,11 @@
 
   async function renderEmployees(){
     if(!has('employee_management','view')&&!currentProfile?.is_super_admin) return;
-    const rows=await call(db().from('profiles').select('*').order('full_name'));
+    let rows=[],from=0,chunk=1000;
+    while(true){
+      const part=await call(db().from('profiles').select('*').order('full_name').range(from,from+chunk-1));
+      rows.push(...part);if(part.length<chunk)break;from+=chunk;
+    }
     const section=$('view-employees');if(!section)return;
     const table=section.querySelector('.card .table-wrap tbody');
     if(table) table.innerHTML=rows.length?rows.map(p=>'<tr><td>'+esc(p.full_name)+'</td><td>'+esc(p.email)+'<br>'+esc(p.phone||'')+'</td><td>'+esc(p.designation||'—')+'</td><td>'+esc(p.department||'—')+'</td><td>'+esc(p.status)+'</td><td>'+new Date(p.created_at).toLocaleDateString()+'</td><td>'+(p.is_super_admin?'Super Admin':(p.status==='active'?'<button class="btn small" data-edit="'+esc(p.user_id)+'">Edit</button> <button class="btn small" data-deactivate="'+esc(p.user_id)+'">Deactivate</button>':'Inactive'))+'</td></tr>').join(''):'<tr><td colspan="7" class="empty">No employees yet.</td></tr>';
