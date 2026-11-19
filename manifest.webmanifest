@@ -2,19 +2,19 @@
   "id": "./",
   "name": "Siddhivinayak",
   "short_name": "Siddhivinayak",
-  "description": "Siddhivinayak Stock Management",
+  "description": "Siddhivinayak",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#111827",
-  "theme_color": "#111827",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "./icons/siddhivinayak-premium.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
