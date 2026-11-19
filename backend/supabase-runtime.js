@@ -360,20 +360,30 @@
       for(let from=0;;from+=1000){const part=await call(db().from('vehicles').select('chassis_number').range(from,from+999));existing.push(...part);if(part.length<1000)break;}
       const seen=new Set(existing.map(x=>String(x.chassis_number||'').trim().toUpperCase()));
       const map={PERSONAL:'Personal',BEV:'EV',PROSPER:'Commercial',LMM:'LLM'};
+      const toDateValue=value=>{
+        if(value instanceof Date&&!isNaN(value))return value;
+        if(typeof value==='number'&&window.XLSX){const z=XLSX.SSF.parse_date_code(value);if(z)return new Date(z.y,z.m-1,z.d);}
+        if(value){const d=new Date(value);if(!isNaN(d))return d;}
+        return null;
+      };
       stockPreviewRows=rows.filter(r=>Object.values(r||{}).some(v=>v!==null&&v!==undefined&&String(v).trim()!=='')).map(r=>{
         const segment=String(plHeader(r,['segmentcode','segment'])||'').trim().toUpperCase();
         const department=map[segment]||'';
         const chassis=String(plHeader(r,['chassisnumber','chassis'])||'').trim().toUpperCase();
+        const date=plHeader(r,['oeminvoicedate','invoicedate']);
+        const invoiceDate=toDateValue(date);
         let decision='Import';
         if(!department)decision='Review: Unknown Segment';
         else if(!chassis)decision='Review: Missing Chassis Number';
+        else if(!invoiceDate)decision='Review: Missing Invoice Date';
+        else if(invoiceDate.getFullYear()<2025)decision='Skip: Before 2025';
         else if(seen.has(chassis))decision='Duplicate — Skip';
         else seen.add(chassis);
-        return {chassis,vin:String(plHeader(r,['vin'])||'').trim(),model:String(plHeader(r,['model'])||''),variant:String(plHeader(r,['variantdesc','variant'])||''),segment,department,status:String(plHeader(r,['vehiclestatus','status'])||'Received'),stockType:String(plHeader(r,['stocktype'])||''),date:plHeader(r,['oeminvoicedate','invoicedate']),raw:r,decision};
+        return {chassis,vin:String(plHeader(r,['vin'])||'').trim(),model:String(plHeader(r,['model'])||''),variant:String(plHeader(r,['variantdesc','variant'])||''),segment,department,status:String(plHeader(r,['vehiclestatus','status'])||'Received'),stockType:String(plHeader(r,['stocktype'])||''),date,raw:r,decision};
       });
       const count=k=>stockPreviewRows.filter(x=>x.decision===k).length;
       const review=stockPreviewRows.filter(x=>x.decision.startsWith('Review')).length;
-      const duplicates=stockPreviewRows.filter(x=>x.decision.startsWith('Duplicate')).length;
+      const duplicates=stockPreviewRows.filter(x=>x.decision.startsWith('Duplicate')||x.decision.startsWith('Skip:')).length;
       $('stockImportSummary').style.display='block';
       $('stockImportSummary').textContent='Rows: '+rows.length+' · Importable: '+count('Import')+' · Duplicates skipped: '+duplicates+' · Needs review: '+review+' · Department: Personal '+stockPreviewRows.filter(x=>x.department==='Personal'&&x.decision==='Import').length+' / Commercial '+stockPreviewRows.filter(x=>x.department==='Commercial'&&x.decision==='Import').length+' / EV '+stockPreviewRows.filter(x=>x.department==='EV'&&x.decision==='Import').length+' / LLM '+stockPreviewRows.filter(x=>x.department==='LLM'&&x.decision==='Import').length;
       $('stockImportRows').innerHTML=stockPreviewRows.slice(0,500).map(x=>'<tr><td>'+esc(x.chassis||'—')+'</td><td>'+esc(x.model)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.segment)+'</td><td>'+esc(x.department||'Review')+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No valid rows found.</td></tr>';
@@ -399,8 +409,14 @@
       let imported=0;
       for(let i=0;i<records.length;i+=200){const batch=records.slice(i,i+200);const {data,error}=await db().from('vehicles').upsert(batch,{onConflict:'chassis_number',ignoreDuplicates:true}).select('id');if(error)throw error;imported+=data?.length||0;}
       const skipped=stockPreviewRows.length-imported;
-      await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Report',department:null,imported_rows:imported,skipped_rows:skipped,error_rows:0,created_by:currentUser.id}));
-      await audit('common_excel_upload','create','Uploaded standard stock report','stock_import_batch',null,{imported,skipped,file:file?.name||''});
+      const byDepartment=['Personal','EV','Commercial','LLM'];
+      for(const dept of byDepartment){
+        const deptRows=stockPreviewRows.filter(x=>x.department===dept);
+        if(!deptRows.length)continue;
+        const deptImported=records.filter(x=>x.department===dept).length;
+        await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Report',department:dept,imported_rows:deptImported,skipped_rows:deptRows.length-deptImported,error_rows:0,created_by:currentUser.id}));
+      }
+      await audit('common_excel_upload','create','Uploaded standard stock report','stock_import_batch',null,{imported,skipped,file:file?.name||'',departments:['Personal','EV','Commercial','LLM'].filter(d=>records.some(x=>x.department===d))});
       stockPreviewRows=[];await renderStock();await loadImportHistory();
       $('stockImportSummary').textContent='Upload complete · Imported '+imported+' · Skipped '+skipped+'.';
       notify(imported+' vehicles imported; '+skipped+' duplicates or review rows skipped.');
