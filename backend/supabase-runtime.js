@@ -26,6 +26,9 @@
     if(currentProfile?.is_super_admin) return true;
     return (permissions.get(module)||[]).includes(action);
   }
+  function roleLevel(){const levels={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Driver':10};return currentProfile?.is_super_admin?100:(levels[currentProfile?.designation]??0);}
+  function canManageStock(){return roleLevel()>30;}
+  function canManageHolds(){return roleLevel()>=70;}
   function allowedDepartmentList(){
     if(currentProfile?.is_super_admin || ['Admin','General Manager'].includes(currentProfile?.designation)) return ['Personal','EV','Commercial','LLM'];
     if(currentProfile?.designation==='Manager') return currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean);
@@ -118,7 +121,8 @@
     document.querySelectorAll('[data-page]').forEach(item=>{
       if(item.closest('[data-sub]'))return;
       const module=pageModule(item.dataset.page||'');
-      item.style.display=(!module||has(module,'view'))?'':'none';
+      const holdPage=(item.dataset.page||'').startsWith('stock-hold');
+      item.style.display=(!module||has(module,'view'))&&(!holdPage||canManageHolds())?'':'none';
     });
     document.querySelectorAll('[data-department]').forEach(card=>{
       const dept=String(card.dataset.department||'').toLowerCase();
@@ -128,7 +132,8 @@
     const shortcutAccess=new Set(Array.isArray(currentProfile?.dashboard_shortcuts)?currentProfile.dashboard_shortcuts:[]);
     document.querySelectorAll('.quick[data-go]').forEach(card=>{
       const module=quickModules[card.dataset.go];
-      card.style.display=(currentProfile?.is_super_admin||shortcutAccess.has('quick-access'))&&(card.dataset.go==='password'||(module&&has(module,'view')))?'':'none';
+      const holdShortcut=card.dataset.go==='stock-hold-central';
+      card.style.display=(currentProfile?.is_super_admin||shortcutAccess.has('quick-access'))&&(card.dataset.go==='password'||(module&&has(module,'view')&&(!holdShortcut||canManageHolds())))?'':'none';
     });
     if(!hasAnyModule){
       document.querySelectorAll('.sidebar [data-page], .sidebar [data-group], .sidebar .nav-section').forEach(item=>{
@@ -159,6 +164,7 @@
     if(typeof window.holdRender==='function') window.holdRender();
   }
   async function submitHold() {
+    if(roleLevel()>30) throw new Error('Only Executive and junior roles can submit a stock hold request from the register.');
     if(!has('stock_hold_management','create')) throw new Error('You do not have permission to submit hold requests.');
     const selectedDepartment=$('holdDept').value;
     if(!allowedDepartmentList().includes(selectedDepartment)) throw new Error('You do not have access to this department.');
@@ -168,6 +174,7 @@
     await loadHolds();['holdVehicle','holdVin','holdVariant','holdExecutive','holdReason'].forEach(id=>$(id).value='');notify('Hold request submitted.');
   }
   async function decideHold(id,decision) {
+    if(!canManageHolds()) throw new Error('Stock Hold Management is available to Manager and above only.');
     if(!has('stock_hold_management','approve')) throw new Error('You do not have approval permission.');
     if(!['Approved','Rejected'].includes(decision)) throw new Error('Invalid decision');
     const {data,error}=await db().from('stock_holds').update({status:decision,approver_id:currentUser.id,approved_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id).eq('status','Pending').select('id');
@@ -342,13 +349,14 @@
     return row;
   }
   async function updateVehicle(id,data,viaImport=false) {
+    if(!canManageStock()&&!viaImport) throw new Error('Executive and junior roles cannot edit stock.');
     if(!has('stock_register','edit') && !(viaImport && has('common_excel_upload','create'))) throw new Error('No stock edit permission (or Common Excel Upload permission for exact-match reconciliation).');
     const row=await call(db().from('vehicles').update({...data,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',id).select().single());
     await audit(viaImport?'common_excel_upload':'stock_register',viaImport?'create':'edit',viaImport?'Reconciled vehicle by exact chassis':'Updated vehicle','vehicle',id);
     return row;
   }
   async function deleteVehicle(id) {
-    if(!has('stock_register','delete')) throw new Error('No stock delete permission.');
+    if(!canManageStock()||!has('stock_register','delete')) throw new Error('Only roles above Executive with delete permission can delete stock.');
     await call(db().from('vehicles').delete().eq('id',id));await audit('stock_register','delete','Deleted vehicle','vehicle',id);
   }
   async function saveQuotation(q) {
@@ -558,7 +566,7 @@
     if(!$('stockTable')) return;
     try{
       const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
-      const canEdit=has('stock_register','edit'),canDelete=has('stock_register','delete');
+      const canEdit=canManageStock()&&has('stock_register','edit'),canDelete=canManageStock()&&has('stock_register','delete');
       const deptFilter=$('stockDepartmentFilter');
       const selectedDept=dept==='All'?(deptFilter?.value||'All Accessible Departments'):dept;
       let rows=await loadVehicles(dept==='All'&&selectedDept!=='All Accessible Departments'?selectedDept:dept);
@@ -569,28 +577,37 @@
       if(statusFilter!=='All') rows=rows.filter(v=>String(v.status||'').trim().toLowerCase()===statusFilter.toLowerCase());
       if(stageFilter!=='All') rows=rows.filter(v=>String(v.stage||'').trim().toUpperCase()===stageFilter.toUpperCase());
       const body=$('stockTable').querySelector('tbody');
-      body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button> ':'')+(canDelete?'<button class="btn small" data-stock-delete="'+esc(v.id)+'">Delete</button>':'')+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
+      const canHold=!canManageStock()&&roleLevel()<=30&&has('stock_hold_management','create');
+      body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>':(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small" style="background:#dc2626;color:#fff;border-color:#dc2626" data-stock-hold="'+esc(v.id)+'">Hold</button>':''))+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
       body.querySelectorAll('[data-stock-edit]').forEach(b=>b.onclick=()=>editVehicleDialog(rows.find(x=>x.id===b.dataset.stockEdit)));
-      body.querySelectorAll('[data-stock-delete]').forEach(b=>b.onclick=async()=>{
-        if(!confirm('Delete this stock vehicle? This action is permanent.'))return;
-        try{await deleteVehicle(b.dataset.stockDelete);await renderStock();notify('Vehicle deleted.');}catch(e){notify(e.message);}
-      });
+      body.querySelectorAll('[data-stock-hold]').forEach(b=>b.onclick=()=>openStockHoldDialog(rows.find(x=>x.id===b.dataset.stockHold)));
+
       const title=$('stockTable').closest('.card')?.querySelector('.card-head .card-title');
       if(title)title.textContent=rows.length+' records · '+(dept==='All'?(selectedDept==='All Accessible Departments'?'All accessible departments':selectedDept):dept);
       const head=$('stockTable').querySelector('thead tr');
       if(head&&head.children.length===11){const th=document.createElement('th');th.textContent='Actions';head.appendChild(th);}
     }catch(e){console.error(e);notify(e.message);}
   }
+  function openStockHoldDialog(vehicle){
+    if(!vehicle||String(vehicle.stage||'').toUpperCase()!=='OPEN')return;
+    const old=$('svStockHoldDialog');if(old)old.remove();
+    const wrap=document.createElement('div');wrap.id='svStockHoldDialog';wrap.style.cssText='position:fixed;inset:0;z-index:99992;background:#15202dcc;display:grid;place-items:center;padding:16px';
+    wrap.innerHTML='<form id="svStockHoldForm" style="width:min(480px,100%);background:#fff;padding:22px;border-radius:14px;color:#253140"><h3 style="margin:0 0 8px">Request Stock Hold</h3><p style="font-size:13px;color:#64748b">'+esc(vehicle.model)+' · '+esc(vehicle.chassis_number)+' · '+esc(vehicle.department)+'</p><label style="display:block;margin:12px 0;font-size:13px">Reason for Hold<textarea required name="reason" class="field" rows="3" style="width:100%" placeholder="Enter reason"></textarea></label><div id="svStockHoldError" style="color:#c51c2a;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svStockHoldCancel" class="btn">Cancel</button><button type="submit" class="btn" style="background:#dc2626;color:#fff">Submit Hold Request</button></div></form>';
+    document.body.appendChild(wrap);$('svStockHoldCancel').onclick=()=>wrap.remove();
+    $('svStockHoldForm').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button[type=submit]');b.disabled=true;try{await call(db().from('stock_holds').insert({department:vehicle.department,vehicle:vehicle.model,variant:[vehicle.variant,vehicle.colour].filter(Boolean).join(' / '),vin:vehicle.chassis_number,executive:currentProfile?.full_name||currentUser.email,reason:new FormData(e.target).get('reason').trim(),created_by:currentUser.id}));await audit('stock_hold_management','create','Submitted hold request','stock_hold',null,{chassis_number:vehicle.chassis_number,department:vehicle.department});wrap.remove();notify('Hold request submitted to Manager.');}catch(ex){$('svStockHoldError').textContent=ex.message;b.disabled=false;}};
+  }
   function editVehicleDialog(vehicle){
     if(!vehicle)return;
     const existing=$('svVehicleDialog');if(existing)existing.remove();
-    const labels={chassis_number:'Chassis Number',excel_number:'Excel Number',model:'Model',variant:'Variant',seating:'Seating',colour:'Colour',manufacturing_year:'Manufacturing Year',oem_invoice_date:'OEM Invoice Date',engine_number:'Engine Number',sc_name:'SC Name',customer_name:'Customer Name',status:'Status',stage:'Stage',place:'Place'};
+    const labels={department:'Department',chassis_number:'Chassis Number',excel_number:'Excel Number',model:'Model',variant:'Variant',seating:'Seating',colour:'Colour',manufacturing_year:'Manufacturing Year',oem_invoice_date:'OEM Invoice Date',engine_number:'Engine Number',sc_name:'SC Name',customer_name:'Customer Name',status:'Status',stage:'Stage',place:'Place'};
     const wrap=document.createElement('div');wrap.id='svVehicleDialog';
     wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
-    const fields=Object.entries(labels).map(([k,label])=>'<label style="display:block;font-size:12px;font-weight:650">'+label+'<input class="field" name="'+k+'" value="'+esc(vehicle[k]??'')+'" '+(k==='chassis_number'?'readonly':'')+'></label>').join('');
-    wrap.innerHTML='<form id="svVehicleEditForm" style="width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Stock Vehicle</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+fields+'</div><div id="svVehicleEditError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svVehicleEditCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Save Changes</button></div></form>';
+    const fields=Object.entries(labels).map(([k,label])=>{let control='';if(k==='department')control='<select class="field" name="department">'+allowedDepartmentList().map(d=>'<option value="'+esc(d)+'" '+(vehicle.department===d?'selected':'')+'>'+esc(d)+'</option>').join('')+'</select>';else if(k==='status')control='<select class="field" name="status">'+['Received','In Transit'].map(v=>'<option '+(String(vehicle.status||'').toLowerCase()===v.toLowerCase()?'selected':'')+'>'+v+'</option>').join('')+'</select>';else if(k==='stage')control='<select class="field" name="stage">'+['OPEN','ALLOTED','HOLD','DAMAGE'].map(v=>'<option '+(String(vehicle.stage||'').toUpperCase()===v?'selected':'')+'>'+v+'</option>').join('')+'</select>';else control='<input class="field" name="'+k+'" value="'+esc(vehicle[k]??'')+'" '+(k==='chassis_number'?'readonly':'')+'>';return '<label style="display:block;font-size:12px;font-weight:650">'+label+control+'</label>';}).join('');
+    wrap.innerHTML='<form id="svVehicleEditForm" style="width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Stock Vehicle</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+fields+'</div><div id="svVehicleEditError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px"><button type="button" id="svVehicleDeleteInside" class="btn" style="color:#b4232c">Delete Vehicle</button><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svVehicleEditCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Save Changes</button></div></div></form>';
     document.body.appendChild(wrap);
     $('svVehicleEditCancel').onclick=()=>wrap.remove();
+    $('svVehicleDeleteInside').style.display=has('stock_register','delete')?'':'none';
+    $('svVehicleDeleteInside').onclick=async()=>{if(!confirm('Permanently delete this vehicle?'))return;const b=$('svVehicleDeleteInside');b.disabled=true;try{await deleteVehicle(vehicle.id);wrap.remove();await renderStock();notify('Vehicle deleted.');}catch(ex){$('svVehicleEditError').textContent=ex.message;b.disabled=false;}};
     $('svVehicleEditForm').onsubmit=async e=>{
       e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
       try{
@@ -817,7 +834,7 @@
   }
   window.holdRender = async () => {
     try{
-      if(!has('stock_hold_management','view'))throw new Error('No hold register permission.');
+      if(!canManageHolds()||!has('stock_hold_management','view'))throw new Error('Stock Hold Management is available to Manager and above only.');
       let rows=[],from=0,chunk=1000;
       while(true){
         const part=await call(db().from('stock_holds').select('*').order('created_at',{ascending:false}).range(from,from+chunk-1));
