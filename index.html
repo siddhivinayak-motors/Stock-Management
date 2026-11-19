@@ -3,7 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#3d3f44">\n<meta name="description" content="Siddhivinayak Mahindra Stock Management — clean workspace ready for database integration.">
+<meta name="theme-color" content="#30343b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="description" content="Siddhivinayak Mahindra Stock Management — clean workspace ready for database integration.">
 <title>Siddhivinayak Mahindra — Stock Management</title>
 <style>
 :root{
@@ -1015,7 +1020,39 @@ document.querySelectorAll('.department-kpi').forEach(card=>{
 });
 let toastTimer;function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.opacity='1';el.style.transform='translate(-50%,0)';clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.style.opacity='0';el.style.transform='translate(-50%,20px)'},2300)}
 document.getElementById('logoutBtn').addEventListener('click',()=>toast('Demo preview — authentication is not connected'));
-document.getElementById('installBtn').addEventListener('click',()=>toast('PWA install requires a manifest and HTTPS hosting'));
+const installButton=document.getElementById('installBtn');
+let deferredInstallPrompt=null;
+const isAppleMobile=/iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const isAppInstalled=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+if(isAppInstalled())installButton.hidden=true;
+window.addEventListener('beforeinstallprompt',event=>{
+ event.preventDefault();
+ deferredInstallPrompt=event;
+ installButton.title='Install Siddhivinayak App';
+ installButton.setAttribute('aria-label','Install Siddhivinayak App');
+});
+window.addEventListener('appinstalled',()=>{
+ deferredInstallPrompt=null;
+ installButton.hidden=true;
+ toast('Siddhivinayak app installed successfully');
+});
+installButton.addEventListener('click',async()=>{
+ if(isAppInstalled()){installButton.hidden=true;toast('App is already installed');return;}
+ if(isAppleMobile){
+  alert('iPhone / iPad પર એપ ઇન્સ્ટોલ કરવા માટે:\n1. Safari માં આ વેબસાઇટ ખોલો.\n2. Share બટન દબાવો.\n3. Add to Home Screen પસંદ કરો.\n4. Add દબાવો.\n\nપછી Siddhivinayak એપ Home Screen પરથી સીધી ખૂલશે.');
+  return;
+ }
+ if(deferredInstallPrompt){
+  deferredInstallPrompt.prompt();
+  const choice=await deferredInstallPrompt.userChoice;
+  if(choice&&choice.outcome==='accepted')deferredInstallPrompt=null;
+  return;
+ }
+ toast('Install માટે Chrome / Edge ના menu (⋮) માંથી Install app અથવા Add to Home screen પસંદ કરો.');
+});
+if('serviceWorker' in navigator&&location.protocol==='https:'){
+ navigator.serviceWorker.register('./service-worker.js',{scope:'./'}).catch(error=>console.warn('App offline/install support could not be enabled:',error));
+}
 document.getElementById('addVehicle').addEventListener('click',()=>{const f=document.getElementById('vehicleForm');f.style.display=f.style.display==='none'?'block':'none'});
 document.getElementById('stockSearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#stockTable tbody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')});
 
