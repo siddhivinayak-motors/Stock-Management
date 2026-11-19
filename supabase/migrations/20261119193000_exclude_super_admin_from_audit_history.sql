@@ -24,10 +24,11 @@ with check(actor_id=(select auth.uid()) and not (select private.is_super_admin()
  and exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.status='active' and p.is_super_admin=false));
 drop policy if exists audit_select on public.audit_logs;
 create policy audit_select on public.audit_logs for select to authenticated
-using(not (select private.is_super_admin()) and (
- exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.status='active' and p.designation in ('Admin','General Manager'))
+using(
+ (select private.is_super_admin())
+ or exists(select 1 from public.profiles p where p.user_id=(select auth.uid()) and p.status='active' and p.designation in ('Admin','General Manager'))
  or (select private.has_permission('audit_history'::public.app_module,'view'::public.app_action))
-));
+);
 revoke insert,update,delete on public.audit_logs from anon,authenticated;
 grant select on public.audit_logs to authenticated;
 delete from public.audit_logs a using public.profiles p where p.user_id=a.actor_id and p.is_super_admin=true;
