@@ -703,6 +703,7 @@
     }
     const section=$('view-employees');if(!section)return;
     rows=rows.filter(p=>!p.deleted_at);
+    if(currentProfile?.designation==='Manager') rows=rows.filter(p=>String(p.department||'').toLowerCase()===String(currentProfile.department||'').toLowerCase());
     const cards=section.querySelectorAll('.stat-grid .stat-value');
     if(cards[0])cards[0].textContent=rows.length;
     if(cards[1])cards[1].textContent=rows.filter(p=>p.status==='active').length;
