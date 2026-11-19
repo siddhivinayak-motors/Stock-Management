@@ -731,6 +731,56 @@
     }
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
     $('holdDeptFilter')?.addEventListener('change',()=>window.holdRender());
+    // Centralized navigation guard: route every sidebar click through one handler.
+    // The legacy inline page router is bypassed because it calls demo-only helpers
+    // for several department routes and can leave the previous view visible.
+    document.addEventListener('click',e=>{
+      const b=e.target?.closest?.('.sidebar [data-page]');
+      if(!b) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const page=b.dataset.page||'';
+      const quoteRoute={
+        'quotation':'Personal','quotation-management':'Personal',
+        'ev-quotation':'EV','ev-management':'EV',
+        'commercial-quotation':'Commercial','commercial-management':'Commercial',
+        'llm-quotation':'LLM','llm-management':'LLM'
+      };
+      try {
+        if(quoteRoute[page]){
+          window.currentQuoteDepartment=quoteRoute[page];
+          if(typeof window.loadDepartmentQuotes==='function') window.loadDepartmentQuotes();
+          if(typeof window.refreshQuotePriceSuggestions==='function') window.refreshQuotePriceSuggestions();
+          window.showPage(page.includes('management')?'quotation-management':'quotation');
+          const title=$('quotationPageTitle');
+          if(title) title.textContent=quoteRoute[page]+' — Quotation';
+          if(typeof window.updateQuoteNumber==='function') window.updateQuoteNumber();
+          if(typeof window.calc==='function') window.calc();
+          if(page.includes('management') && typeof window.renderQuoteManagement==='function') window.renderQuoteManagement();
+        } else if(page.startsWith('stock-hold-') || page==='stock-hold-central') {
+          window.showPage('stock-hold-central');
+          if(typeof window.holdRender==='function') window.holdRender();
+        } else if(page.startsWith('stock-')) {
+          const key=['personal','ev','commercial','llm'].find(k=>page.endsWith('-'+k));
+          const dept={personal:'Personal',ev:'EV',commercial:'Commercial',llm:'LLM'}[key];
+          if(dept && typeof window.openDepartmentStock==='function') window.openDepartmentStock(dept,key,null);
+          else window.showPage('stock');
+          renderStock().catch(err=>notify(err.message));
+        } else {
+          window.showPage(page);
+          if(page==='employees') renderEmployees().catch(err=>notify(err.message));
+          if(page==='audit') loadAudit().catch(err=>notify(err.message));
+          if(page==='upload') loadImportHistory().catch(err=>notify(err.message));
+          if(page==='price-list') loadPriceLists().catch(err=>notify(err.message));
+          if(page==='reports') loadRetailReport().catch(err=>notify(err.message));
+          if(page==='dashboard') loadDashboardData?.();
+        }
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n===b));
+      } catch(err) {
+        console.error('Navigation failed for '+page,err);
+        notify('Menu open failed: '+(err.message||'Unknown error'));
+      }
+    },true);
     // Let the original UI's own click handlers perform navigation.
     // A document-level CAPTURE listener with stopImmediatePropagation was blocking
     // the existing button handlers, making otherwise valid controls appear dead.
