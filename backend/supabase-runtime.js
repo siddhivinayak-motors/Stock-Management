@@ -92,9 +92,7 @@
     if(!has('stock_hold_management','approve')) throw new Error('You do not have approval permission.');
     if(!['Approved','Rejected'].includes(decision)) throw new Error('Invalid decision');
     await call(db().from('stock_holds').update({status:decision,approver_id:currentUser.id,approved_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',id).eq('status','Pending'));
-    const h=await call(db().from('stock_holds').select('vehicle_id').eq('id',id).single());
-    if(h?.vehicle_id) await call(db().from('vehicles').update({stage:decision==='Approved'?'HOLD':'OPEN',updated_by:currentUser.id}).eq('id',h.vehicle_id));
-    await loadHolds();await audit('stock_hold_management','approve',decision+' hold','stock_hold',id);
+    // Database trigger synchronizes the linked stock vehicle stage atomically.\n    await loadHolds();await audit('stock_hold_management','approve',decision+' hold','stock_hold',id);
   }
   async function loadPriceLists() {
     if(!has('price_list_management','view')) return;
