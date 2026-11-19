@@ -495,11 +495,15 @@
     wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Employee Details</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+input('full_name','Employee Name',profile.full_name)+input('phone','Mobile Number',profile.phone,'tel')+'<label style="display:block;font-size:13px;font-weight:650">New Password (leave blank to keep current)<input type="password" name="password" minlength="6" autocomplete="new-password" class="field" style="width:100%;margin-top:5px"></label><label style="display:block;font-size:13px;font-weight:650">Designation / Role<select name="designation" id="svEditRole" class="field" style="width:100%;margin-top:5px">'+Object.keys(ROLE_MODULES_UI).concat(['Super Admin']).map(x=>'<option value="'+x+'" '+(profile.designation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label>'+departments+moduleAccessMarkup(profile.designation,selectedModules)+'<label style="display:block;font-size:13px;font-weight:650">Account Status<select name="status" class="field" style="width:100%;margin-top:5px"><option value="active" '+(profile.status==='active'?'selected':'')+'>Active</option><option value="inactive" '+(profile.status!=='active'?'selected':'')+'>Inactive</option></select></label><label style="display:block;font-size:13px;font-weight:650">Email (read only)<input class="field" value="'+esc(profile.email||'')+'" readonly style="width:100%;margin-top:5px"></label></div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button type="button" id="svEmployeeDelete" class="btn" style="border-color:#efb7bc;color:#b4232c;background:#fff7f7">Delete User</button><div style="display:flex;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Save Changes</button></div></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
-    $('svEditRole').addEventListener('change',()=>{
-      const selected=[...ROLE_MODULES_UI[$('svEditRole').value]||[]];
-      const oldField=wrap.querySelector('fieldset:has(input[name="module_access"])');
-      if(oldField)oldField.outerHTML=moduleAccessMarkup($('svEditRole').value,selected);
-    });
+    const applyEditRole=()=>{
+      const role=$('svEditRole').value,selectedModules=[...(ROLE_MODULES_UI[role]||[])];
+      const moduleField=wrap.querySelector('fieldset:has(input[name="module_access"])');
+      if(moduleField)moduleField.outerHTML=moduleAccessMarkup(role,selectedModules);
+      const allDepartments=['Admin','General Manager','Accountant','HR','DMS','Driver'].includes(role);
+      wrap.querySelectorAll('input[name="department_access"]').forEach(c=>{if(allDepartments)c.checked=true;c.disabled=allDepartments;});
+    };
+    applyEditRole();
+    $('svEditRole').addEventListener('change',applyEditRole);
     $('svEmployeeDelete').onclick=async()=>{
       if(!confirm('Delete '+(profile.full_name||profile.email)+'? This removes the account from Employee Directory and blocks login. Historical stock, quotation and audit records will be preserved.'))return;
       const button=$('svEmployeeDelete');button.disabled=true;button.textContent='Deleting…';
