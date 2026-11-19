@@ -86,6 +86,8 @@ Deno.serve(async (req: Request) => {
     if (!roles.includes(role)) return json({ error: "Select a valid designation / role" }, 400);
     if (role === "Super Admin") return json({ error: "The Super Admin account is unique and cannot be created from New User." }, 403);
     if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
+    const allDepartmentRoles = ["Admin","General Manager","Accountant","HR","DMS","Driver"];
+    const finalDepartments = allDepartmentRoles.includes(role) ? ["Personal","EV","Commercial","LLM"] : departments;
     const { data: created, error: createError } = await adminClient.auth.admin.createUser({
       email, password, email_confirm: true, user_metadata: { full_name: fullName },
     });
@@ -99,7 +101,7 @@ Deno.serve(async (req: Request) => {
     const userId = created.user.id;
     const { error: insertError } = await adminClient.from("profiles").upsert({
       user_id: userId, full_name: fullName, email, employee_code: null, phone: null,
-      designation: role, department: departments[0], department_access: departments,
+      designation: role, department: finalDepartments[0], department_access: finalDepartments,
       status: "active", is_super_admin: false,
     }, { onConflict: "user_id" });
     if (insertError) { await adminClient.auth.admin.deleteUser(userId); return json({ error: insertError.message }, 400); }
@@ -115,9 +117,9 @@ Deno.serve(async (req: Request) => {
     await adminClient.from("audit_logs").insert({
       actor_id: callerId, actor_email: authData.user.email, module:"employee_management",
       action:"create", action_label:"Created employee account", record_type:"profile", record_id:userId,
-      details:{email,designation:role,department_access:departments},
+      details:{email,designation:role,department_access:finalDepartments},
     });
-    return json({success:true,user_id:userId,email,designation:role,department_access:departments,message:"Employee account created. They can sign in immediately with this email and password."},201);
+    return json({success:true,user_id:userId,email,designation:role,department_access:finalDepartments,message:"Employee account created. They can sign in immediately with this email and password."},201);
   }
 
   if (action === "update_employee") {
@@ -141,9 +143,12 @@ Deno.serve(async (req: Request) => {
       const access = Array.isArray(body.department_access) ? body.department_access.map(String) : [];
       const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
       if (access.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Invalid department access" }, 400);
-      patch.department_access = [...new Set(access)];
-      patch.department = access[0] || null;
-      if (!access.length) return json({error:"Select at least one department"},400);
+      const role = String(patch.designation || target.designation || "");
+      const allDepartmentRoles = ["Admin","General Manager","Accountant","HR","DMS","Driver"];
+      const finalAccess = allDepartmentRoles.includes(role) ? ["Personal","EV","Commercial","LLM"] : [...new Set(access)];
+      if (!finalAccess.length) return json({error:"Select at least one department"},400);
+      patch.department_access = finalAccess;
+      patch.department = finalAccess[0];
     }
     if (body.status !== undefined) {
       const status = String(body.status);
