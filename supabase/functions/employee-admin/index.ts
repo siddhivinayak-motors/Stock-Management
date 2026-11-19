@@ -93,6 +93,36 @@ Deno.serve(async (req: Request) => {
     return json({ success: true, user_id: invite.user.id, email, message: "Invitation sent. Employee must set a password from the email link." }, 201);
   }
 
+  if (action === "update_employee") {
+    const userId = String(body.user_id || "");
+    if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
+    const { data: target, error: targetError } = await adminClient.from("profiles")
+      .select("user_id,email,is_super_admin").eq("user_id", userId).maybeSingle();
+    if (targetError || !target) return json({ error: "Employee not found" }, 404);
+    if (target.is_super_admin) return json({ error: "A Super Admin profile cannot be edited here" }, 403);
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    for (const key of ["full_name","employee_code","phone","designation","department"]) {
+      if (Object.prototype.hasOwnProperty.call(body, key)) {
+        patch[key] = body[key] === "" ? null : String(body[key]).trim();
+      }
+    }
+    if (typeof patch.full_name === "string" && !patch.full_name) return json({ error: "Full name cannot be empty" }, 400);
+    const { error: updateError } = await adminClient.from("profiles").update(patch).eq("user_id", userId);
+    if (updateError) return json({ error: updateError.message }, 400);
+    if (typeof patch.full_name === "string") {
+      const { error: authUpdateError } = await adminClient.auth.admin.updateUserById(userId, {
+        user_metadata: { full_name: patch.full_name },
+      });
+      if (authUpdateError) return json({ error: "Profile updated, but Auth metadata update failed: " + authUpdateError.message }, 500);
+    }
+    await adminClient.from("audit_logs").insert({
+      actor_id: callerId, actor_email: authData.user.email, module: "employee_management",
+      action: "edit", action_label: "Updated employee profile",
+      record_type: "profile", record_id: userId,
+    });
+    return json({ success: true, message: "Employee profile updated" });
+  }
+
   if (action === "deactivate_employee") {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
