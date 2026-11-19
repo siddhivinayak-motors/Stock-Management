@@ -842,7 +842,7 @@
   window.holdDecision = (id,decision) => decideHold(id,decision).catch(e=>notify(e.message));
   window.openDepartmentStock = (department) => {
     currentStockDepartment=department||'Personal';
-    const deptFilter=$('stockDepartmentFilter');if(deptFilter)deptFilter.value='All Accessible Departments';
+    const deptFilter=$('stockDepartmentFilter');if(deptFilter){deptFilter.value='All Accessible Departments';deptFilter.style.display='none';}
     const deptPicker=$('stockDepartmentForNewVehicle');if(deptPicker){deptPicker.value=currentStockDepartment;deptPicker.disabled=true;}
     if($('stockPageTitle'))$('stockPageTitle').textContent=currentStockDepartment+' — Stock Register';
     if($('stockPageSubtitle'))$('stockPageSubtitle').textContent=currentStockDepartment+' · Live operational workspace';
@@ -975,7 +975,7 @@
         if($('stockPageTitle'))$('stockPageTitle').textContent='All Accessible Departments — Stock Register';
         if($('stockPageSubtitle'))$('stockPageSubtitle').textContent='Combined live stock across your authorized departments';
         const picker=$('stockDepartmentForNewVehicle');if(picker)picker.disabled=false;
-        const filter=$('stockDepartmentFilter');if(filter)filter.value='All Accessible Departments';
+        const filter=$('stockDepartmentFilter');if(filter){filter.value='All Accessible Departments';filter.style.display='';}
         setTimeout(()=>renderStock(),0);
       }
       const b=e.target?.closest?.('[data-page]');
