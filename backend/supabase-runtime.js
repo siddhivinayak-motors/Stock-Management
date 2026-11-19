@@ -28,7 +28,7 @@
   }
   function allowedDepartmentList(){
     if(currentProfile?.is_super_admin || ['Admin','General Manager'].includes(currentProfile?.designation)) return ['Personal','EV','Commercial','LLM'];
-    if(currentProfile?.designation==='Manager') return [currentProfile?.department].filter(Boolean);
+    if(currentProfile?.designation==='Manager') return currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean);
     return currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean);
   }
   async function refreshIdentity() {
@@ -604,7 +604,7 @@
   const ROLE_MODULES_UI={
     'Admin':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'],
     'General Manager':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'],
-    'Manager':['dashboard','stock_register','stock_hold_management','quotation_management'],
+    'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management'],
     'Accountant':['price_list_management','retail_reports','common_excel_upload'],
     'HR':['price_list_management','employee_management','retail_reports','common_excel_upload'],
     'DMS':['price_list_management','retail_reports','common_excel_upload'],
@@ -671,8 +671,8 @@
     const roleSelect=$('svNewRole'),checks=[...wrap.querySelectorAll('input[name="department_access"]')];
     const applyRole=()=>{
       const managerScope=currentProfile?.designation==='Manager';
-      $('svRoleHint').textContent=managerScope?'Managers can create employees only in their own department.':'Select only departments assigned to your account.';
-      checks.forEach(c=>{c.disabled=managerScope||!allowedDepartmentList().includes(c.value);if(managerScope)c.checked=c.value===currentProfile.department;});
+      $('svRoleHint').textContent=managerScope?'Managers can create employees only in departments assigned to their account.':'Select only departments assigned to your account.';
+      checks.forEach(c=>{c.disabled=!allowedDepartmentList().includes(c.value);if(managerScope)c.checked=false;});
     };
     roleSelect.addEventListener('change',applyRole);
     $('svEmployeeForm').onsubmit=async e=>{
