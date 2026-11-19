@@ -712,7 +712,7 @@ td{padding:15px 16px;line-height:1.5}
 </section>
 <section class="view" id="view-employees">
  <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Employee Management</h1><div class="subtitle">Live operational workspace</div></div><button class="btn" onclick="window.SVMBackend?.refreshEmployees?.()">⟳ &nbsp;Refresh</button></div>
- <div class="stat-grid"><div class="stat"><div class="stat-label">Total Employees</div><div class="stat-value">0</div></div><div class="stat"><div class="stat-label">Active</div><div class="stat-value">0</div></div><div class="stat"><div class="stat-label">Inactive</div><div class="stat-value">0</div></div><div style="margin-left:auto;align-self:center"><button class="btn primary" type="button" id="svNewEmployee">＋ New User</button></div></div>
+ <div class="stat-grid"><div class="stat"><div class="stat-label">Total Employees</div><div class="stat-value">0</div></div><div class="stat"><div class="stat-label">Active</div><div class="stat-value">0</div></div><div class="stat"><div class="stat-label">Inactive</div><div class="stat-value">0</div></div><div style="margin-left:auto;align-self:center"><button class="btn primary" type="button" id="svNewEmployee">＋ Create User</button></div></div>
  <div class="card"><div class="card-head"><div><div class="card-title">Employee Directory</div><div class="card-desc">Manage employee accounts, roles and department access</div></div><span class="pill">0 users</span></div><div class="table-wrap"><table><thead><tr><th>Employee</th><th>Contact</th><th>Designation</th><th>Department Access</th><th>Status</th><th>Permissions</th></tr></thead><tbody><tr><td colspan="6" class="empty">No employee records yet.</td></tr></tbody></table></div></div>
 
 </section>
@@ -1347,6 +1347,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js"></script>
+<script src="./backend/supabase-runtime.js?v=employee-permissions-final-20261119"></script>
 <script src="./backend/price-list-module.js"></script>
 </body></html>
