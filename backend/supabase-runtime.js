@@ -731,50 +731,25 @@
     }
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
     $('holdDeptFilter')?.addEventListener('change',()=>window.holdRender());
-    document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',e=>{
+    // Let the original UI's own click handlers perform navigation.
+    // A document-level CAPTURE listener with stopImmediatePropagation was blocking
+    // the existing button handlers, making otherwise valid controls appear dead.
+    // Observe navigation in the bubble phase only, then refresh the selected module.
+    document.addEventListener('click',e=>{
+      const b=e.target?.closest?.('[data-page]');
+      if(!b)return;
       const p=b.dataset.page||'';
-      const stockDept=p==='stock-personal'?'Personal':p==='stock-ev'?'EV':p==='stock-commercial'?'Commercial':p==='stock-llm'?'LLM':null;
-      const quoteDept=p==='ev-quotation'||p==='ev-management'?'EV':p==='commercial-quotation'||p==='commercial-management'?'Commercial':p==='llm-quotation'||p==='llm-management'?'LLM':null;
-      const holdDept=p==='stock-hold-personal'?'Personal':p==='stock-hold-ev'?'EV':p==='stock-hold-commercial'?'Commercial':p==='stock-hold-llm'?'LLM':null;
-      if(stockDept){
-        e.preventDefault();e.stopImmediatePropagation();window.openDepartmentStock(stockDept);return;
-      }
-      if(holdDept){
-        e.preventDefault();e.stopImmediatePropagation();window.showPage('stock-hold-central');
-        if($('holdDeptFilter'))$('holdDeptFilter').value=holdDept;
-        window.holdRender();return;
-      }
-      if(quoteDept){
-        e.preventDefault();e.stopImmediatePropagation();currentQuoteDepartment=quoteDept;
-        window.showPage(p.endsWith('-management')?'quotation-management':'quotation');
-        if($('quotationPageTitle'))$('quotationPageTitle').textContent=quoteDept+' Quotation';
-        if(typeof resetQuotationForm==='function')resetQuotationForm();
-        if(p.endsWith('-management'))reloadQuoteList().catch(x=>notify(x.message));
-        return;
-      }
-      if(p==='quotation'||p==='quotation-management'){
-        e.preventDefault();e.stopImmediatePropagation();
-        window.showPage(p);
-        if(p==='quotation'&&typeof resetQuotationForm==='function')resetQuotationForm();
-        if(p==='quotation-management')reloadQuoteList().catch(x=>notify(x.message));
-        return;
-      }
-      if(p==='stock-import'){
-        e.preventDefault();e.stopImmediatePropagation();window.showPage('stock-import');return;
-      }
-      if(p==='price-list'||p==='employees'||p==='audit'||p==='reports'||p==='upload'||p==='backup-restore'||p==='dashboard'){
-        e.preventDefault();e.stopImmediatePropagation();
-        window.showPage(p==='employees'?'employees':p==='audit'?'audit':p==='reports'?'reports':p==='upload'?'upload':p==='backup-restore'?'backup-restore':p==='price-list'?'price-list':'dashboard');
+      setTimeout(()=>{
         if(p==='employees')renderEmployees().catch(x=>notify(x.message));
         if(p==='audit')loadAudit().catch(x=>notify(x.message));
         if(p==='upload')loadImportHistory().catch(x=>notify(x.message));
         if(p==='price-list')loadPriceLists().catch(x=>notify(x.message));
-        return;
-      }
-      if(p.startsWith('stock'))setTimeout(()=>renderStock(),0);
-      if(p.includes('quotation'))setTimeout(()=>reloadQuoteList(),0);
-      if(p.includes('employee'))setTimeout(()=>renderEmployees().catch(x=>notify(x.message)),0);
-    },true));
+        if(p==='quotation-management'||p==='ev-management'||p==='commercial-management'||p==='llm-management')reloadQuoteList().catch(x=>notify(x.message));
+        if(p.startsWith('stock-')&&!p.startsWith('stock-hold-'))renderStock();
+        if(p.startsWith('stock-hold-')||p==='stock-hold-central')window.holdRender();
+        if(p==='reports')loadRetailReport();
+      },0);
+    },false);
     const originalOpen=window.openDepartmentStock;
     if(originalOpen)window.openDepartmentStock=function(...args){const x=originalOpen.apply(this,args);setTimeout(()=>renderStock(),0);return x;};
     const originalImportPreview=window.stockImportPreview;
