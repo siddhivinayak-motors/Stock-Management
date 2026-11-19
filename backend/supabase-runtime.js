@@ -404,6 +404,10 @@
     const employee=$('permEmployee')?.value,tbody=$('permRows');if(!tbody)return;
     if(!employee){tbody.innerHTML='<tr><td colspan="3">Select an employee to view permissions.</td></tr>';return;}
     const rows=await call(db().from('employee_permissions').select('*').eq('user_id',employee));
+    const selectedModule=moduleEnum($('permModule')?.value);
+    const current=rows.find(x=>x.module===selectedModule);
+    const allowed=new Set(current?.actions||[]);
+    document.querySelectorAll('#permChecks input').forEach(x=>{x.checked=allowed.has(x.value);});
     tbody.innerHTML=rows.length?rows.map(x=>'<tr><td>'+esc(employee)+'</td><td>'+esc(x.module)+'</td><td>'+esc((x.actions||[]).join(', '))+'</td></tr>').join(''):'<tr><td colspan="3">No permissions assigned.</td></tr>';
   }
   window.permSave = async () => {
@@ -473,6 +477,7 @@
     const newUser=$('view-employees')?.querySelector('.stat-grid .btn.primary');
     if(newUser)newUser.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();employeeDialog();},true);
     $('permEmployee')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
+    $('permModule')?.addEventListener('change',()=>renderPermissions().catch(e=>notify(e.message)));
     const auditView=$('view-audit');
     if(auditView){
       const toolbar=auditView.querySelector('.toolbar');
