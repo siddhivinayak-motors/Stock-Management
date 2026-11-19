@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const callerId = authData.user.id;
 
   const { data: profile, error: profileError } = await callerClient
-    .from("profiles").select("is_super_admin,status").eq("user_id", callerId).maybeSingle();
+    .from("profiles").select("is_super_admin,status,designation").eq("user_id", callerId).maybeSingle();
   if (profileError || !profile || profile.status !== "active") return json({ error: "Active employee profile required" }, 403);
 
   const { data: canManage, error: permError } = await callerClient
@@ -83,6 +83,19 @@ Deno.serve(async (req: Request) => {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON body" }, 400); }
   const action = String(body.action || "");
+  const ROLE_LEVEL: Record<string,number> = {
+    "Super Admin":100,"Admin":90,"General Manager":80,"Manager":70,
+    "Accountant":60,"HR":50,"DMS":40,"Executive":30,"Reception":20,"Driver":10
+  };
+  const callerRole=profile.is_super_admin?"Super Admin":String(profile.designation||"");
+  const callerLevel=ROLE_LEVEL[callerRole]??0;
+  const isRoot=profile.is_super_admin===true;
+  const isAdmin=callerRole==="Admin";
+  const {data:callerPermRows,error:callerPermError}=await callerClient
+    .from("employee_permissions").select("module,actions").eq("user_id",callerId);
+  if(callerPermError)return json({error:"Could not verify your permission limits"},500);
+  const callerModules=new Set((callerPermRows||[]).filter((r:any)=>(r.actions||[]).includes("view")).map((r:any)=>r.module));
+  const canGrantModule=(module:string)=>isRoot||isAdmin||callerModules.has(module);
   if (action === "create_employee") {
     const email = String(body.email || "").trim().toLowerCase();
     const fullName = String(body.full_name || "").trim();
@@ -191,8 +204,12 @@ Deno.serve(async (req: Request) => {
     const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation").eq("user_id",userId).maybeSingle();
     if(targetError||!target||target.deleted_at) return json({error:"Active employee not found"},404);
     if(target.is_super_admin) return json({error:"Super Admin permissions cannot be changed"},403);
+    const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
+    if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
     const selected = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
     if(selected.some(m=>!ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
+    const forbidden=selected.filter((m:string)=>!canGrantModule(m));
+    if(forbidden.length) return json({error:"You cannot grant permissions you do not have: "+forbidden.join(", ")},403);
     const {error:clearError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId);
     if(clearError) return json({error:clearError.message},500);
     const rows=rolePermissionRows(String(target.designation||""),userId,callerId,selected);
