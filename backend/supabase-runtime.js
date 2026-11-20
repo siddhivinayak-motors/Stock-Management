@@ -9,7 +9,7 @@
     Dashboard:'dashboard', 'Stock Register':'stock_register',
     'Stock Hold Management':'stock_hold_management',
     'Price List Management':'price_list_management',
-    'Quotation Management':'quotation_management',
+    'Quotation Management':'quotation_management', 'OTF Management':'otf_management',
     'Employee Management':'employee_management',
     'Common Excel Upload':'common_excel_upload',
     'Backup & Restore':'backup_restore','Audit History':'audit_history',
@@ -104,6 +104,7 @@
   async function call(q) { const {data,error}=await q; if(error) throw error; return data; }
   function has(module,action='view') {
     // Quotation visibility is a fixed role rule, enforced again by Supabase RLS.
+    if(module==='otf_management'&&action==='view'&&['Manager','General Manager','Admin','HR','DMS','Accountant','Accounts','Executive','Reception','Receptionist','Driver'].includes(currentProfile?.designation)) return true;
     if(module==='quotation_management'&&action==='view'&&
       ['Manager','General Manager','Admin','HR','DMS','Accountant','Accounts','Executive','Reception','Receptionist','Driver'].includes(currentProfile?.designation)) return true;
     // Super Admin can view all records, but audit() below never records Super Admin activity.
@@ -234,7 +235,7 @@
     if(roleLabel) roleLabel.textContent=currentProfile?.is_super_admin?'SUPER ADMIN':String(currentProfile?.designation||'EMPLOYEE').toUpperCase();
     setupQuotationVehiclePicker();
     bindOtfUi();
-    const hasAnyModule=['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'].some(m=>has(m,'view'));
+    const hasAnyModule=['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','otf_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'].some(m=>has(m,'view'));
     // Keep the app shell intact; enforce module and department access on the actual navigation items.
     try{await refreshDashboard();}catch(e){console.error('Dashboard data refresh failed:',e);notify('Dashboard data could not be refreshed: '+(e.message||e));}
     const dashRefresh=document.querySelector('#view-dashboard .page-head .btn, #view-dashboard button[onclick*="Dashboard refreshed"]');
@@ -243,7 +244,7 @@
     const viewMap={
       'view-dashboard':'dashboard','view-stock':'stock_register','view-quotation':'quotation_management',
       'view-quotation-management':'quotation_management',
-      'view-otf-order-book':'quotation_management','view-otf-management':'quotation_management',
+      'view-otf-order-book':'otf_management','view-otf-management':'otf_management',
       'view-upload':'common_excel_upload','view-stock-hold-central':'stock_hold_management',
       'view-price-list':'price_list_management','view-employees':'employee_management',
       'view-audit':'audit_history','view-reports':'retail_reports','view-backup-restore':'backup_restore'
@@ -254,7 +255,8 @@
       if(page.startsWith('stock-hold'))return 'stock_hold_management';
       if(page==='upload')return 'common_excel_upload';
       if(page.startsWith('stock'))return 'stock_register';
-      if(page.startsWith('otf-')||page.includes('quotation'))return 'quotation_management';
+      if(page.startsWith('otf-'))return 'otf_management';
+      if(page.includes('quotation'))return 'quotation_management';
       if(page==='price-list')return 'price_list_management';
       if(page==='employees')return 'employee_management';
       // Department-specific quotation-management pages use the same module gate.
@@ -278,6 +280,7 @@
        // Department Access grants all four department functions; no separate
        // module checkbox is required for Personal / EV / Commercial / LLM.
        sub.querySelectorAll('[data-page]').forEach(item=>item.style.display=allowed?'':'none');
+       sub.querySelectorAll('[data-page^="otf-"]').forEach(item=>item.style.display=allowed&&has('otf_management','view')?'':'none');
        if(group)group.style.display=allowed?'':'none';
     });
     document.querySelectorAll('[data-page]').forEach(item=>{
@@ -1292,17 +1295,17 @@
     await loadEmployees();return data;
   }
   const ROLE_MODULES_UI={
-    'Admin':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'],
-    'General Manager':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'],
-    'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','price_list_management','common_excel_upload','backup_restore','retail_reports'],
-    'Accountant':['stock_register','price_list_management','retail_reports','common_excel_upload'],
-    'HR':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','retail_reports'],
-    'DMS':['stock_register','price_list_management','retail_reports','common_excel_upload'],
-    'Executive':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports'],
-    'Reception':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports'],
+    'Admin':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports','otf_management'],
+    'General Manager':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports','otf_management'],
+    'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','price_list_management','common_excel_upload','backup_restore','retail_reports','otf_management'],
+    'Accountant':['stock_register','price_list_management','retail_reports','common_excel_upload','otf_management'],
+    'HR':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','retail_reports','otf_management'],
+    'DMS':['stock_register','price_list_management','retail_reports','common_excel_upload','otf_management'],
+    'Executive':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports','otf_management'],
+    'Reception':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports','otf_management'],
     'Driver':['stock_register']
   };
-  const MODULE_LABELS_UI={dashboard:'Dashboard',stock_register:'Stock Register',stock_hold_management:'Stock Hold Management',price_list_management:'Price List',quotation_management:'Quotation',employee_management:'Employee Management',common_excel_upload:'Excel Upload',backup_restore:'Backup & Restore',audit_history:'Audit History',retail_reports:'Retail Reports'};
+  const MODULE_LABELS_UI={dashboard:'Dashboard',stock_register:'Stock Register',stock_hold_management:'Stock Hold Management',price_list_management:'Price List',quotation_management:'Quotation',otf_management:'OTF Management',employee_management:'Employee Management',common_excel_upload:'Excel Upload',backup_restore:'Backup & Restore',audit_history:'Audit History',retail_reports:'Retail Reports'};
   function moduleAccessMarkup(role,selected=[]){
     const allowed=ROLE_MODULES_UI[role]||[];
     return '<fieldset style="border:1px solid #dce2e9;border-radius:8px;padding:10px;margin-top:12px"><legend style="font-size:13px;font-weight:700">Function Access</legend><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">'+allowed.map(m=>'<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="module_access" value="'+m+'" '+(selected.includes(m)?'checked':'')+'>'+MODULE_LABELS_UI[m]+'</label>').join('')+'</div><small style="color:#718096;display:block;margin-top:8px">Only selected functions will appear in this employee login.</small></fieldset>';
@@ -1387,7 +1390,7 @@
   // Department functions are inherited automatically from Department Access.
   const EMPLOYEE_MENU_GROUPS = [
     {title:'Workspace',items:[
-      ['price_list_management','Price List'],['employee_management','Employee Management'],
+      ['price_list_management','Price List','otf_management'],['employee_management','Employee Management'],
       ['audit_history','Audit History'],['retail_reports','Retail Reports'],
       ['common_excel_upload','Common Excel Upload'],['backup_restore','Backup & Restore']
     ]},
@@ -1828,7 +1831,7 @@
         if(p.startsWith('stock-')&&!p.startsWith('stock-hold-'))renderStock();
         if(p.startsWith('stock-hold-')||p==='stock-hold-central')window.holdRender();
         if(p==='reports')loadRetailReport();
-        if(p.startsWith('otf-')){if(p==='otf-management')loadOtfManagement().catch(e=>notify(e.message));else loadOtfRegister().catch(e=>notify(e.message));}
+        if(p==='otf-management')loadOtfManagement(otfManagementDepartment).catch(e=>notify(e.message));
       },0);
     },false);
     const originalOpen=window.openDepartmentStock;
@@ -1843,7 +1846,7 @@
   }
 
   // OTF Order Book — quotation lookup and independent chassis verification.
-  let otfDepartment='Personal', otfMatches=[], otfSelectedQuote=null, otfVerifiedVehicle=null, otfSavedRows=[];
+  let otfDepartment='Personal', otfMatches=[], otfSelectedQuote=null, otfVerifiedVehicle=null;
   const otfDigits=v=>String(v||'').replace(/\D/g,'');
   const otfNorm=v=>String(v||'').normalize('NFD').replace(/\p{M}/gu,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const otfValue=id=>$(id)?.value?.trim()||'';
@@ -1859,7 +1862,7 @@
   }
   window.otfOpenDepartment=async function(department){
     if(!['Personal','EV','Commercial','LLM'].includes(department))return;
-    if(!has('quotation_management','view')){notify('Quotation / OTF permission required.');return;}
+    if(!has('otf_management','view')){notify('Quotation / OTF permission required.');return;}
     if(!allowedDepartmentList().includes(department)&&!canManageOtf()){notify('You do not have access to '+department+'.');return;}
     otfDepartment=department;otfResetSelection();otfMatches=[];
     if($('otfPageTitle'))$('otfPageTitle').textContent=department+' — OTF Order Book';
@@ -1872,10 +1875,10 @@
     if($('otfPayments'))$('otfPayments').innerHTML='';
     if($('otfAccessories'))$('otfAccessories').innerHTML='';
     otfSetStatus('Select a quotation and verify the chassis number before saving.');
-    await loadOtfRegister();
+
   };
   async function searchOtfQuotes(){
-    if(!has('quotation_management','view'))throw new Error('Quotation view permission required.');
+    if(!has('otf_management','view'))throw new Error('Quotation view permission required.');
     const phone=otfDigits(otfValue('otfPhoneSearch'));
     if(phone.length!==10)throw new Error('Enter a valid 10-digit mobile number.');
     otfResetSelection();if($('otfChassisInput'))$('otfChassisInput').value='';
@@ -1974,30 +1977,32 @@
     w.document.open();w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escHtml(order.order_number)+'</title><style>@page{size:A4;margin:10mm}*{box-sizing:border-box}body{font:10px Arial,sans-serif;color:#18212b;margin:0}h1{font-size:17px;margin:0;text-align:center}h2{font-size:11px;margin:12px 0 5px;border-bottom:1px solid #333;padding-bottom:4px}header{border-bottom:2px solid #222;padding-bottom:8px;margin-bottom:8px}header p{text-align:center;margin:4px 0;font-size:10px}.meta{display:flex;justify-content:space-between;margin:8px 0;font-weight:bold}.grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px}.field{border-bottom:1px solid #d5dbe2;padding:3px 0;min-height:17px}.field b{display:inline-block;min-width:115px}.full{grid-column:1/-1}table{width:100%;border-collapse:collapse;margin-top:4px}th,td{border:1px solid #89929b;padding:4px;text-align:left}th{background:#f0f2f4}.num{text-align:right;white-space:nowrap}.totals{margin:7px 0 0 auto;width:48%;font-weight:bold}.totals div{display:flex;justify-content:space-between;padding:3px 0}.note{border:1px solid #777;padding:7px;margin-top:10px;font-weight:bold;font-size:10px}.sign{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:28px}.sign div{border-top:1px solid #222;padding-top:5px;text-align:center}.small{font-size:8px;color:#444}.keep{break-inside:avoid}@media print{button{display:none}}</style></head><body><header><h1>SIDDHIVINAYAK MOTORS PVT. LTD.</h1><p>AUTHORISED DEALER : MAHINDRA &amp; MAHINDRA LIMITED</p><p>'+escHtml(q.branch_address)+'</p><div class="meta"><span>OTF ORDER BOOK: '+escHtml(order.order_number)+'</span><span>Date: '+escHtml(order.booking_date)+'</span></div></header><div class="grid"><div class="field"><b>Quotation No.:</b> '+escHtml(q.quote_number)+'</div><div class="field"><b>Enquiry No.:</b> '+escHtml(order.enquiry_number)+'</div><div class="field"><b>Customer ID:</b> '+escHtml(order.customer_id)+'</div><div class="field"><b>Invoice No.:</b> '+escHtml(order.invoice_number)+'</div><div class="field"><b>Quote Date:</b> '+escHtml(q.quote_date)+'</div><div class="field"><b>GSTIN:</b> '+escHtml(order.customer_gstin)+'</div><div class="field"><b>Name:</b> '+escHtml(order.customer_name)+'</div><div class="field"><b>Mobile:</b> '+escHtml(order.phone)+'</div><div class="field full"><b>Address:</b> '+escHtml(order.address)+'</div><div class="field"><b>City / District:</b> '+escHtml([order.city,order.district].filter(Boolean).join(' / '))+'</div><div class="field"><b>Email:</b> '+escHtml(order.email)+'</div><div class="field"><b>Aadhaar:</b> '+escHtml(order.aadhaar_number)+'</div><div class="field"><b>PAN:</b> '+escHtml(order.pan_number)+'</div><div class="field"><b>HPA:</b> '+escHtml(order.hpa)+'</div><div class="field"><b>Booking Amount:</b> '+otfMoney(order.booking_amount)+'</div><div class="field"><b>DOB:</b> '+escHtml(order.dob)+'</div><div class="field"><b>Marriage Anniversary:</b> '+escHtml(order.marriage_anniversary)+'</div><div class="field"><b>Nominee:</b> '+escHtml([order.nominee,order.nominee_relationship,order.nominee_age].filter(Boolean).join(' / '))+'</div><div class="field"><b>Sales Executive:</b> '+escHtml(order.sales_person)+'</div></div><h2>VEHICLE DETAILS — VERIFIED FROM STOCK REGISTER</h2><div class="grid"><div class="field"><b>Model:</b> '+escHtml(order.model)+'</div><div class="field"><b>Variant:</b> '+escHtml(order.variant)+'</div><div class="field"><b>Colour:</b> '+escHtml(order.colour)+'</div><div class="field"><b>Chassis No.:</b> '+escHtml(order.chassis_number)+'</div><div class="field"><b>Engine No.:</b> '+escHtml(order.engine_number)+'</div><div class="field"><b>Stock Stage:</b> '+escHtml(v.stage)+'</div></div><h2>QUOTATION PRICE BREAKUP</h2><table><thead><tr><th>Particular</th><th class="num">Amount</th></tr></thead><tbody>'+rows+'</tbody></table><div class="totals"><div><span>Subtotal</span><span>'+otfMoney(q.subtotal)+'</span></div><div><span>Total Discount</span><span>− '+otfMoney(q.discount)+'</span></div><div><span>GRAND TOTAL</span><span>'+otfMoney(q.total)+'</span></div></div><h2>EXCHANGE DETAILS</h2><div class="grid"><div class="field"><b>Old Car:</b> '+escHtml(exchange.model)+'</div><div class="field"><b>Registration:</b> '+escHtml(exchange.registration)+'</div><div class="field"><b>M.F. Year:</b> '+escHtml(exchange.manufacturing_year)+'</div><div class="field"><b>Old Value:</b> '+otfMoney(exchange.old_value)+'</div><div class="field"><b>Extra Support:</b> '+otfMoney(exchange.extra_support)+'</div><div class="field"><b>Total Exchange:</b> '+otfMoney(exchange.total_value)+'</div></div><h2>ACCESSORIES DETAILS</h2><table><thead><tr><th>SL</th><th>Item</th><th>Part No.</th><th class="num">Amount</th></tr></thead><tbody>'+accRows+'</tbody></table><h2>PAYMENT DETAILS</h2><table><thead><tr><th>SL</th><th>Payment</th><th>Date</th><th class="num">Amount</th><th>Mode / Reference</th></tr></thead><tbody>'+payRows+'</tbody></table><div class="note">ખાસ નોંધ: બુકિંગ કરાવ્યા બાદ વાહનના ભાવમાં જે વધઘટ થશે તે ગ્રાહકના શિરે રહેશે. વાહન ડિલિવરી સમયે જે ભાવ હશે તે જ લાગુ પડશે.</div><div class="small" style="margin-top:7px">'+(order.terms||[]).map(escHtml).join(' · ')+'<br>This order book is generated from the selected quotation and the independently verified stock chassis record.</div><div class="sign"><div>Customer Signature</div><div>SC Sign.</div><div>SM Sign.</div></div><script>window.onload=()=>window.print();</script></body></html>');
     w.document.close();
   }
-  let otfManagementRows=[],otfEditingId=null;
-  async function loadOtfRegister(){
-    if(!has('quotation_management','view'))return;
-    const rows=await call(db().from('otf_order_books').select('*').eq('department',otfDepartment).order('created_at',{ascending:false}).limit(500));
-    otfSavedRows=rows;
-    const body=$('otfRegisterRows');if(!body)return;
-    body.innerHTML=rows.length?rows.map((r,i)=>'<tr><td><b>'+esc(r.order_number)+'</b></td><td>'+new Date(r.created_at).toLocaleDateString('en-IN')+'</td><td>'+esc(r.customer_name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc([r.model,r.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(r.chassis_number)+'</td><td>'+otfMoney(r.booking_amount)+'</td><td><span class="pill '+(r.status==='BOOKED'?'green':'red')+'">'+esc(r.status)+'</span></td><td><button class="btn small" data-otf-print="'+i+'">Print A4</button></td></tr>').join(''):'<tr><td colspan="9" class="empty">No order books loaded.</td></tr>';
-    body.querySelectorAll('[data-otf-print]').forEach(btn=>btn.addEventListener('click',()=>otfPrintDocument(otfSavedRows[Number(btn.dataset.otfPrint)])));
-  }
+  let otfManagementRows=[],otfEditingId=null,otfManagementDepartment='Personal';
   function canManageOtf(){return ['Super Admin','Admin','General Manager','Manager','Accountant','Accounts','HR','DMS'].includes(String(currentProfile?.designation||''))||currentProfile?.is_super_admin===true;}
-  async function loadOtfManagement(){
-    if(!has('quotation_management','view'))throw new Error('OTF view permission required.');
-    otfManagementRows=await call(db().from('otf_order_books').select('*').order('created_at',{ascending:false}).limit(2000));
+  async function loadOtfManagement(department=otfManagementDepartment){
+    if(!has('otf_management','view'))throw new Error('OTF Management view permission required.');
+    otfManagementDepartment=department;
+    otfManagementRows=await call(db().from('otf_order_books').select('*').eq('department',department).order('created_at',{ascending:false}).limit(2000));
     renderOtfManagement();
   }
+  window.otfOpenManagement=async function(department){
+    if(!['Personal','EV','Commercial','LLM'].includes(department))return;
+    if(!has('otf_management','view')){notify('OTF Management permission required.');return;}
+    if(!allowedDepartmentList().includes(department)&&!canManageOtf()){notify('You do not have access to '+department+'.');return;}
+    otfManagementDepartment=department;
+    if($('otfManagementDepartment'))$('otfManagementDepartment').value=department;
+    if($('otfManagementTitle'))$('otfManagementTitle').textContent=department+' — OTF Management';
+    await loadOtfManagement(department);
+  };
   function renderOtfManagement(){
     const body=$('otfManagementRows');if(!body)return;
-    const term=String($('otfManagementSearch')?.value||'').trim().toLowerCase(),dept=$('otfManagementDepartment')?.value||'',status=$('otfManagementStatus')?.value||'';
+    const term=String($('otfManagementSearch')?.value||'').trim().toLowerCase(),dept=otfManagementDepartment,status=$('otfManagementStatus')?.value||'';
     const rows=otfManagementRows.filter(r=>(!dept||r.department===dept)&&(!status||r.status===status)&&(!term||[r.order_number,r.customer_name,r.phone,r.chassis_number,r.model,r.variant].some(v=>String(v||'').toLowerCase().includes(term))));
     if($('otfManagementCount'))$('otfManagementCount').textContent=rows.length+' Records';
     body.innerHTML=rows.length?rows.map(r=>'<tr><td><b>'+esc(r.order_number)+'</b></td><td>'+new Date(r.created_at).toLocaleDateString('en-IN')+'</td><td>'+esc(r.customer_name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc([r.model,r.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(r.chassis_number)+'</td><td>'+otfMoney(r.booking_amount)+'</td><td>'+esc(r.department)+'</td><td><select class="field" data-otf-status="'+esc(r.id)+'" style="min-width:125px;min-height:32px;padding:5px"><option '+(r.status==='BOOKED'?'selected':'')+'>BOOKED</option><option '+(r.status==='IN PROCESS'?'selected':'')+'>IN PROCESS</option><option '+(r.status==='DELIVERED'?'selected':'')+'>DELIVERED</option><option '+(r.status==='CANCELLED'?'selected':'')+'>CANCELLED</option></select></td><td><div style="display:flex;gap:5px"><button class="btn small" data-otf-mprint="'+esc(r.id)+'">Print</button><button class="btn small primary" data-otf-edit="'+esc(r.id)+'">Edit</button></div></td></tr>').join(''):'<tr><td colspan="10" class="empty">No OTF records found for the selected filters.</td></tr>';
     if(!canManageOtf()){body.querySelectorAll('[data-otf-status]').forEach(sel=>sel.disabled=true);body.querySelectorAll('[data-otf-edit]').forEach(btn=>btn.hidden=true);}
     body.querySelectorAll('[data-otf-mprint]').forEach(btn=>btn.addEventListener('click',()=>{const r=otfManagementRows.find(x=>x.id===btn.dataset.otfMprint);if(r)otfPrintDocument(r);}));
-    body.querySelectorAll('[data-otf-status]').forEach(sel=>sel.addEventListener('change',async()=>{try{if(!canManageOtf())throw new Error('Only Manager and above can change OTF status.');await call(db().from('otf_order_books').update({status:sel.value,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',sel.dataset.otfStatus));await audit('quotation_management','edit','Updated OTF status','otf_order_book',sel.dataset.otfStatus,{status:sel.value});notify('OTF status updated.');await loadOtfManagement();}catch(e){notify(e.message);await loadOtfManagement().catch(()=>{});}}));
+    body.querySelectorAll('[data-otf-status]').forEach(sel=>sel.addEventListener('change',async()=>{try{if(!canManageOtf())throw new Error('Only Manager and above can change OTF status.');await call(db().from('otf_order_books').update({status:sel.value,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',sel.dataset.otfStatus));await audit('otf_management','edit','Updated OTF status','otf_order_book',sel.dataset.otfStatus,{status:sel.value});notify('OTF status updated.');await loadOtfManagement();}catch(e){notify(e.message);await loadOtfManagement().catch(()=>{});}}));
     body.querySelectorAll('[data-otf-edit]').forEach(btn=>btn.addEventListener('click',()=>openOtfForEdit(btn.dataset.otfEdit)));
   }
   function openOtfForEdit(id){
@@ -2024,23 +2029,22 @@
     if(printAfter)popup=window.open('','_blank','width=1000,height=760');
     try{
       const wasEditing=!!otfEditingId;
-      if(!wasEditing&&!has('quotation_management','create'))throw new Error('OTF create permission required.');
+      if(!wasEditing&&!has('otf_management','create'))throw new Error('OTF create permission required.');
       const payload=buildOtfPayload();
       let saved;
       if(wasEditing){
         if(!canManageOtf())throw new Error('Only Manager and above can edit OTF records.');
         const existing=otfManagementRows.find(x=>x.id===otfEditingId);if(existing)payload.order_number=existing.order_number;
         saved=await call(db().from('otf_order_books').update({...payload,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',otfEditingId).select('*').single());
-        await audit('quotation_management','edit','Updated OTF Order Book','otf_order_book',saved.id,{order_number:saved.order_number,department:saved.department});
+        await audit('otf_management','edit','Updated OTF Order Book','otf_order_book',saved.id,{order_number:saved.order_number,department:saved.department});
         otfEditingId=null;
         if($('otfSaveOrder'))$('otfSaveOrder').textContent='Save OTF Order Book';
         if($('otfSavePrintOrder'))$('otfSavePrintOrder').textContent='Save & Print A4';
       }else{
         saved=await call(db().from('otf_order_books').insert(payload).select('*').single());
-        await audit('quotation_management','create','Created OTF Order Book','otf_order_book',saved.id,{order_number:saved.order_number,department:saved.department,quotation_id:saved.quotation_id,vehicle_id:saved.vehicle_id});
+        await audit('otf_management','create','Created OTF Order Book','otf_order_book',saved.id,{order_number:saved.order_number,department:saved.department,quotation_id:saved.quotation_id,vehicle_id:saved.vehicle_id});
       }
-      await loadOtfRegister();
-      await loadOtfManagement().catch(()=>{});
+      await loadOtfManagement(otfDepartment).catch(()=>{});
       otfSetStatus((wasEditing?'Updated successfully: ':'Saved successfully: ')+saved.order_number);
       if($('otfPrintPreview'))$('otfPrintPreview').disabled=false;
       if(printAfter)otfPrintDocument(saved,popup);
@@ -2060,9 +2064,8 @@
       $('otfPrintPreview')?.addEventListener('click',()=>{if(otfSelectedQuote&&otfVerifiedVehicle){const draft=buildOtfPayload();otfPrintDocument({...draft,order_number:'PREVIEW',created_at:new Date().toISOString()});}});
       $('otfAddPayment')?.addEventListener('click',addOtfPayment);
       $('otfAddAccessory')?.addEventListener('click',addOtfAccessory);
-      $('otfRefresh')?.addEventListener('click',()=>loadOtfRegister().then(()=>notify('OTF register refreshed')).catch(e=>notify(e.message)));
-      $('otfManagementRefresh')?.addEventListener('click',()=>loadOtfManagement().catch(e=>notify(e.message)));
-      ['otfManagementSearch','otfManagementDepartment','otfManagementStatus'].forEach(id=>$(id)?.addEventListener(id==='otfManagementSearch'?'input':'change',renderOtfManagement));
+      $('otfManagementRefresh')?.addEventListener('click',()=>loadOtfManagement(otfManagementDepartment).catch(e=>notify(e.message)));
+      ['otfManagementSearch','otfManagementStatus'].forEach(id=>$(id)?.addEventListener(id==='otfManagementSearch'?'input':'change',renderOtfManagement));
     }
   }
 
@@ -2088,7 +2091,7 @@
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
     window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit};
-    window.SVMBackend.loadOtfRegister=loadOtfRegister;window.SVMBackend.loadOtfManagement=loadOtfManagement;
+    window.SVMBackend.loadOtfManagement=loadOtfManagement;
     window.dispatchEvent(new Event('svm:ready'));
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
