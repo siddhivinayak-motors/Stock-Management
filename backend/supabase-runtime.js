@@ -1317,10 +1317,17 @@
     const field=(label,value)=>'<div class="ssc-field"><span class="ssc-label">'+label+'</span><span class="ssc-value">'+esc(value||'—')+'</span></div>';
     const canSubmit=!canManageStock()&&roleLevel()<=30&&has('stock_hold_management','create')&&String(v.stage||'').toUpperCase()==='OPEN';
     box.hidden=false;
-    box.innerHTML='<div class="ssc-head"><span class="ssc-title">SELECTED VEHICLE FROM STOCK REGISTER</span><button type="button" class="ssc-clear" id="clearSelectedStockContext">Clear selection ×</button></div><div class="ssc-grid">'+field('Department',v.department)+field('Chassis Number',v.chassis_number)+field('Model',v.model)+field('Variant',v.variant)+field('Colour',v.colour)+field('Stock Stage',v.stage)+'</div><div class="ssc-actions">'+(has('quotation_management','view')?'<button type="button" class="ssc-request" id="createQuoteFromSelectedStock">Create Quotation →</button>':'')+(canSubmit?'<button type="button" class="ssc-request" id="requestSelectedStockHold">Create Hold Request →</button>':'')+'</div>';
+    box.innerHTML='<div class="ssc-head"><span class="ssc-title">SELECTED VEHICLE FROM STOCK REGISTER</span><button type="button" class="ssc-clear" id="clearSelectedStockContext">Clear selection ×</button></div><div class="ssc-grid">'+field('Department',v.department)+field('Chassis Number',v.chassis_number)+field('Model',v.model)+field('Variant',v.variant)+field('Colour',v.colour)+field('Stock Stage',v.stage)+'</div><div class="ssc-actions">'+(has('quotation_management','create')?'<button type="button" class="ssc-request" id="createQuoteFromSelectedStock">Create Quotation →</button>':'')+(canSubmit?'<button type="button" class="ssc-request" id="requestSelectedStockHold">Create Hold Request →</button>':'')+'</div>';
     $('clearSelectedStockContext').onclick=()=>{selectedStockVehicle=null;renderSelectedStockContext();document.querySelectorAll('#stockTable tbody tr.selected-stock-row').forEach(r=>{r.classList.remove('selected-stock-row');r.setAttribute('aria-selected','false');});};
     $('requestSelectedStockHold')?.addEventListener('click',()=>openStockHoldDialog(v));
-    $('createQuoteFromSelectedStock')?.addEventListener('click',()=>window.startQuotationFromStock?.(v));
+    $('createQuoteFromSelectedStock')?.addEventListener('click',async e=>{
+      const button=e.currentTarget;if(button.disabled)return;
+      if(typeof window.startQuotationFromStock!=='function'){notify('Quotation launch service is not available. Refresh the page and try again.');return;}
+      button.disabled=true;const oldText=button.textContent;button.textContent='Opening Quotation…';
+      try{await window.startQuotationFromStock(v);}
+      catch(error){console.error(error);notify(error.message||'Could not open quotation from selected stock.');}
+      finally{button.disabled=false;button.textContent=oldText;}
+    });
   }
   window.holdDecision = (id,decision) => decideHold(id,decision).catch(e=>notify(e.message));
   window.openDepartmentStock = (department) => {
