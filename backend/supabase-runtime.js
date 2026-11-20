@@ -1280,9 +1280,9 @@
     'workspace.price_list_imports':'Workspace · Price List Import History','workspace.common_excel_upload':'Workspace · Common Excel Upload History','workspace.audit_history':'Workspace · Audit History','workspace.retail_reports':'Workspace · Retail Reports'
   };
   function resetIsSuperAdmin(){return !!currentUser&&(!!currentProfile?.is_super_admin||String(currentProfile?.designation||'').toLowerCase()==='super admin');}
-  function resetSelectedKeys(){return [...document.querySelectorAll('#svResetTree input[type=checkbox]:checked')].map(x=>x.value);}
+  function resetSelectedKeys(){return [...document.querySelectorAll('#svResetTree input[type=checkbox][value]:checked')].map(x=>x.value);}
   function syncResetSelectionUI(){
-    const selected=resetSelectedKeys(),all=[...document.querySelectorAll('#svResetTree input[type=checkbox]')];
+    const selected=resetSelectedKeys(),all=[...document.querySelectorAll('#svResetTree input[type=checkbox][value]')];
     if($('svResetCheckedCount'))$('svResetCheckedCount').textContent=selected.length+' options selected';
     if($('svResetSelectAll'))$('svResetSelectAll').checked=all.length>0&&selected.length===all.length;
     document.querySelectorAll('#svResetTree input[data-reset-group]').forEach(g=>{const prefix=g.dataset.resetGroup==='workspace'?'workspace.':g.dataset.resetGroup+'.';const members=all.filter(x=>x.value.startsWith(prefix));g.checked=members.length>0&&members.every(x=>x.checked);});
