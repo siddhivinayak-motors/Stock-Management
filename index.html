@@ -1077,12 +1077,38 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <div class="card"><div class="card-head"><div class="card-desc">0 activity records · Activity will appear after integration</div></div><div class="table-wrap"><table><thead><tr><th>Date &amp; Time</th><th>Employee</th><th>Designation</th><th>Module</th><th>Action</th><th>Reference</th><th>Status</th><th>Change Details</th></tr></thead><tbody><tr><td colspan="8" class="empty">No activity records yet.</td></tr></table></div></div>
 </section>
 <section class="view" id="view-upload">
- <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Stock Data</h1><div class="subtitle">Excel uploads and Full Stock Sync are temporarily disabled.</div></div></div>
- <div class="card"><div class="card-body">
-  <div class="card-title">Live Database Connected</div>
-  <p class="card-desc">The live stock database remains connected. Manager and Robin Excel upload actions, including Personal / EV Full Sync, are temporarily unavailable. No existing stock, exit history, quotation or other database records have been changed by this screen.</p>
-  <p class="card-desc">To load or reconcile the initial stock file, provide the original Excel file or a shareable spreadsheet link for review first. No bulk replacement will run without preview and your confirmation.</p>
- </div></div>
+ <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Excel Upload</h1><div class="subtitle">Separate stock upload and review for each responsible team</div></div><button class="btn" onclick="window.SVMBackend?.loadImportHistory?.()">⟳ &nbsp;Refresh</button></div>
+ <div class="stock-upload-split" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px;align-items:start">
+  <div class="stock-upload-pane">
+   <div class="card" style="border:1px solid #d7e2f0"><div class="card-body">
+    <div class="card-title">Manager — Personal / EV Full Stock Sync</div>
+    <p class="card-desc">Manager Excel Upload. Reads the STOCK worksheet and replaces Personal and EV stock only after preview and confirmation. Commercial and LLM remain unchanged.</p>
+    <label for="pratikStockFile" style="display:block;font-weight:700;margin:12px 0 7px">Manager Excel Upload</label>
+    <input type="file" id="pratikStockFile" accept=".xlsx,.xls" class="field" style="width:100%">
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px;flex-wrap:wrap">
+     <button class="btn" type="button" onclick="window.pratikStockPreview()">Review STOCK Sheet</button>
+     <button class="btn primary" type="button" id="pratikStockApply" onclick="window.pratikStockApply()" disabled>Confirm &amp; Update Personal / EV</button>
+    </div>
+    <div id="pratikStockSummary" class="notice" style="display:none;margin-top:14px;white-space:pre-line"></div>
+   </div></div>
+   <div class="card" style="margin-top:12px"><div class="card-head"><div class="card-title">Manager — Review Changes</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>SR</th><th>Chassis</th><th>Model / Variant</th><th>Department</th><th>Status</th><th>Stage</th><th>Review</th></tr></thead><tbody id="pratikStockRows"><tr><td colspan="7" class="empty">Upload Manager Excel and select Review STOCK Sheet.</td></tr></tbody></table></div></div>
+  </div>
+  <div class="stock-upload-pane">
+   <div class="card" style="border:1px solid #d7e2f0"><div class="card-body">
+    <div class="card-title">Robin — Commercial / LLM Stock Upload</div>
+    <p class="card-desc">Robin Excel Upload. Preview and review changes before adding new Commercial and LLM stock. Personal and EV rows are excluded from this upload.</p>
+    <label for="robinStockFile" style="display:block;font-weight:700;margin:12px 0 7px">Robin Excel Upload</label>
+    <input type="file" id="robinStockFile" accept=".xlsx,.xls" class="field" style="width:100%">
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px;flex-wrap:wrap">
+     <button class="btn" type="button" onclick="window.robinStockPreview()">Review &amp; Preview Changes</button>
+     <button class="btn primary" type="button" onclick="window.robinStockCommit()">Upload Commercial / LLM</button>
+    </div>
+    <div id="robinStockSummary" class="notice" style="display:none;margin-top:14px;white-space:pre-line"></div>
+   </div></div>
+   <div class="card" style="margin-top:12px"><div class="card-head"><div class="card-title">Robin — Review Changes</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Chassis</th><th>Model</th><th>Variant</th><th>Segment</th><th>Department</th><th>Status</th><th>Decision</th></tr></thead><tbody id="robinStockRows"><tr><td colspan="7" class="empty">Upload Robin Excel and select Review &amp; Preview Changes.</td></tr></tbody></table></div></div>
+  </div>
+ </div>
+ <div class="card" style="margin-top:16px"><div class="card-head"><div class="card-title">Upload History</div></div><div class="table-wrap"><table><thead><tr><th>File Name</th><th>Status</th><th>Imported</th><th>Skipped / Duplicate</th><th>Errors</th><th>Created At</th></tr></thead><tbody><tr><td colspan="6" class="empty">No import history yet.</td></tr></tbody></table></div></div>
 </section>
 <section class="view" id="view-reports">
  <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Vehicle Exit Reports</h1><div class="subtitle">Permanent history of Retail, Demo, Damage, Transfer Out and Other vehicle exits</div></div><button class="btn" id="retailRefresh" type="button">⟳ &nbsp;Refresh</button></div>
