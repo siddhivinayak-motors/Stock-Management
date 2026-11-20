@@ -643,7 +643,7 @@
       terms:q.terms||QUOTE_COMPANY_DEFAULTS.terms,bank_details:q.bank||QUOTE_COMPANY_DEFAULTS.bank_details,
       created_by:currentUser.id,updated_by:currentUser.id
     }).select().single());
-    if(q.items?.length) await call(db().from('quotation_items').insert(q.items.map((x,i)=>({quotation_id:row.id,line_no:i+1,particulars:x.particulars||x.name||'',amount:Number(x.amount||0),is_discount:!!(x.discount??x.isDiscount)||/discount|\\bless\\b/i.test(String(x.name||x.particulars||''))}))));
+    if(q.items?.length) await call(db().from('quotation_items').insert(q.items.map((x,i)=>({quotation_id:row.id,line_no:i+1,particulars:x.particulars||x.name||'',amount:Number(x.amount||0),is_discount:!!(x.discount??x.isDiscount)||/discount|\\bless\\b/i.test(String(x.name||x.particulars||'')),is_custom:!!x.custom}))));
     await audit('quotation_management','create','Saved quotation','quotation',row.id,{quote_number:row.quote_number});
     return row;
   }
@@ -672,7 +672,7 @@
     amountWords:row.amount_words||'',terms:Array.isArray(row.terms)?row.terms:[],
     bank:row.bank_details&&typeof row.bank_details==='object'?row.bank_details:{},
     status:String(row.status||'Pending').toUpperCase(),prints:Number(row.print_count||0),
-    date:row.quote_date,items:(row.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount||/discount|\\bless\\b/i.test(String(x.particulars||''))}))
+    date:row.quote_date,items:(row.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount||/discount|\\bless\\b/i.test(String(x.particulars||'')),custom:!!x.is_custom}))
   });
   const sameQuoteKey=(a,b)=>
     String(a.department||'').trim().toLowerCase()===String(b.department||'').trim().toLowerCase() &&
@@ -776,7 +776,7 @@
       const isDiscountItem=x=>!!x.discount||/discount|\\bless\\b/i.test(String(x.name||''));
       const regularItems=allItems.filter(x=>!isDiscountItem(x));
       const discountItems=allItems.filter(isDiscountItem);
-      const regularRows=regularItems.map((x,n)=>{const removable=!/accessor|coating|ceramic|ppf/i.test(String(x.name||''));return '<div class="charge-row"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" value="'+Number(x.amount||0).toFixed(2)+'" data-charge="'+escAttr(x.name)+'"></div>'+(removable?'<button class="icon-btn remove-charge" aria-label="Remove charge">×</button>':'')+'</div>';}).join('');
+      const regularRows=regularItems.map((x,n)=>{const removable=!!x.custom;return '<div class="charge-row"'+(removable?' data-custom-charge="true"':'')+'><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" value="'+Number(x.amount||0).toFixed(2)+'" data-charge="'+escAttr(x.name)+'"></div>'+(removable?'<button class="icon-btn remove-charge" aria-label="Remove charge">×</button>':'')+'</div>';}).join('');
       const discountDefs=[
         {name:'LESS RETAIL OFFER',match:/retail/i},
         {name:'LESS EXCHANGE OFFER',match:/exchange/i},
@@ -837,7 +837,7 @@
         };
         await call(db().from('quotations').update(payload).eq('id',id).select('id').single());
         await call(db().from('quotation_items').delete().eq('quotation_id',id));
-        const itemRows=(q.items||[]).map((x,i)=>({quotation_id:id,line_no:i+1,particulars:x.name,amount:Number(x.amount||0),is_discount:!!x.discount}));
+        const itemRows=(q.items||[]).map((x,i)=>({quotation_id:id,line_no:i+1,particulars:x.name,amount:Number(x.amount||0),is_discount:!!x.discount,is_custom:!!x.custom}));
         if(itemRows.length) await call(db().from('quotation_items').insert(itemRows));
         await audit('quotation_management','edit','Edited quotation; approval reset to Pending','quotation',id,{quote_number:q.no});
         editingQuotationId=null;
