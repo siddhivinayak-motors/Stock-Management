@@ -1934,14 +1934,14 @@
     if(aadhaar&&aadhaar.length!==12)throw new Error('Aadhaar must contain 12 digits.');
     if(pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan))throw new Error('Enter a valid 10-character PAN number.');
     const q=otfSelectedQuote,v=otfVerifiedVehicle,code=otfDeptCode[otfDepartment]||'PV';
-    const now=new Date(),date=now.toISOString().slice(0,10).replace(/-/g,'');
+    const now=new Date(),date=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
     const orderNo='OTF-'+code+'-'+date+'-'+now.getTime().toString().slice(-6)+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
     return {
       order_number:orderNo,department:otfDepartment,quotation_id:q.id,vehicle_id:v.id,
       customer_name:otfValue('otfCustomerName'),phone:otfDigits(otfValue('otfCustomerPhone')),
       address,city:otfValue('otfCity'),district:otfValue('otfDistrict'),
       customer_gstin:otfValue('otfCustomerGstin'),aadhaar_number:aadhaar||null,pan_number:pan||null,
-      enquiry_number:otfValue('otfEnquiryNumber')||null,customer_id:otfValue('otfCustomerId')||null,
+      enquiry_number:otfValue('otfEnquiryNumber')||null,customer_id:otfValue('otfCustomerId')||null,invoice_number:otfValue('otfInvoiceNumber')||null,
       booking_amount:otfNumber('otfBookingAmount'),booking_date:otfValue('otfBookingDate')||date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8),
       hpa:otfValue('otfHpa'),dob:otfValue('otfDob')||null,marriage_anniversary:otfValue('otfAnniversary')||null,
       email:otfValue('otfEmail')||null,nominee:otfValue('otfNominee')||null,
