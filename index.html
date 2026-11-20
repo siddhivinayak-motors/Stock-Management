@@ -1356,12 +1356,12 @@ document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',(
 }));
 const sidebarDeptStateKey=userId=>'svm_sidebar_department_state_v1:'+String(userId||'');
 function applySidebarDepartmentState(){
+ // Department register folders must always start collapsed after refresh/login.
  document.querySelectorAll('.nav-item.group[data-group]').forEach(button=>{
   const key=button.dataset.group,sub=document.querySelector('[data-sub="'+key+'"]');
-  const visible=!!sub&&sub.style.display!=='none';
-  button.classList.toggle('expanded',visible);
-  button.setAttribute('aria-expanded',visible?'true':'false');
-  if(sub)sub.classList.toggle('open',visible);
+  button.classList.remove('expanded');
+  button.setAttribute('aria-expanded','false');
+  if(sub)sub.classList.remove('open');
  });
 }
 function saveSidebarDepartmentState(){
