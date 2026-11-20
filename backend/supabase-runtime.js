@@ -113,23 +113,24 @@
       try{
         if(!window.SVMBackend||typeof window.SVMBackend.loadPriceLists!=='function')throw new Error('Price List service unavailable');
         await window.SVMBackend.loadPriceLists();
-        const rows=(window.plData&&window.plData[dept])||[];
+        const rows=Object.entries(window.plData||{}).flatMap(([department,items])=>(items||[]).map(row=>({...row,department:row.department||department})));
         const tokens=query.split(/\s+/).filter(Boolean);
         const matches=rows.filter(row=>{
           const hay=quoteSearchNorm([row.vehicle,row.variant,row.colour].join(' '));
           return tokens.every(token=>hay.includes(token));
         }).sort((a,b)=>String(a.vehicle||'').localeCompare(String(b.vehicle||''))||String(a.variant||'').localeCompare(String(b.variant||''))||String(a.colour||'').localeCompare(String(b.colour||'')));
-        if(!matches.length){box.innerHTML='<div class="q-stock-empty">No matching Model / Variant / Colour found in this department Price List.</div>';return;}
-        box.innerHTML='<div class="q-stock-count">'+matches.length+' Price List match(es) · '+esc(dept)+'</div>'+matches.slice(0,40).map((row,i)=>'<button type="button" class="q-stock-option" data-quote-price-index="'+i+'"><span class="q-stock-main"><b>'+esc(row.vehicle||'—')+'</b><span>'+esc(row.variant||'Variant not listed')+' · '+esc(row.colour||'Colour not listed')+'</span></span><span class="q-stock-meta"><small>PRICE LIST</small></span></button>').join('')+(matches.length>40?'<div class="q-stock-count">Showing first 40 matches. Type more model or variant text to narrow the list.</div>':'');
+        if(!matches.length){box.innerHTML='<div class="q-stock-empty">No matching Model / Variant / Colour found in accessible department Price Lists.</div>';return;}
+        box.innerHTML='<div class="q-stock-count">'+matches.length+' Price List match(es) · All accessible departments</div>'+matches.slice(0,60).map((row,i)=>'<button type="button" class="q-stock-option" data-quote-price-index="'+i+'"><span class="q-stock-main"><b>'+esc(row.vehicle||'—')+'</b><span>'+esc(row.variant||'Variant not listed')+' · '+esc(row.colour||'Colour not listed')+'</span></span><span class="q-stock-meta"><small>'+esc(row.department||'PRICE LIST')+'</small></span></button>').join('')+(matches.length>60?'<div class="q-stock-count">Showing first 60 matches. Type more model or variant text to narrow the list.</div>':'');
         box.querySelectorAll('[data-quote-price-index]').forEach(button=>button.addEventListener('click',()=>{
           const row=matches[Number(button.dataset.quotePriceIndex)];if(!row)return;
-          model.value=row.vehicle||'';variant.value=row.variant||'';colour.value=row.colour||'';
+          if(typeof window.setQuotationDepartment==='function')window.setQuotationDepartment(row.department);
+          model.value=row.vehicle||'';variant.value=row.variant||'';if(row.colour)colour.value=row.colour;
           if($('qCarDesc'))$('qCarDesc').value='';
           if($('qSalesPerson'))$('qSalesPerson').value=currentProfile?.full_name||currentUser?.email||'';
           hide();
-          variant.dispatchEvent(new Event('change',{bubbles:true}));
-          if(typeof quoteAutoFillPrice==='function')quoteAutoFillPrice();
-          if(typeof notify==='function')notify('Price List vehicle selected · '+(row.vehicle||'')+' / '+(row.variant||'')+' / '+(row.colour||''));
+          if(typeof window.quoteApplyPriceList==='function')window.quoteApplyPriceList(row);
+          else if(typeof quoteAutoFillPrice==='function')quoteAutoFillPrice();
+          if(typeof notify==='function')notify('Quotation department changed to '+row.department+' · '+(row.vehicle||'')+' / '+(row.variant||''));
         }));
       }catch(error){box.hidden=false;box.innerHTML='<div class="q-stock-empty">Price List search unavailable: '+esc(error.message)+' · Check your Price List access.</div>';}
     };
@@ -1091,9 +1092,10 @@
     const field=(label,value)=>'<div class="ssc-field"><span class="ssc-label">'+label+'</span><span class="ssc-value">'+esc(value||'—')+'</span></div>';
     const canSubmit=!canManageStock()&&roleLevel()<=30&&has('stock_hold_management','create')&&String(v.stage||'').toUpperCase()==='OPEN';
     box.hidden=false;
-    box.innerHTML='<div class="ssc-head"><span class="ssc-title">SELECTED VEHICLE FROM STOCK REGISTER</span><button type="button" class="ssc-clear" id="clearSelectedStockContext">Clear selection ×</button></div><div class="ssc-grid">'+field('Department',v.department)+field('Chassis Number',v.chassis_number)+field('Model',v.model)+field('Variant',v.variant)+field('Colour',v.colour)+field('Stock Stage',v.stage)+'</div>'+(canSubmit?'<div class="ssc-actions"><button type="button" class="ssc-request" id="requestSelectedStockHold">Create Hold Request →</button></div>':'');
+    box.innerHTML='<div class="ssc-head"><span class="ssc-title">SELECTED VEHICLE FROM STOCK REGISTER</span><button type="button" class="ssc-clear" id="clearSelectedStockContext">Clear selection ×</button></div><div class="ssc-grid">'+field('Department',v.department)+field('Chassis Number',v.chassis_number)+field('Model',v.model)+field('Variant',v.variant)+field('Colour',v.colour)+field('Stock Stage',v.stage)+'</div><div class="ssc-actions">'+(has('quotation_management','view')?'<button type="button" class="ssc-request" id="createQuoteFromSelectedStock">Create Quotation →</button>':'')+(canSubmit?'<button type="button" class="ssc-request" id="requestSelectedStockHold">Create Hold Request →</button>':'')+'</div>';
     $('clearSelectedStockContext').onclick=()=>{selectedStockVehicle=null;renderSelectedStockContext();document.querySelectorAll('#stockTable tbody tr.selected-stock-row').forEach(r=>{r.classList.remove('selected-stock-row');r.setAttribute('aria-selected','false');});};
     $('requestSelectedStockHold')?.addEventListener('click',()=>openStockHoldDialog(v));
+    $('createQuoteFromSelectedStock')?.addEventListener('click',()=>window.startQuotationFromStock?.(v));
   }
   window.holdDecision = (id,decision) => decideHold(id,decision).catch(e=>notify(e.message));
   window.openDepartmentStock = (department) => {
