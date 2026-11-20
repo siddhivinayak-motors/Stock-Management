@@ -1278,9 +1278,9 @@ function updateQuoteNumber(){const el=document.getElementById('quoteNumber');if(
 function calc(){
  let subtotal=0,discount=0;
  charges.querySelectorAll('.charge-row').forEach(r=>{
-  const name=r.querySelector('select').value;
+  const name=(r.querySelector('.q-charge-name')?.textContent||r.querySelector('select')?.value||r.querySelector('.q-charge-editable')?.value||'').trim();
   const val=Math.max(0,Number(r.querySelector('.amount').value)||0);
-  if(name==='Discount')discount+=val;else subtotal+=val;
+  if(name.toLowerCase()==='discount')discount+=val;else subtotal+=val;
  });
  document.getElementById('subtotal').textContent=money(subtotal);
  document.getElementById('discount').textContent='− '+money(discount);
@@ -1307,7 +1307,7 @@ function getQuotePayload(){
  const phone=document.getElementById('qPhone').value.trim();
  if(!model||!customer||phone.length!==10){toast('Enter vehicle model, customer name and valid 10-digit mobile');return null}
  const items=[];
- charges.querySelectorAll('.charge-row').forEach(r=>{const name=r.querySelector('select').value;const amount=Number(r.querySelector('.amount').value)||0;items.push({name,amount,discount:name==='Discount'})});
+ charges.querySelectorAll('.charge-row').forEach(r=>{const name=(r.querySelector('.q-charge-name')?.textContent||r.querySelector('select')?.value||r.querySelector('.q-charge-editable')?.value||r.querySelector('.amount')?.dataset.charge||'Charge').trim();const amount=Number(r.querySelector('.amount').value)||0;items.push({name,amount,discount:name.toLowerCase()==='discount'})});
  const amountWords=numberWordsIndian(totals.total);
  const terms=[
   "All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.",
