@@ -554,15 +554,17 @@
     String(a.model||'').trim().replace(/\s+/g,' ').toLowerCase()===String(b.model||'').trim().replace(/\s+/g,' ').toLowerCase() &&
     String(a.variant||'').trim().replace(/\s+/g,' ').toLowerCase()===String(b.variant||'').trim().replace(/\s+/g,' ').toLowerCase() &&
     Math.round(Number(a.total||0)*100)===Math.round(Number(b.total||0)*100);
-  const canManageQuotationRecords = () =>
-    ['Manager','General Manager','Admin'].includes(currentProfile?.designation) || !!currentProfile?.is_super_admin;
+  const QUOTATION_MANAGER_ROLES = new Set(['Manager','General Manager','Admin']);
+  const canReviewQuotationRecords = () => !!currentProfile?.is_super_admin || QUOTATION_MANAGER_ROLES.has(String(currentProfile?.designation||''));
+  const canEditQuotationRecords = () => has('quotation_management','edit');
+  const canDeleteQuotationRecords = () => canReviewQuotationRecords();
   window.renderQuoteManagement = () => {
     const body=$('quoteManagementRows');if(!body)return;
-    const canEdit=canManageQuotationRecords();
-    const canDelete=canManageQuotationRecords();
+    const canEdit=canEditQuotationRecords();
+    const canDelete=canDeleteQuotationRecords();
     body.innerHTML=quoteRecords.map((q,i)=>{
       const blocked=q.status==='PENDING'&&quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other));
-      const canReview=has('quotation_management','approve');
+      const canReview=canReviewQuotationRecords() && has('quotation_management','approve');
       const approval=q.status!=='PENDING'||!canReview?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>';
       const manage=(canDelete?'<button class="btn small danger" onclick="deleteSavedQuote('+i+')">Delete</button>':'')+(canEdit?'<button class="btn small" onclick="editSavedQuote('+i+')">Edit</button>':'');
       const statusClass=q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red';
@@ -585,7 +587,7 @@
     try {
       const q=quoteRecords[i];
       if(!q?.id) throw new Error('Quotation record not found.');
-      if(!canManageQuotationRecords()) throw new Error('Edit is available only to Manager, General Manager, Admin and Super Admin.');
+      if(!canEditQuotationRecords()) throw new Error('You do not have quotation edit permission.');
       editingQuotationId=q.id;
       currentQuoteDepartment=q.department||'Personal';
       if(typeof showPage==='function') showPage('quotation');
@@ -616,7 +618,7 @@
     try {
       const q=quoteRecords[i];
       if(!q?.id) throw new Error('Quotation record not found.');
-      if(!canManageQuotationRecords()) throw new Error('Delete is available only to Manager, General Manager, Admin and Super Admin.');
+      if(!canDeleteQuotationRecords()) throw new Error('Only Manager, General Manager, Admin and Super Admin can delete quotations.');
       if(!confirm('Delete quotation '+q.no+' for '+q.customer+'? This cannot be undone.')) return;
       await call(db().from('quotation_items').delete().eq('quotation_id',q.id));
       await call(db().from('quotations').delete().eq('id',q.id));
@@ -631,7 +633,7 @@
       const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
       const model=$('qVehicle').value.trim(),variant=$('qVariant').value.trim();
       if(editingQuotationId){
-        if(!canManageQuotationRecords()) throw new Error('Quotation edit is restricted to Manager, General Manager, Admin and Super Admin.');
+        if(!canEditQuotationRecords()) throw new Error('You do not have quotation edit permission.');
         const id=editingQuotationId;
         if(quoteRecords.some(other=>other.id!==id&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું બીજું quotation પહેલેથી નોંધાયેલું છે. Duplicate quotation તરીકે ફેરફાર સેવ નહીં થાય.');
         const payload={
@@ -706,7 +708,7 @@
   window.approveQuote = async (i) => {
     try{
       const q=quoteRecords[i];if(!q?.id) return;
-      if(!has('quotation_management','approve')) throw new Error('You do not have approval permission.');
+      if(!canReviewQuotationRecords() || !has('quotation_management','approve')) throw new Error('Only Manager, General Manager, Admin and Super Admin can approve quotations.');
       if(quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી APPROVED છે. આ duplicate quotation approve નહીં થાય.');
       const {data,error}=await db().from('quotations').update({status:'Approved',approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id).eq('status','Pending').select('id');
       if(error)throw error;
@@ -718,7 +720,7 @@
   window.denyQuote = async (i) => {
     try{
       const q=quoteRecords[i];if(!q?.id) return;
-      if(!has('quotation_management','approve')) throw new Error('You do not have quotation review permission.');
+      if(!canReviewQuotationRecords() || !has('quotation_management','approve')) throw new Error('Only Manager, General Manager, Admin and Super Admin can deny quotations.');
       if(q.status!=='PENDING') throw new Error('Only pending quotations can be denied.');
       const reason=prompt('Deny quotation '+q.no+'. Enter a reason (optional):','');
       if(reason===null) return;
