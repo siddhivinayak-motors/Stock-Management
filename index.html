@@ -1427,13 +1427,12 @@ function printQuoteDocumentPaper(q){
  const discounts=all.filter(x=>x.discount);
  const retail=discounts.filter(x=>/retail/i.test(x.name||''));
  const exchange=discounts.filter(x=>/exchange/i.test(x.name||''));
- const extra=discounts.filter(x=>/extra/i.test(x.name||''));
  const otherDiscounts=discounts.filter(x=>!/retail|exchange/i.test(x.name||''));
  const itemRows=regular.map((x,i)=>'<tr><td class="sl">'+(i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">'+amount(x.amount)+'</td></tr>').join('');
  const sumRows='<tr class="sum"><td colspan="2">TOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
-  '<tr><td colspan="2">Less&nbsp; RETAIL OFFER (If any)</td><td class="amt">− '+(retail.length?'₹ '+moneyPrint(retail.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
-  '<tr><td colspan="2">Less&nbsp; EXCHANGE BONUS (If any)</td><td class="amt">− '+(exchange.length?'₹ '+moneyPrint(exchange.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
-  '<tr><td colspan="2">Less&nbsp; EXTRA DISCOUNT (If any)</td><td class="amt">− '+(otherDiscounts.length?'₹ '+moneyPrint(otherDiscounts.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
+  '<tr><td colspan="2">Less&nbsp; RETAIL OFFER (If any)</td><td class="amt">− '+(retail.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(retail.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
+  '<tr><td colspan="2">Less&nbsp; EXCHANGE BONUS (If any)</td><td class="amt">− '+(exchange.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(exchange.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
+  '<tr><td colspan="2">Less&nbsp; EXTRA DISCOUNT (If any)</td><td class="amt">− '+(otherDiscounts.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(otherDiscounts.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
   '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(q.total)+'</td></tr>';
  const dateRaw=String(q.date||new Date().toISOString().slice(0,10));
  const dateObj=new Date(dateRaw+'T00:00:00');
