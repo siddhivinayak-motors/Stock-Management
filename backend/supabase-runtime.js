@@ -107,9 +107,13 @@
     if(module==='quotation_management'&&action==='view'&&
       ['Manager','General Manager','Admin','HR','DMS','Accountant','Accounts','Executive','Reception','Receptionist','Driver'].includes(currentProfile?.designation)) return true;
     // Super Admin can view all records, but audit() below never records Super Admin activity.
-    if(currentProfile?.is_super_admin) return true;
-    const role=String(currentProfile?.designation||'');
-    if(module==='stock_register'&&action==='view'&&(STOCK_EDIT_ROLES.has(role)||STOCK_HOLD_ROLES.has(role))) return true;
+    const role=String(currentProfile?.designation||'').trim();
+    const roleKey=role.toLowerCase();
+    // Treat the canonical Super Admin designation as a full-access identity too.
+    // Some legacy profiles may have the designation but a false/null flag.
+    if(currentProfile?.is_super_admin===true||roleKey==='super admin') return true;
+    if(module==='stock_register'&&action==='view'&&
+      ([...STOCK_EDIT_ROLES,...STOCK_HOLD_ROLES].some(x=>String(x).toLowerCase()===roleKey))) return true;
     if(module==='retail_reports'&&action==='view'&&canRetailStock()) return true;
     if(module==='stock_hold_management'&&action==='create'&&canSubmitStockHoldRole()) return true;
     if(module==='audit_history'&&action==='view'&&['Admin','General Manager'].includes(role)) return true;
