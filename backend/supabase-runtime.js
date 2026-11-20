@@ -274,11 +274,12 @@
     await loadHolds();await audit('stock_hold_management','approve',decision+' hold','stock_hold',id);
   }
   async function loadPriceListStock() {
-    if(!has('stock_register','view')) { window.svPriceListStockRows=[]; return []; }
+    if(!has('stock_register','view')&&!has('price_list_management','view')&&!has('quotation_management','view')) { window.svPriceListStockRows=[]; return []; }
+    const allowed=new Set(allowedDepartmentList());
     let rows=[],from=0,chunk=1000;
     while(true) {
-      const part=await call(db().from('vehicles').select('model,variant,colour,department').order('model').range(from,from+chunk-1));
-      rows.push(...part); if(part.length<chunk)break; from+=chunk;
+      const part=await call(db().from('vehicles').select('model,variant,colour,department,status,stage').order('model').range(from,from+chunk-1));
+      rows.push(...part.filter(r=>allowed.has(r.department))); if(part.length<chunk)break; from+=chunk;
     }
     window.svPriceListStockRows=rows; return rows;
   }
