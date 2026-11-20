@@ -1728,6 +1728,35 @@ function refreshQuotePriceSuggestions(){
  const names=[...new Set(data.map(x=>x.vehicle).filter(Boolean))];
  list.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join('');
 }
+function setQuotationDepartment(department){
+ const allowed=['Personal','EV','Commercial','LLM'];
+ if(!allowed.includes(department))return false;
+ currentQuoteDepartment=department;
+ loadDepartmentQuotes();
+ const title=document.getElementById('quotationPageTitle');if(title)title.textContent=department+' — Quotation';
+ document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===({Personal:'quotation',EV:'ev-quotation',Commercial:'commercial-quotation',LLM:'llm-quotation'}[department])));
+ updateQuoteNumber();renderQuoteManagement();return true;
+}
+window.setQuotationDepartment=setQuotationDepartment;
+window.startQuotationFromStock=async function(vehicle){
+ if(!vehicle||!setQuotationDepartment(vehicle.department)){toast('Selected stock vehicle has no valid department.');return;}
+ showPage('quotation');
+ resetQuotationForm();
+ document.getElementById('qVehicle').value=vehicle.model||'';
+ document.getElementById('qVariant').value=vehicle.variant||'';
+ document.getElementById('qColour').value=vehicle.colour||'';
+ document.getElementById('qSalesPerson').value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
+ document.getElementById('quotationPageTitle').textContent=currentQuoteDepartment+' — Quotation';
+ updateQuoteNumber();
+ try{
+  await window.SVMBackend?.loadPriceLists?.();
+  const match=quoteFindPriceMatch();
+  if(match)quoteApplyPriceList(match);
+  else{quoteClearPriceListRows();const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Vehicle selected from '+currentQuoteDepartment+' Stock. No matching Price List variant found; select the exact Price List variant below.';}
+ }catch(error){console.error(error);toast('Vehicle selected, but Price List could not be loaded: '+error.message);}
+ window.scrollTo({top:0,behavior:'smooth'});
+ toast(currentQuoteDepartment+' quotation opened with selected vehicle.');
+};
 function quotePriceNorm(value){
  return String(value||'').toUpperCase().replace(/\+/g,' PLUS ').replace(/\bBS[\s_.-]*6(?:\.?2)?\b/g,' ').replace(/\bREFRESH\b|\bNEW\b|\bLAUNCH\b/g,' ').replace(/\bOPTIONAL\b/g,' OPT ').replace(/[^A-Z0-9]+/g,' ').trim().split(/\s+/).filter(Boolean).map(t=>t==='OPT'?'O':t);
 }
@@ -1738,7 +1767,7 @@ function quoteFindPriceMatch(){
  const rows=(window.plData&&window.plData[currentQuoteDepartment])||[];
  const colour=document.getElementById('qColour').value.trim();
  const colourKey=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
- const candidates=rows.filter(x=>modelKey(x.vehicle)===modelKey(model)&&(!colour||colourKey(x.colour)===colourKey(colour)));
+ const candidates=rows.filter(x=>modelKey(x.vehicle)===modelKey(model)&&(!x.colour||!colour||colourKey(x.colour)===colourKey(colour))).sort((a,b)=>Number(colourKey(b.colour)===colourKey(colour))-Number(colourKey(a.colour)===colourKey(colour)));
  if(!candidates.length)return null;
  const modelTokens=quotePriceNorm(model);
  const stockTokens=quotePriceNorm(variant).filter(t=>!modelTokens.includes(t)&&!['BS','6','2'].includes(t));
@@ -1812,6 +1841,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=quotation-pricelist-search-20261120c"></script>
+<script src="./backend/supabase-runtime.js?v=quotation-department-price-autofill-20261120d"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
