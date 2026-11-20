@@ -191,6 +191,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          city: string | null
           department: string | null
           designation: string | null
           email: string
@@ -204,6 +205,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          city?: string | null
           department?: string | null
           designation?: string | null
           email: string
