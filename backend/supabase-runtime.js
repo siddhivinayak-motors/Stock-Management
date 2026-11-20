@@ -1860,7 +1860,7 @@
   window.otfOpenDepartment=async function(department){
     if(!['Personal','EV','Commercial','LLM'].includes(department))return;
     if(!has('quotation_management','view')){notify('Quotation / OTF permission required.');return;}
-    if(!allowedDepartmentList().includes(department)){notify('You do not have access to '+department+'.');return;}
+    if(!allowedDepartmentList().includes(department)&&!canManageOtf()){notify('You do not have access to '+department+'.');return;}
     otfDepartment=department;otfResetSelection();otfMatches=[];
     if($('otfPageTitle'))$('otfPageTitle').textContent=department+' — OTF Order Book';
     if($('otfPhoneSearch'))$('otfPhoneSearch').value='';
