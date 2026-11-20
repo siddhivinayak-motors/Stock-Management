@@ -2027,10 +2027,23 @@
     try{
       if(!has('quotation_management','create'))throw new Error('OTF create permission required.');
       const payload=buildOtfPayload();
-      const saved=await call(db().from('otf_order_books').insert(payload).select('*').single());
-      await audit('quotation_management','create','Created OTF Order Book','otf_order_book',saved.id,{order_number:saved.order_number,department:saved.department,quotation_id:saved.quotation_id,vehicle_id:saved.vehicle_id});
+      let saved;
+      if(otfEditingId){
+        if(!canManageOtf())throw new Error('Only Manager and above can edit OTF records.');
+        const existing=otfManagementRows.find(x=>x.id===otfEditingId);
+        if(existing)payload.order_number=existing.order_number;
+        saved=await call(db().from('otf_order_books').update({...payload,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',otfEditingId).select('*').single());
+        await audit('quotation_management','edit','Updated OTF Order Book','otf_order_book',saved.id,{order_number:saved.order_number,department:saved.department});
+        otfEditingId=null;
+        if($('otfSaveOrder'))$('otfSaveOrder').textContent='Save OTF Order Book';
+        if($('otfSavePrintOrder'))$('otfSavePrintOrder').textContent='Save & Print A4';
+      }else{
+        saved=await call(db().from('otf_order_books').insert(payload).select('*').single());
+        await audit('quotation_management','create','Created OTF Order Book','otf_order_book',saved.id,{order_number:saved.order_number,department:saved.department,quotation_id:saved.quotation_id,vehicle_id:saved.vehicle_id});
+      }
       await loadOtfRegister();
-      otfSetStatus('Saved successfully: '+saved.order_number);
+      if($('otfManagementRows'))await loadOtfManagement().catch(()=>{});
+      otfSetStatus((otfEditingId?'Updated successfully: ':'Saved successfully: ')+saved.order_number);
       if($('otfPrintPreview'))$('otfPrintPreview').disabled=false;
       if(printAfter)otfPrintDocument(saved,popup);
       else notify('OTF Order Book saved: '+saved.order_number);
