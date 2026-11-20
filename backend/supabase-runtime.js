@@ -271,7 +271,8 @@
     document.querySelectorAll('[data-sub]').forEach(sub=>{
       const dept=departmentKeys[sub.dataset.sub];
       const allowed=!!dept&&allowedDepartments.has(String(dept).toLowerCase());
-      sub.style.display=allowed?'':'none';
+      const otfManagerAccess=has('otf_management','view')&&canManageOtf();
+      sub.style.display=(allowed||otfManagerAccess)?'':'none';
       sub.querySelectorAll('[data-page]').forEach(item=>{
         const module=pageModule(item.dataset.page||'');
         item.style.display=allowed&&(!module||has(module,'view'))?'':'none';
@@ -284,7 +285,7 @@
          const isManagement=(item.dataset.page||'').startsWith('otf-management-');
          item.style.display=has('otf_management','view')&&(allowed|| (isManagement&&canManageOtf()))?'':'none';
        });
-       if(group)group.style.display=allowed?'':'none';
+       if(group)group.style.display=(allowed||otfManagerAccess)?'':'none';
     });
     document.querySelectorAll('[data-page]').forEach(item=>{
       if(item.closest('[data-sub]'))return;
@@ -2053,7 +2054,7 @@
       if(printAfter)otfPrintDocument(saved,popup);
       else notify('OTF Order Book saved: '+saved.order_number);
       return saved;
-    }catch(e){if(popup)popup.close();console.error(e);const message=e.code==='23505'?'This chassis already has an active OTF booking, or the order number already exists. Check the OTF Register.':(e.message||'Could not save OTF Order Book.');otfSetStatus(message,true);notify(message);return null;}
+    }catch(e){if(popup)popup.close();console.error(e);const message=e.code==='23505'?'This chassis already has an active OTF booking, or the order number already exists. Check OTF Management.':(e.message||'Could not save OTF Order Book.');otfSetStatus(message,true);notify(message);return null;}
   }
   function bindOtfUi(){
     if($('otfSearchQuotes')&&!$('otfSearchQuotes').dataset.bound){
