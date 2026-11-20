@@ -618,7 +618,7 @@
       contactMobile=normalized;
     }
     const row=await call(db().from('quotations').insert({
-      quote_number:q.no,department:q.department,quote_date:q.date,customer_name:q.customer,phone:q.phone,address:q.address,
+      quote_number:q.no,department:q.department,quote_date:q.date,customer_name:q.customer,phone:q.phone,address:q.address,customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,
       vehicle_count:Number(q.vehicleNos||1),hypo:q.hypo,model:q.model,car_description:q.carDescription,variant:q.variant,colour:q.colour,chassis:q.chassis,
       sales_person:q.salesPerson,contact_person:contactPerson,contact_mobile:contactMobile,
       email:QUOTE_COMPANY_DEFAULTS.email,branch_address:QUOTE_COMPANY_DEFAULTS.branch_address,
@@ -646,7 +646,7 @@
   const moduleEnum = (label) => MODULES[label] || label;
   const toQuoteView = (row) => ({
     id:row.id,no:row.quote_number,department:row.department,customer:row.customer_name,phone:row.phone||'',
-    address:row.address||'',vehicleNos:String(row.vehicle_count??1),hypo:row.hypo||'',
+    address:row.address||'',customerGstin:row.customer_gstin||'',salesMobile:row.sales_mobile||'',vehicleNos:String(row.vehicle_count??1),hypo:row.hypo||'',
     model:row.model||'',carDescription:row.car_description||'',variant:row.variant||'',colour:row.colour||'',
     vehicle:[row.model,row.variant].filter(Boolean).join(' · '),chassis:row.chassis||'',
     salesPerson:row.sales_person||'',by:row.created_by_name||(row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'—'),
@@ -704,7 +704,7 @@
       if(typeof showPage==='function') showPage('quotation');
       const set=(id,v)=>{const el=$(id);if(el)el.value=v??'';};
       set('qCustomer',q.customer);set('qPhone',q.phone);set('qDate',q.date);
-      set('qAddress',q.address);set('qVehicleNos',q.vehicleNos||1);set('qHypo',q.hypo);
+      set('qAddress',q.address);set('qCustomerGSTIN',q.customerGstin);set('qSalesMobile',q.salesMobile);set('qVehicleNos',q.vehicleNos||1);set('qHypo',q.hypo);
       set('qVehicle',q.model);set('qVariant',q.variant);set('qColour',q.colour);
       set('qCarDesc',q.carDescription);set('qSalesPerson',q.salesPerson);
       set('qContactPerson',q.contactPerson);set('qContactMobile',q.contactMobile);
@@ -749,7 +749,7 @@
         if(quoteRecords.some(other=>other.id!==id&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું બીજું quotation પહેલેથી નોંધાયેલું છે. Duplicate quotation તરીકે ફેરફાર સેવ નહીં થાય.');
         const payload={
           quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
-          customer_name:q.customer,phone:q.phone,address:q.address,vehicle_count:Number(q.vehicleNos||1),
+          customer_name:q.customer,phone:q.phone,address:q.address,customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,vehicle_count:Number(q.vehicleNos||1),
           hypo:q.hypo,model,car_description:q.carDescription,variant,colour:q.colour,
           sales_person:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
           email:q.email,branch_address:q.branchAddress,helpline:q.helpline,pan:q.pan,gstin:q.gstin,
@@ -793,7 +793,7 @@
       if($('quoteNumber'))$('quoteNumber').textContent=allocatedNumber;
       const payload={
         quote_number:allocatedNumber,department:dept,quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
-        customer_name:q.customer,phone:q.phone,address:$('qAddress')?.value||'',
+        customer_name:q.customer,phone:q.phone,address:$('qAddress')?.value||'',customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,
         vehicle_count:Number($('qVehicleNos')?.value||1),hypo:$('qHypo')?.value||'',
         model,car_description:$('qCarDesc')?.value||'',variant,colour:$('qColour')?.value||'',
         chassis:q.chassis,sales_person:$('qSalesPerson')?.value||'',
