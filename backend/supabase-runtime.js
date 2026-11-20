@@ -53,8 +53,21 @@
     branch_address:'Press Quarter, near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004',
     helplines:['9879100031','9925139389'],
     terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],
-    bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'}
+    bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar',micr:'364002005'}
   };
+  const QUOTE_BRANCH_DETAILS = {
+    Bhavnagar:QUOTE_COMPANY_DEFAULTS,
+    Amreli:{
+      pan:'AAMCS1007J',gstin:'24AAMCS1007J1ZI',
+      email:'siddhivinayakac.008@gmail.com',
+      branch_address:'Lathi Road Highway, Near Lalav Temple, Amreli, Gujarat',
+      helplines:['9879594200'],
+      terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Amreli Jurisdiction.'],
+      bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'36388108144',ifsc:'SBIN0015502',branch:'SBI Lathi Road Branch - Amreli'}
+    }
+  };
+  const quoteBranchDetailsForCity=city=>QUOTE_BRANCH_DETAILS[String(city||'').trim()]||QUOTE_COMPANY_DEFAULTS;
+  window.svmGetQuoteBranchDetails=quoteBranchDetailsForCity;
   const canEditQuoteCompanySettings=()=>!!currentProfile&&(currentProfile.is_super_admin===true||['manager','general manager','dms','hr','accountant','accounts','admin'].includes(String(currentProfile.designation||'').trim().toLowerCase()));
   async function loadQuoteCompanySettings(){
     const rows=await call(db().from('quotation_company_settings').select('*').eq('id',true).limit(1));
@@ -63,11 +76,12 @@
   async function applyQuoteCompanyDetails(){
     if(!currentUser||!currentProfile)return;
     const set=(id,value)=>{const el=$(id);if(el&&value!==undefined&&value!==null)el.value=value;};
-    // PAN, GSTIN, email, branch, helplines, terms and bank coordinates are immutable company data.
-    set('qPan',QUOTE_COMPANY_DEFAULTS.pan);set('qGstin',QUOTE_COMPANY_DEFAULTS.gstin);
-    set('qEmail',QUOTE_COMPANY_DEFAULTS.email);
-    set('qBranchAddress',QUOTE_COMPANY_DEFAULTS.branch_address);
-    set('qHelpline',QUOTE_COMPANY_DEFAULTS.helplines.join(' / '));
+    // Company identity is shared; branch contact, address and bank coordinates follow the employee's saved City.
+    const branchDetails=quoteBranchDetailsForCity(currentProfile.city);
+    set('qPan',branchDetails.pan);set('qGstin',branchDetails.gstin);
+    set('qEmail',branchDetails.email);
+    set('qBranchAddress',branchDetails.branch_address);
+    set('qHelpline',(branchDetails.helplines||[]).join(' / '));
     set('qContactPerson',currentProfile.full_name||currentUser.email||'');
     set('qContactMobile',currentProfile.phone||'');
     const canEditContact=canEditQuoteCompanySettings();
@@ -843,8 +857,8 @@
         model,variant,colour:$('qColour')?.value||'',
         sales_person:$('qSalesPerson')?.value||'',
         contact_person:$('qContactPerson')?.value||'',contact_mobile:$('qContactMobile')?.value||'',
-        email:$('qEmail')?.value||'',branch_address:$('qBranchAddress')?.value||'',
-        helpline:$('qHelpline')?.value||'',pan:$('qPan')?.value||'',gstin:$('qGstin')?.value||'',
+        email:q.email||$('qEmail')?.value||'',branch_address:q.branchAddress||$('qBranchAddress')?.value||'',
+        helpline:q.helpline||$('qHelpline')?.value||'',pan:q.pan||$('qPan')?.value||'',gstin:q.gstin||$('qGstin')?.value||'',
         subtotal:q.subtotal,discount:q.discount,total:q.total,
         amount_words:q.amountWords||'',terms:q.terms||[],bank_details:q.bank||{},
         created_by:currentUser.id,updated_by:currentUser.id
