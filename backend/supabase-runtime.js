@@ -1060,7 +1060,7 @@
     },true);
   }
   function normalizeEmployeeMobile(value){
-    let digits=String(value||'').replace(/\\D/g,'');
+    let digits=String(value||'').replace(/\D/g,'');
     if(digits.length===12&&digits.startsWith('91'))digits=digits.slice(2);
     else if(digits.length===11&&digits.startsWith('0'))digits=digits.slice(1);
     if(digits.length!==10)throw new Error('મોબાઇલ નંબર 10 અંકનો હોવો જોઈએ. +91 અથવા શરૂઆતનો 0 હોય તો પણ ચાલશે.');
