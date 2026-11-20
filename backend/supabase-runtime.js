@@ -630,6 +630,7 @@
       if(editingQuotationId){
         if(!canManageQuotationRecords()) throw new Error('Quotation edit is restricted to Manager, General Manager, Admin and Super Admin.');
         const id=editingQuotationId;
+        if(quoteRecords.some(other=>other.id!==id&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું બીજું quotation પહેલેથી નોંધાયેલું છે. Duplicate quotation તરીકે ફેરફાર સેવ નહીં થાય.');
         const payload={
           quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
           customer_name:q.customer,phone:q.phone,address:q.address,vehicle_count:Number(q.vehicleNos||1),
