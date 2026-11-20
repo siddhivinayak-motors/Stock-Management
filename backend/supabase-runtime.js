@@ -1862,7 +1862,7 @@
     if($('otfPhoneSearch'))$('otfPhoneSearch').value='';
     if($('otfQuoteResults'))$('otfQuoteResults').innerHTML='';
     if($('otfChassisInput'))$('otfChassisInput').value='';
-    const formIds=['otfCustomerName','otfCustomerPhone','otfEnquiryNumber','otfCustomerId','otfCustomerGstin','otfAadhaar','otfPan','otfEmail','otfAddress','otfCity','otfDistrict','otfHpa','otfBookingAmount','otfDob','otfAnniversary','otfNominee','otfNomineeRelation','otfNomineeAge','otfExchangeModel','otfExchangeReg','otfExchangeYear','otfExchangeValue','otfExchangeSupport','otfExchangeTotal'];
+    const formIds=['otfCustomerName','otfCustomerPhone','otfEnquiryNumber','otfCustomerId','otfInvoiceNumber','otfCustomerGstin','otfAadhaar','otfPan','otfEmail','otfAddress','otfCity','otfDistrict','otfHpa','otfBookingAmount','otfDob','otfAnniversary','otfNominee','otfNomineeRelation','otfNomineeAge','otfExchangeModel','otfExchangeReg','otfExchangeYear','otfExchangeValue','otfExchangeSupport','otfExchangeTotal'];
     formIds.forEach(id=>{if($(id))$(id).value=id==='otfBookingAmount'?'0':'';});
     if($('otfBookingDate'))$('otfBookingDate').value=new Date().toISOString().slice(0,10);
     if($('otfPayments'))$('otfPayments').innerHTML='';
