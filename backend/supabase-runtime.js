@@ -16,6 +16,7 @@
     'Retail Reports':'retail_reports'
   };
   let client, currentUser, currentProfile, permissions = new Map(), authReady = false, sessionLoginRecordedFor = null;
+  let editingQuotationId = null;
   let selectedStockVehicle = null;
 
   if(!document.getElementById('svmSelectedStockStyles')){
@@ -552,12 +553,17 @@
     String(a.model||'').trim().replace(/\s+/g,' ').toLowerCase()===String(b.model||'').trim().replace(/\s+/g,' ').toLowerCase() &&
     String(a.variant||'').trim().replace(/\s+/g,' ').toLowerCase()===String(b.variant||'').trim().replace(/\s+/g,' ').toLowerCase() &&
     Math.round(Number(a.total||0)*100)===Math.round(Number(b.total||0)*100);
+  const canManageQuotationRecords = () =>
+    ['Manager','General Manager','Admin'].includes(currentProfile?.designation) || !!currentProfile?.is_super_admin;
   window.renderQuoteManagement = () => {
     const body=$('quoteManagementRows');if(!body)return;
+    const canEdit=canManageQuotationRecords()&&has('quotation_management','edit');
+    const canDelete=canManageQuotationRecords()&&has('quotation_management','delete');
     body.innerHTML=quoteRecords.map((q,i)=>{
       const blocked=q.status==='PENDING'&&quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other));
       const approval=q.status!=='PENDING'?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button>';
-      return '<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.vehicle)+'</td><td>'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+(q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red')+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+approval+'</div></td></tr>';
+      const manage=(canEdit?'<button class="btn small" onclick="editSavedQuote('+i+')">Edit</button>':'')+(canDelete?'<button class="btn small danger" onclick="deleteSavedQuote('+i+')">Delete</button>':'');
+      return '<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.vehicle)+'</td><td>'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+(q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red')+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+approval+manage+'</div></td></tr>';
     }).join('');
     $('qmTotal').textContent=quoteRecords.length;
     $('qmPending').textContent=quoteRecords.filter(q=>q.status==='PENDING').length;
@@ -572,11 +578,80 @@
     if(typeof renderQuoteManagement==='function') renderQuoteManagement();
     if(typeof updateQuoteNumber==='function') updateQuoteNumber();
   }
+  window.editSavedQuote = (i) => {
+    try {
+      const q=quoteRecords[i];
+      if(!q?.id) throw new Error('Quotation record not found.');
+      if(!canManageQuotationRecords()||!has('quotation_management','edit')) throw new Error('Edit is available only to Manager, General Manager, Admin and Super Admin with Edit permission.');
+      editingQuotationId=q.id;
+      currentQuoteDepartment=q.department||'Personal';
+      if(typeof showPage==='function') showPage('quotation');
+      const set=(id,v)=>{const el=$(id);if(el)el.value=v??'';};
+      set('qCustomer',q.customer);set('qPhone',q.phone);set('qDate',q.date);
+      set('qAddress',q.address);set('qVehicleNos',q.vehicleNos||1);set('qHypo',q.hypo);
+      set('qVehicle',q.model);set('qVariant',q.variant);set('qColour',q.colour);
+      set('qCarDesc',q.carDescription);set('qSalesPerson',q.salesPerson);
+      set('qContactPerson',q.contactPerson);set('qContactMobile',q.contactMobile);
+      set('qEmail',q.email);set('qBranchAddress',q.branchAddress);set('qHelpline',q.helpline);
+      set('qPan',q.pan);set('qGstin',q.gstin);
+      if($('quoteNumber'))$('quoteNumber').textContent=q.no;
+      document.querySelectorAll('#view-quotation details').forEach(d=>d.open=true);
+      const escAttr=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      const rows=(q.items||[]).map((x,n)=>'<div class="charge-row"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" value="'+Number(x.amount||0)+'" data-charge="'+escAttr(x.name)+'"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>').join('');
+      $('charges').innerHTML=rows;
+      if($('quotationPageTitle'))$('quotationPageTitle').textContent=currentQuoteDepartment+' — Edit Quotation';
+      const head=document.querySelector('#view-quotation .card-title');if(head)head.textContent='Edit Quotation';
+      const desc=document.querySelector('#view-quotation .card-desc');if(desc)desc.textContent='Edit quotation details, save changes, then print the revised quotation.';
+      const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='EDIT MODE';tag.className='pill orange';}
+      if($('saveQuote'))$('saveQuote').textContent='Save Changes';
+      if($('savePrintQuote'))$('savePrintQuote').textContent='Save Changes & Print';
+      if(typeof calc==='function')calc();
+      notify('Quotation loaded for editing.');
+    } catch(e){notify(e.message);}
+  };
+  window.deleteSavedQuote = async (i) => {
+    try {
+      const q=quoteRecords[i];
+      if(!q?.id) throw new Error('Quotation record not found.');
+      if(!canManageQuotationRecords()||!has('quotation_management','delete')) throw new Error('Delete is available only to Manager, General Manager, Admin and Super Admin with Delete permission.');
+      if(!confirm('Delete quotation '+q.no+' for '+q.customer+'? This cannot be undone.')) return;
+      await call(db().from('quotation_items').delete().eq('quotation_id',q.id));
+      await call(db().from('quotations').delete().eq('id',q.id));
+      await audit('quotation_management','delete','Deleted quotation','quotation',q.id,{quote_number:q.no,customer:q.customer});
+      await reloadQuoteList();
+      notify('Quotation deleted.');
+    } catch(e){notify(e.message);}
+  };
   window.saveQuote = async (printAfter=false) => {
     try {
       const q=getQuotePayload(); if(!q) return;
       const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
       const model=$('qVehicle').value.trim(),variant=$('qVariant').value.trim();
+      if(editingQuotationId){
+        if(!canManageQuotationRecords()||!has('quotation_management','edit')) throw new Error('You do not have quotation edit permission.');
+        const id=editingQuotationId;
+        const payload={
+          quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
+          customer_name:q.customer,phone:q.phone,address:q.address,vehicle_count:Number(q.vehicleNos||1),
+          hypo:q.hypo,model,car_description:q.carDescription,variant,colour:q.colour,
+          sales_person:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
+          email:q.email,branch_address:q.branchAddress,helpline:q.helpline,pan:q.pan,gstin:q.gstin,
+          subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:q.amountWords||'',
+          terms:q.terms||[],bank_details:q.bank||{},status:'Pending',approved_by:null,approved_at:null,
+          updated_by:currentUser.id,updated_at:new Date().toISOString()
+        };
+        await call(db().from('quotations').update(payload).eq('id',id).select('id').single());
+        await call(db().from('quotation_items').delete().eq('quotation_id',id));
+        const itemRows=(q.items||[]).map((x,i)=>({quotation_id:id,line_no:i+1,particulars:x.name,amount:Number(x.amount||0),is_discount:!!x.discount}));
+        if(itemRows.length) await call(db().from('quotation_items').insert(itemRows));
+        await audit('quotation_management','edit','Edited quotation; approval reset to Pending','quotation',id,{quote_number:q.no});
+        editingQuotationId=null;
+        await reloadQuoteList();
+        if(typeof resetQuotationForm==='function')resetQuotationForm();
+        notify('Quotation updated. Approval reset to Pending.');
+        if(printAfter){const idx=quoteRecords.findIndex(x=>x.id===id);if(idx>=0)window.printSavedQuote(idx);}
+        return;
+      }
       const normalizeText=v=>String(v||'').trim().replace(/\s+/g,' ').toLocaleLowerCase();
       const normalizePhone=v=>String(v||'').replace(/\D/g,'');
       const phoneKey=normalizePhone(q.phone);
@@ -621,6 +696,7 @@
       if(printAfter) window.printSavedQuote(quoteRecords.findIndex(x=>x.id===saved.id));
     } catch(e){console.error(e);const duplicateError=e.code==='23505'||String(e.message||'').includes('Duplicate quotation');notify(duplicateError?'આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી નોંધાયેલું છે. ફરીથી એન્ટ્રી કરી શકાશે નહીં.':(e.message||'Could not save quotation.'));}
   };
+  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; if(typeof original==='function')original(); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Complete customer and vehicle details, review all charge heads, then save or print.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('savePrintQuote'))$('savePrintQuote').textContent='Save & Print';})(window.resetQuotationForm);
   window.saveRecords = () => {}; // Quotation records now live in Supabase, not localStorage.
   window.loadDepartmentQuotes = () => { reloadQuoteList().catch(e=>{console.error(e);notify(e.message);}); };
   window.approveQuote = async (i) => {
