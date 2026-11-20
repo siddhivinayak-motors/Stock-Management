@@ -1272,7 +1272,60 @@
       notify('Operational data restore completed.');
     }catch(e){notify(e.message);}
   };
-  window.resetAllExceptEmployees = () => notify('For safety, operational reset is disabled until a server-side, audited reset workflow is configured.');
+  const resetLabels={
+    'personal.stock':'Personal · Stock Register','personal.holds':'Personal · Stock Hold Management','personal.quotations':'Personal · Quotations','personal.price_list':'Personal · Price List','personal.excel_upload':'Personal · Excel Upload History',
+    'ev.stock':'EV · Stock Register','ev.holds':'EV · Stock Hold Management','ev.quotations':'EV · Quotations','ev.price_list':'EV · Price List','ev.excel_upload':'EV · Excel Upload History',
+    'commercial.stock':'Commercial · Stock Register','commercial.holds':'Commercial · Stock Hold Management','commercial.quotations':'Commercial · Quotations','commercial.price_list':'Commercial · Price List','commercial.excel_upload':'Commercial · Excel Upload History',
+    'llm.stock':'LLM · Stock Register','llm.holds':'LLM · Stock Hold Management','llm.quotations':'LLM · Quotations','llm.price_list':'LLM · Price List','llm.excel_upload':'LLM · Excel Upload History',
+    'workspace.price_list_imports':'Workspace · Price List Import History','workspace.common_excel_upload':'Workspace · Common Excel Upload History','workspace.audit_history':'Workspace · Audit History','workspace.retail_reports':'Workspace · Retail Reports'
+  };
+  function resetIsSuperAdmin(){return !!currentUser&&(!!currentProfile?.is_super_admin||String(currentProfile?.designation||'').toLowerCase()==='super admin');}
+  function resetSelectedKeys(){return [...document.querySelectorAll('#svResetTree input[type=checkbox]:checked')].map(x=>x.value);}
+  function syncResetSelectionUI(){
+    const selected=resetSelectedKeys(),all=[...document.querySelectorAll('#svResetTree input[type=checkbox]')];
+    if($('svResetCheckedCount'))$('svResetCheckedCount').textContent=selected.length+' options selected';
+    if($('svResetSelectAll'))$('svResetSelectAll').checked=all.length>0&&selected.length===all.length;
+  }
+  window.openOperationalResetDialog=()=>{
+    if(!resetIsSuperAdmin()){notify('Operational Reset is available only to an active Super Admin.');return;}
+    if($('svResetDialog'))$('svResetDialog').hidden=false;
+    syncResetSelectionUI();
+  };
+  window.closeOperationalResetDialog=()=>{if($('svResetDialog'))$('svResetDialog').hidden=true;};
+  window.reviewOperationalReset=async()=>{
+    try{
+      if(!resetIsSuperAdmin())throw new Error('Only Super Admin can reset operational data.');
+      const keys=resetSelectedKeys();if(!keys.length)throw new Error('Select at least one department or function.');
+      const result=await call(db().rpc('svm_operational_reset',{p_selection:keys,p_execute:false}));
+      const counts=result?.counts||{};
+      $('svResetSummaryRows').innerHTML=keys.map(k=>'<div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid #f0dfe1;padding:5px 0"><span>'+String(resetLabels[k]||k).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</span><b>'+Number(counts[k]||0)+' records</b></div>').join('');
+      $('svResetSummaryTotal').textContent='Total records to be cleared: '+Number(result?.total_rows||0);
+      $('svResetSelectionSummary').hidden=false;
+      window.closeOperationalResetDialog();
+      $('svResetSelectionSummary').scrollIntoView({behavior:'smooth',block:'center'});
+    }catch(e){notify(e.message);}
+  };
+  window.confirmOperationalReset=async()=>{
+    try{
+      if(!resetIsSuperAdmin())throw new Error('Only Super Admin can reset operational data.');
+      const keys=resetSelectedKeys();if(!keys.length)throw new Error('No reset selection found. Reopen and select items.');
+      const preview=await call(db().rpc('svm_operational_reset',{p_selection:keys,p_execute:false}));
+      const lines=keys.map(k=>(resetLabels[k]||k)+': '+Number(preview?.counts?.[k]||0)+' records').join('\\n');
+      if(!confirm('FINAL CONFIRMATION — permanently delete these selected records?\\n\\n'+lines+'\\n\\nEmployee Management, employee accounts and permissions will NOT be deleted. This action cannot be undone.'))return;
+      const done=await call(db().rpc('svm_operational_reset',{p_selection:keys,p_execute:true}));
+      if(!done?.executed)throw new Error('Reset did not confirm successful execution.');
+      notify('Selected operational data has been reset. Employee Management was preserved.');
+      setTimeout(()=>location.reload(),900);
+    }catch(e){notify(e.message);}
+  };
+  document.addEventListener('change',e=>{
+    if(e.target?.matches('#svResetTree input[type=checkbox]'))syncResetSelectionUI();
+    if(e.target?.id==='svResetSelectAll'){
+      document.querySelectorAll('#svResetTree input[type=checkbox]').forEach(x=>x.checked=e.target.checked);
+      syncResetSelectionUI();
+    }
+  });
+  window.resetAllExceptEmployees=window.openOperationalResetDialog;
   async function loadRetailReport(){
     // Retail Date is a separate sales event. OEM Invoice Date is not a valid substitute.
     if($('retailRows'))$('retailRows').innerHTML='<tr><td colspan="7" class="empty">Retail sales date data is not yet connected. This report is disabled rather than using OEM invoice dates as retail dates.</td></tr>';
