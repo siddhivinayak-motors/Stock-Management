@@ -53,7 +53,7 @@
     branch_address:'Press Quarter, near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004',
     helplines:['9879100031','9925139389'],
     terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],
-    bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar',micr:'364002005'}
+    bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar',payableAt:'Bhavnagar',micr:'364002005'}
   };
   const QUOTE_BRANCH_DETAILS = {
     Bhavnagar:QUOTE_COMPANY_DEFAULTS,
@@ -63,7 +63,7 @@
       branch_address:'Lathi Road Highway, Near Lalav Temple, Amreli, Gujarat',
       helplines:['9879594200'],
       terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Amreli Jurisdiction.'],
-      bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'36388108144',ifsc:'SBIN0015502',branch:'SBI Lathi Road Branch - Amreli'}
+      bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'36388108144',ifsc:'SBIN0015502',branch:'SBI Lathi Road Branch - Amreli',payableAt:'Amreli'}
     }
   };
   const quoteBranchDetailsForCity=city=>QUOTE_BRANCH_DETAILS[String(city||'').trim()]||QUOTE_COMPANY_DEFAULTS;
