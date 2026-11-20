@@ -126,7 +126,7 @@ Deno.serve(async (req: Request) => {
     const role = String(body.designation || "").trim();
     const roles = ["Super Admin","Admin","General Manager","Manager","Accountant","HR","DMS","Executive","Reception","Driver"];
     const departments = Array.isArray(body.department_access) ? [...new Set(body.department_access.map(String))] : [];
-    const normalizeMobile=(value:unknown)=>{let digits=String(value||"").replace(/\\D/g,"");if(digits.length===12&&digits.startsWith("91"))digits=digits.slice(2);else if(digits.length===11&&digits.startsWith("0"))digits=digits.slice(1);return digits;};
+    const normalizeMobile=(value:unknown)=>{let digits=String(value||"").replace(/\D/g,"");if(digits.length===12&&digits.startsWith("91"))digits=digits.slice(2);else if(digits.length===11&&digits.startsWith("0"))digits=digits.slice(1);return digits;};
     const phone=normalizeMobile(body.phone);
     const city=String(body.city||"").trim();
     const allowedCities=new Set(["Bhavnagar","Amreli","Botad","Rajula"]);
@@ -205,7 +205,7 @@ Deno.serve(async (req: Request) => {
     if (typeof patch.full_name === "string" && !patch.full_name) return json({ error: "Full name cannot be empty" }, 400);
     if (typeof patch.designation === "string" && (!Object.keys(ROLE_MODULES).includes(patch.designation) || patch.designation === "Super Admin")) return json({error:"Select a valid employee role"},400);
     if (typeof patch.phone === "string" && patch.phone) {
-      const digits=String(patch.phone).replace(/\\D/g,"");
+      const digits=String(patch.phone).replace(/\D/g,"");
       const normalized=digits.length===12&&digits.startsWith("91")?digits.slice(2):digits.length===11&&digits.startsWith("0")?digits.slice(1):digits;
       if(normalized.length!==10)return json({error:"Mobile number must be 10 digits. +91 or a leading 0 is accepted."},400);
       patch.phone=normalized;
