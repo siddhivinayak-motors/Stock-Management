@@ -1123,7 +1123,6 @@
       const department=dept==='All'?(selected==='All Accessible Departments'?'All Accessible Departments':selected):dept;
       const status=$('stockStatusFilter')?.selectedOptions?.[0]?.textContent||'All Statuses';
       const stage=$('stockStageFilter')?.selectedOptions?.[0]?.textContent||'All Stages';
-      const sort=$('stockAgeSort')?.selectedOptions?.[0]?.textContent||'Oldest Age First';
       const search=$('stockSearch')?.value?.trim()||'';
       const now=new Date();
       const printed=now.toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'});
@@ -1176,8 +1175,7 @@
       if(stageFilter==='ACTIVE') rows=rows.filter(v=>['OPEN','ALLOTED','HOLD'].includes(String(v.stage||'').trim().toUpperCase()));
       else if(stageFilter==='EXITED') rows=rows.filter(v=>['RETAIL','DEMO','DAMAGE','TRANSFER_OUT','OTHER'].includes(String(v.stage||'').trim().toUpperCase()));
       else if(stageFilter!=='All') rows=rows.filter(v=>String(v.stage||'').trim().toUpperCase()===stageFilter.toUpperCase());
-      const ageSort=$('stockAgeSort')?.value||'oldest';
-      rows.sort((a,b)=>{const ta=Number(a.ageing),tb=Number(b.ageing),va=Number.isFinite(ta),vb=Number.isFinite(tb);if(!va&&!vb)return 0;if(!va)return 1;if(!vb)return -1;return ageSort==='newest'?ta-tb:tb-ta;});
+      rows.sort((a,b)=>{const sa=Number.parseInt(String(a.sr_no??'').replace(/[^0-9-]/g,''),10),sb=Number.parseInt(String(b.sr_no??'').replace(/[^0-9-]/g,''),10);const va=Number.isFinite(sa),vb=Number.isFinite(sb);if(va&&vb)return sa-sb;if(va)return -1;if(vb)return 1;return String(a.sr_no??'').localeCompare(String(b.sr_no??''),undefined,{numeric:true,sensitivity:'base'});});
       const body=$('stockTable').querySelector('tbody');
       const canHold=canSubmitStockHoldRole();
       body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'" tabindex="0" aria-label="Select vehicle '+esc(v.chassis_number)+'" aria-selected="'+(selectedStockVehicle?.id===v.id?'true':'false')+'" class="'+(selectedStockVehicle?.id===v.id?'selected-stock-row':'')+'"><td class="stock-hold-cell">'+(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small stock-hold-btn" data-stock-hold="'+esc(v.id)+'">Hold</button>':'—')+'</td><td>'+esc(v.sr_no??'—')+'</td><td>'+esc(v.model||'—')+'</td><td>'+esc(v.variant||'—')+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.mfg_year_label||v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td><b>'+esc(v.chassis_number)+'</b></td><td>'+esc(v.engine_number||'—')+'</td><td>'+esc(v.status||'—')+'</td><td>'+esc(v.place||'—')+'</td><td>'+esc(v.ageing??'—')+'</td><td>'+esc(v.stage||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.alloted_date||'—')+'</td><td>'+esc(v.alloted_ageing??'—')+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>'+(canRetail&&['OPEN','ALLOTED','HOLD'].includes(String(v.stage||'').toUpperCase())?'<button class="btn small" style="background:#16834a;color:#fff;border-color:#16834a" data-stock-exit="'+esc(v.id)+'">Move Out</button>':''):'')+'</td></tr>').join(''):'<tr><td colspan="19" class="empty">No stock records yet.</td></tr>';
@@ -1778,7 +1776,6 @@
     const permittedDepartments=allowedDepartmentList();
     const stockFilter=$('stockDepartmentFilter');
     if(stockFilter){const current=stockFilter.value;stockFilter.innerHTML='<option>All Accessible Departments</option>'+permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');if(permittedDepartments.includes(current))stockFilter.value=current;stockFilter.onchange=()=>renderStock();}
-    $('stockAgeSort')?.addEventListener('change',()=>renderStock());
     const addButton=$('addVehicle');if(addButton){addButton.style.display=canManageStock()?'':'none';addButton.disabled=!canManageStock();}
     const newVehicleDept=$('stockDepartmentForNewVehicle');
     if(newVehicleDept){newVehicleDept.innerHTML=permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');newVehicleDept.value=permittedDepartments[0]||'';}
