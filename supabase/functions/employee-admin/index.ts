@@ -126,6 +126,12 @@ Deno.serve(async (req: Request) => {
     const role = String(body.designation || "").trim();
     const roles = ["Super Admin","Admin","General Manager","Manager","Accountant","HR","DMS","Executive","Reception","Driver"];
     const departments = Array.isArray(body.department_access) ? [...new Set(body.department_access.map(String))] : [];
+    const normalizeMobile=(value:unknown)=>{let digits=String(value||"").replace(/\\D/g,"");if(digits.length===12&&digits.startsWith("91"))digits=digits.slice(2);else if(digits.length===11&&digits.startsWith("0"))digits=digits.slice(1);return digits;};
+    const phone=normalizeMobile(body.phone);
+    const city=String(body.city||"").trim();
+    const allowedCities=new Set(["Bhavnagar","Amreli","Botad","Rajula"]);
+    if(body.phone&&phone.length!==10)return json({error:"Mobile number must be 10 digits. +91 or a leading 0 is accepted."},400);
+    if(city&&!allowedCities.has(city))return json({error:"Select a valid city"},400);
     const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
     if (!email || !fullName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Valid email and full name are required" }, 400);
     if (password.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
@@ -159,7 +165,7 @@ Deno.serve(async (req: Request) => {
     }
     const userId = created.user.id;
     const { error: insertError } = await adminClient.from("profiles").upsert({
-      user_id: userId, full_name: fullName, email, employee_code: null, phone: null,
+      user_id: userId, full_name: fullName, email, employee_code: null, phone: phone||null, city: city||null,
       designation: role, department: finalDepartments[0], department_access: finalDepartments,
       status: "active", is_super_admin: false, dashboard_shortcuts: selectedShortcuts,
     }, { onConflict: "user_id" });
@@ -191,14 +197,20 @@ Deno.serve(async (req: Request) => {
     if (!canManageTargetDepartments(target)) return json({error:"You can manage employees only in your assigned department."},403);
     if (!isRoot && (ROLE_LEVEL[String(target.designation||"")]??0)>=callerLevel) return json({error:"You can manage only employees below your own designation."},403);
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    for (const key of ["full_name","employee_code","phone","designation","department"]) {
+    for (const key of ["full_name","employee_code","phone","city","designation","department"]) {
       if (Object.prototype.hasOwnProperty.call(body, key)) {
         patch[key] = body[key] === "" ? null : String(body[key]).trim();
       }
     }
     if (typeof patch.full_name === "string" && !patch.full_name) return json({ error: "Full name cannot be empty" }, 400);
     if (typeof patch.designation === "string" && (!Object.keys(ROLE_MODULES).includes(patch.designation) || patch.designation === "Super Admin")) return json({error:"Select a valid employee role"},400);
-    if (typeof patch.phone === "string" && patch.phone && !/^\\d{10}$/.test(patch.phone)) return json({ error: "Mobile number must be exactly 10 digits" }, 400);
+    if (typeof patch.phone === "string" && patch.phone) {
+      const digits=String(patch.phone).replace(/\\D/g,"");
+      const normalized=digits.length===12&&digits.startsWith("91")?digits.slice(2):digits.length===11&&digits.startsWith("0")?digits.slice(1):digits;
+      if(normalized.length!==10)return json({error:"Mobile number must be 10 digits. +91 or a leading 0 is accepted."},400);
+      patch.phone=normalized;
+    }
+    if (typeof patch.city === "string" && patch.city && !["Bhavnagar","Amreli","Botad","Rajula"].includes(patch.city)) return json({error:"Select a valid city"},400);
     if (typeof patch.department === "string" && patch.department && !["Personal","EV","Commercial","LLM"].includes(patch.department)) return json({ error: "Invalid department" }, 400);
     if (body.department_access !== undefined) {
       const access = Array.isArray(body.department_access) ? body.department_access.map(String) : [];
