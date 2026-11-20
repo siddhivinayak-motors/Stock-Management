@@ -52,7 +52,11 @@
       ['Manager','General Manager','Admin','HR','DMS','Accountant','Accounts','Executive','Reception','Receptionist','Driver'].includes(currentProfile?.designation)) return true;
     // Super Admin can view all records, but audit() below never records Super Admin activity.
     if(currentProfile?.is_super_admin) return true;
-    if(module==='audit_history'&&action==='view'&&['Admin','General Manager'].includes(currentProfile?.designation)) return true;
+    const role=String(currentProfile?.designation||'');
+    if(module==='stock_register'&&action==='view'&&(STOCK_EDIT_ROLES.has(role)||STOCK_HOLD_ROLES.has(role))) return true;
+    if(module==='retail_reports'&&action==='view'&&canRetailStock()) return true;
+    if(module==='stock_hold_management'&&action==='create'&&canSubmitStockHoldRole()) return true;
+    if(module==='audit_history'&&action==='view'&&['Admin','General Manager'].includes(role)) return true;
     return (permissions.get(module)||[]).includes(action);
   }
   function roleLevel(){const levels={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Driver':10};return currentProfile?.is_super_admin?100:(levels[currentProfile?.designation]??0);}
@@ -1030,9 +1034,9 @@
     'Admin':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'],
     'General Manager':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'],
     'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','price_list_management','common_excel_upload','backup_restore','retail_reports'],
-    'Accountant':['price_list_management','retail_reports','common_excel_upload'],
+    'Accountant':['stock_register','price_list_management','retail_reports','common_excel_upload'],
     'HR':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','retail_reports'],
-    'DMS':['price_list_management','retail_reports','common_excel_upload'],
+    'DMS':['stock_register','price_list_management','retail_reports','common_excel_upload'],
     'Executive':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports'],
     'Reception':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports'],
     'Driver':['stock_register']
@@ -1464,6 +1468,7 @@
     const newVehicleDept=$('stockDepartmentForNewVehicle');
     if(newVehicleDept){newVehicleDept.innerHTML=permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');newVehicleDept.value=permittedDepartments[0]||'';}
     $('retailRefresh')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();loadRetailReport();},true);
+    $('applyRetailMonth')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();loadRetailReport();},true);
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
     $('holdDeptFilter')?.addEventListener('change',()=>window.holdRender());
     // Let the original UI's own click handlers perform navigation.
