@@ -1192,8 +1192,9 @@ const sidebarDeptStateKey=userId=>'svm_sidebar_department_state_v1:'+String(user
 function applySidebarDepartmentState(){
  document.querySelectorAll('.nav-item.group[data-group]').forEach(button=>{
   const key=button.dataset.group,sub=document.querySelector('[data-sub="'+key+'"]');
-  button.classList.add('expanded');button.setAttribute('aria-expanded','true');
-  if(sub)sub.classList.add('open');
+  button.classList.remove('expanded');
+  button.setAttribute('aria-expanded','false');
+  if(sub)sub.classList.remove('open');
  });
 }
 function saveSidebarDepartmentState(){
