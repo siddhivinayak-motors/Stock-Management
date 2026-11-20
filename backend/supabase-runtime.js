@@ -280,7 +280,10 @@
        // Department Access grants all four department functions; no separate
        // module checkbox is required for Personal / EV / Commercial / LLM.
        sub.querySelectorAll('[data-page]').forEach(item=>item.style.display=allowed?'':'none');
-       sub.querySelectorAll('[data-page^="otf-"]').forEach(item=>item.style.display=allowed&&has('otf_management','view')?'':'none');
+       sub.querySelectorAll('[data-page^="otf-"]').forEach(item=>{
+         const isManagement=(item.dataset.page||'').startsWith('otf-management-');
+         item.style.display=has('otf_management','view')&&(allowed|| (isManagement&&canManageOtf()))?'':'none';
+       });
        if(group)group.style.display=allowed?'':'none';
     });
     document.querySelectorAll('[data-page]').forEach(item=>{
@@ -1303,7 +1306,7 @@
     'DMS':['stock_register','price_list_management','retail_reports','common_excel_upload','otf_management'],
     'Executive':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports','otf_management'],
     'Reception':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports','otf_management'],
-    'Driver':['stock_register']
+    'Driver':['stock_register','otf_management']
   };
   const MODULE_LABELS_UI={dashboard:'Dashboard',stock_register:'Stock Register',stock_hold_management:'Stock Hold Management',price_list_management:'Price List',quotation_management:'Quotation',otf_management:'OTF Management',employee_management:'Employee Management',common_excel_upload:'Excel Upload',backup_restore:'Backup & Restore',audit_history:'Audit History',retail_reports:'Retail Reports'};
   function moduleAccessMarkup(role,selected=[]){
