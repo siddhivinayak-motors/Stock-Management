@@ -541,6 +541,8 @@ export type Database = {
           status: string
           updated_at: string
           updated_by: string | null
+          retail_date: string | null
+          retailed_by: string | null
           variant: string | null
         }
         Insert: {
@@ -565,6 +567,8 @@ export type Database = {
           status?: string
           updated_at?: string
           updated_by?: string | null
+          retail_date?: string | null
+          retailed_by?: string | null
           variant?: string | null
         }
         Update: {
