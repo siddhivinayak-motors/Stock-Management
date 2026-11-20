@@ -1285,9 +1285,9 @@
   const RESET_OWNER_UID='236565a9-1892-41ee-b54a-c81bde3b9b01';
   function resetIsSuperAdmin(){return !!currentUser&&currentUser.id===RESET_OWNER_UID&&currentProfile?.user_id===RESET_OWNER_UID&&currentProfile?.is_super_admin===true&&String(currentProfile?.status||'').toLowerCase()==='active';}
   function syncOperationalResetVisibility(){
-    const allowed=resetIsSuperAdmin();
+    const allowed=!!currentProfile&&currentProfile.user_id===RESET_OWNER_UID&&currentProfile.is_super_admin===true&&String(currentProfile.status||'').toLowerCase()==='active';
     const area=$('svOperationalResetArea'),dialog=$('svResetDialog');
-    if(area)area.hidden=!allowed;
+    if(area){area.style.display=allowed?'block':'none';area.hidden=false;}
     if(!allowed&&dialog)dialog.hidden=true;
     if(!allowed&&$('svResetSelectionSummary'))$('svResetSelectionSummary').hidden=true;
   }
@@ -1481,7 +1481,7 @@
     // Re-apply permission-dependent controls only after the authenticated profile is loaded.
     // The initial call above runs before currentProfile exists and must not hide Super Admin actions.
     if(currentUser) installScreenHooks();
-    if(currentUser){await startApp();await recordSessionLogin();} else showLogin();
+    if(currentUser){await startApp();syncOperationalResetVisibility();await recordSessionLogin();} else {syncOperationalResetVisibility();showLogin();}
     db().auth.onAuthStateChange(async(_event,session)=>{
       if(!session){currentUser=null;currentProfile=null;permissions.clear();sessionLoginRecordedFor=null;syncOperationalResetVisibility();showLogin();return;}
       try{await refreshIdentity();await startApp();await recordSessionLogin();}catch(e){console.error(e);showLogin();}
