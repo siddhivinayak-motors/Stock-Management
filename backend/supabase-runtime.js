@@ -303,7 +303,7 @@
     window.plData=by;window.plHistory=versions.map(v=>({version:v.version_label,dept:v.department,file:v.source_file||'',date:v.published_at,rows:v.row_count}));
     if(typeof window.plRender==='function') window.plRender();
   }
-  async function publishPriceList(rowsByDepartment,sourceFile='',fileObjects=[]) {
+  async function publishPriceList(rowsByDepartment,sourceFile='',fileObjects=[],withinFileDuplicates=0) {
     if(!has('price_list_management','create')) throw new Error('No permission to upload price lists.');
     // Always compare against the latest published version before deciding what is new.
     await loadPriceLists();
@@ -317,7 +317,7 @@
     };
     const existingByDepartment=window.plData||{};
     const mergedByDepartment={},incomingByDepartment={};
-    const report={added:0,updated:0,skipped:0,total:0,departments:{}};
+    const report={added:0,updated:0,skipped:Number(withinFileDuplicates||0),total:0,departments:{},withinFileDuplicates:Number(withinFileDuplicates||0)};
     for(const department of departments){
       const oldItems=existingByDepartment[department]||[];
       const map=new Map(),merged=[];
