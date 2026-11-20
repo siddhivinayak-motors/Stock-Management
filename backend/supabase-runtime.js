@@ -53,7 +53,7 @@
     terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],
     bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'}
   };
-  const canEditQuoteCompanySettings=()=>!!currentProfile&&(currentProfile.is_super_admin===true||['Manager','General Manager','DMS','HR','Accountant','Accounts','Admin'].includes(String(currentProfile.designation||'').trim()));
+  const canEditQuoteCompanySettings=()=>!!currentProfile&&(currentProfile.is_super_admin===true||['manager','general manager','dms','hr','accountant','accounts','admin'].includes(String(currentProfile.designation||'').trim().toLowerCase()));
   async function loadQuoteCompanySettings(){
     const rows=await call(db().from('quotation_company_settings').select('*').eq('id',true).limit(1));
     return rows?.[0]||QUOTE_COMPANY_DEFAULTS;
@@ -69,9 +69,10 @@
     set('qContactPerson',currentProfile.full_name||currentUser.email||'');
     set('qContactMobile',currentProfile.phone||'');
     const canEditContact=canEditQuoteCompanySettings();
-    const viewOnlyRole=['Executive','Reception','Receptionist','Driver'].includes(String(currentProfile.designation||'').trim());
-    // These roles may inspect the company block but cannot focus, click, type, paste, or alter anything in it.
-    const companyDetails=document.querySelector('#view-quotation details.quote-more');
+    const designation=String(currentProfile.designation||'').trim().toLowerCase();
+    const viewOnlyRole=['executive','reception','receptionist','driver'].includes(designation);
+    // Target the company details block by its PAN field; the quotation form is shared by every department.
+    const companyDetails=$('qPan')?.closest('details.quote-more');
     const companyBody=companyDetails?.querySelector(':scope > div');
     if(companyBody){
       companyBody.inert=viewOnlyRole;
