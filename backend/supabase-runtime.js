@@ -47,7 +47,10 @@
   const db = () => { if (!client) throw new Error('Supabase client is not ready'); return client; };
   async function call(q) { const {data,error}=await q; if(error) throw error; return data; }
   function has(module,action='view') {
-    // Super Admin can view all audit records, but audit() below never records Super Admin activity.
+    // Quotation visibility is a fixed role rule, enforced again by Supabase RLS.
+    if(module==='quotation_management'&&action==='view'&&
+      ['Manager','General Manager','Admin','HR','DMS','Accountant','Accounts','Executive','Reception','Receptionist','Driver'].includes(currentProfile?.designation)) return true;
+    // Super Admin can view all records, but audit() below never records Super Admin activity.
     if(currentProfile?.is_super_admin) return true;
     if(module==='audit_history'&&action==='view'&&['Admin','General Manager'].includes(currentProfile?.designation)) return true;
     return (permissions.get(module)||[]).includes(action);
