@@ -581,7 +581,13 @@
       const normalizePhone=v=>String(v||'').replace(/\D/g,'');
       const phoneKey=normalizePhone(q.phone);
       if(phoneKey.length!==10) throw new Error('Enter a valid 10-digit mobile number.');
-      const existing=await call(db().from('quotations').select('id,quote_number,customer_name,phone,model,variant,total').eq('department',dept));
+      let existing=[];
+      try {
+        existing=await call(db().from('quotations').select('id,quote_number,customer_name,phone,model,variant,total').eq('department',dept));
+      } catch(checkError) {
+        if(!/permission|policy|row.level security|not allowed/i.test(String(checkError.message||''))) throw checkError;
+        // Users with create-only access rely on the database trigger for the authoritative duplicate check.
+      }
       const duplicate=existing.find(row=>
         normalizeText(row.customer_name)===normalizeText(q.customer) &&
         normalizePhone(row.phone)===phoneKey &&
@@ -613,7 +619,7 @@
       await reloadQuoteList();
       notify('Quotation saved to Supabase.');
       if(printAfter) window.printSavedQuote(quoteRecords.findIndex(x=>x.id===saved.id));
-    } catch(e){console.error(e);notify(e.message||'Could not save quotation.');}
+    } catch(e){console.error(e);const duplicateError=e.code==='23505'||String(e.message||'').includes('Duplicate quotation');notify(duplicateError?'આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી નોંધાયેલું છે. ફરીથી એન્ટ્રી કરી શકાશે નહીં.':(e.message||'Could not save quotation.'));}
   };
   window.saveRecords = () => {}; // Quotation records now live in Supabase, not localStorage.
   window.loadDepartmentQuotes = () => { reloadQuoteList().catch(e=>{console.error(e);notify(e.message);}); };
