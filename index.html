@@ -1002,7 +1002,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <div class="card quote-create-card">
   <div class="card-head"><div><div class="card-title">Create New Quotation</div><div class="card-desc">Complete customer and vehicle details, review all charge heads, then save or print.</div></div><span class="pill red">NEW</span></div>
   <div class="card-body">
-   <div class="quote-number-strip"><span>Quotation Number</span><strong id="quoteNumber">SV-PER-00001</strong><span class="auto-tag">AUTO GENERATED</span></div>
+   <div class="quote-number-strip"><span>Quotation Number</span><strong id="quoteNumber">PV-20261120-AUTO</strong><span class="auto-tag">AUTO GENERATED</span></div>
    <div class="q-section-heading">01 · CUSTOMER DETAILS</div>
    <div class="q-form-grid">
     <label>Customer Name / Company<input id="qCustomer" placeholder="Enter customer name" required></label>
@@ -1406,7 +1406,7 @@ const demoQuotes=[];
 let quoteRecords;
 try{quoteRecords=JSON.parse(localStorage.getItem(quoteStoreKey)||'null')||demoQuotes.map(x=>({...x}));}catch(e){quoteRecords=demoQuotes.map(x=>({...x}));}
 function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function nextQuoteNumber(){const prefix=({Personal:'PV',EV:'EV',Commercial:'COM',LLM:'LLM'}[currentQuoteDepartment]||'PV');const count=quoteRecords.filter(q=>String(q.no||'').startsWith(prefix+'-')).length+1;return prefix+'-'+String(count).padStart(3,'0')}
+function nextQuoteNumber(){const prefix=({Personal:'PV',EV:'EV',Commercial:'CV',LLM:'LV'}[currentQuoteDepartment]||'PV');const now=new Date(),pad=n=>String(n).padStart(2,'0'),dateKey=now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate());return prefix+'-'+dateKey+'-AUTO'}
 function updateQuoteNumber(){const el=document.getElementById('quoteNumber');if(el)el.textContent=nextQuoteNumber()}
 function isDiscountChargeRow(r){
  const name=(r?.querySelector('.q-charge-name')?.textContent||r?.querySelector('.q-charge-name')?.value||r?.querySelector('select')?.value||r?.querySelector('.q-charge-editable')?.value||r?.querySelector('.amount')?.dataset?.charge||'').trim();
@@ -1730,7 +1730,8 @@ function updateQuoteNumber(){
  const now=new Date(),pad=n=>String(n).padStart(2,'0');
  const dateKey=now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate());
  // The database daily counter is authoritative; the final sequence is allocated atomically on Save.
- el.textContent='SV-'+dateKey+'-AUTO';
+ const prefix=({Personal:'PV',EV:'EV',Commercial:'CV',LLM:'LV'}[currentQuoteDepartment]||'PV');
+ el.textContent=prefix+'-'+dateKey+'-AUTO';
 }
 function renumberCharges(){[...charges.querySelectorAll('.charge-row'),...quoteDiscounts.querySelectorAll('.charge-row')].forEach((r,i)=>{const n=r.querySelector('.charge-index');if(n)n.textContent=String(i+1).padStart(2,'0')})}
 function getQuoteDateTime(now=new Date()){
