@@ -962,11 +962,11 @@ td,.data-table td{font-size:13px;line-height:1.45}
    <div class="q-section-heading">02 · VEHICLE DETAILS</div>
    <div class="q-form-grid">
     <label>Vehicle Model<input id="qVehicle" placeholder="Type model name, e.g. BOLERO" autocomplete="off" required></label>
-    <div id="qStockSuggestions" class="q-stock-suggestions" hidden role="listbox" aria-label="Matching stock vehicles"></div>
+    <div id="qPriceSuggestions" class="q-stock-suggestions" hidden role="listbox" aria-label="Matching Price List vehicles"></div>
     <label>Variant<input id="qVariant" placeholder="Type variant, e.g. BS6.0" autocomplete="off"></label>
     <label>Colour<input id="qColour" placeholder="Type colour or code, e.g. WH" autocomplete="off"></label>
     <label>Car Description<input id="qCarDesc" placeholder="Vehicle description"></label>
-    <label>Vehicle / Chassis Number<input id="qChassis" placeholder="Auto-filled from stock; manual entry allowed"></label>
+    
     <label>Sales Consultant<input id="qSalesPerson" placeholder="Auto-filled from logged-in employee" readonly aria-readonly="true"></label>
    </div>
    <div class="q-section-heading">03 · PRICE DETAILS</div>
@@ -1631,7 +1631,7 @@ function getQuotePayload(){
  const items=[];
  charges.querySelectorAll('.charge-row').forEach(r=>{const input=r.querySelector('.amount');items.push({name:r.querySelector('.q-charge-name')?.value?.trim()||r.querySelector('.q-charge-name')?.textContent.trim()||r.querySelector('select')?.value||'Other',amount:Number(input?.value)||0,discount:r.classList.contains('discount-charge')})});
  const v=id=>document.getElementById(id)?.value.trim()||'';
- return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,carDescription:v('qCarDesc'),variant:v('qVariant'),colour:v('qColour'),chassis:v('qChassis'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'PENDING',prints:0,items};
+ return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,carDescription:v('qCarDesc'),variant:v('qVariant'),colour:v('qColour'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'PENDING',prints:0,items};
 }
 function renderQuoteManagement(){
  const body=document.getElementById('quoteManagementRows');if(!body)return;
@@ -1670,7 +1670,7 @@ function printQuoteDocument(q){
  </style></head><body><div class="sheet">
  <div class="brandhead"><div>SIDDHIVINAYAK MOTORS PVT. LTD.<small>MAHINDRA AUTHORISED DEALERSHIP · BHAVNAGAR</small></div></div>
  <div class="topmeta"><span>QUOTATION · ${esc(q.department||'')}</span><span>SR. NO.: ${esc(q.no)}</span></div>
- <table class="details"><tr><td>NAME / M/S.</td><td colspan="3">${esc(q.customer)}</td></tr><tr><td>VEHICLE NOS.</td><td>${esc(q.vehicleNos||'1')}</td><td>DATE &amp; TIME</td><td>${esc(dateText)}</td></tr><tr><td>ADDRESS</td><td colspan="3">${esc(q.address)}</td></tr><tr><td>MODEL</td><td>${esc(q.model)}</td><td>VARIANT</td><td>${esc(q.variant)}</td></tr><tr><td>CAR DESCRIPTION</td><td colspan="3">${esc(q.carDescription)}</td></tr><tr><td>HYPO</td><td>${esc(q.hypo)}</td><td>COLOUR</td><td>${esc(q.colour)}</td></tr><tr><td>VIN / CHASSIS</td><td colspan="3">${esc(q.chassis)}</td></tr></table>
+ <table class="details"><tr><td>NAME / M/S.</td><td colspan="3">${esc(q.customer)}</td></tr><tr><td>VEHICLE NOS.</td><td>${esc(q.vehicleNos||'1')}</td><td>DATE &amp; TIME</td><td>${esc(dateText)}</td></tr><tr><td>ADDRESS</td><td colspan="3">${esc(q.address)}</td></tr><tr><td>MODEL</td><td>${esc(q.model)}</td><td>VARIANT</td><td>${esc(q.variant)}</td></tr><tr><td>CAR DESCRIPTION</td><td colspan="3">${esc(q.carDescription)}</td></tr><tr><td>HYPO</td><td>${esc(q.hypo)}</td><td>COLOUR</td><td>${esc(q.colour)}</td></tr></table>
  <table class="charges" style="margin-top:8px"><thead><tr><th>SR.NO.</th><th>PARTICULARS</th><th>AMOUNT</th></tr></thead><tbody>${rows}<tr><td>—</td><td>(-) LESS — INCLUDING COMPANY DISCOUNT, DEALER MARGIN AND INSURANCE DISCOUNT</td><td class="amt">${amountINR(less)}</td></tr></tbody></table>
  <div class="net"><span>NET PAYABLE</span><span>${amountINR(q.total)}</span></div><div class="words">Amount in Words: ${esc(q.amountWords||numberWordsIndian(q.total))}</div>
  <div class="company"><div>PAN NO.: ${esc(q.pan)}</div><div>COMPANY GSTIN/UIN: ${esc(q.gstin)}</div></div>
@@ -1680,7 +1680,7 @@ function printQuoteDocument(q){
  w.document.close();
 }
 function resetQuotationForm(){
- ['qCustomer','qPhone','qAddress','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qChassis','qContactPerson','qContactMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+ ['qCustomer','qPhone','qAddress','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qContactPerson','qContactMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
  setQuotationDateTime();
  const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
  const stockSuggestions=document.getElementById('qStockSuggestions');if(stockSuggestions){stockSuggestions.hidden=true;stockSuggestions.innerHTML='';}
@@ -1703,7 +1703,9 @@ function quoteFindPriceMatch(){
  if(!model||!variant)return null;
  const modelKey=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
  const rows=(window.plData&&window.plData[currentQuoteDepartment])||[];
- const candidates=rows.filter(x=>modelKey(x.vehicle)===modelKey(model));
+ const colour=document.getElementById('qColour').value.trim();
+ const colourKey=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
+ const candidates=rows.filter(x=>modelKey(x.vehicle)===modelKey(model)&&(!colour||colourKey(x.colour)===colourKey(colour)));
  if(!candidates.length)return null;
  const modelTokens=quotePriceNorm(model);
  const stockTokens=quotePriceNorm(variant).filter(t=>!modelTokens.includes(t)&&!['BS','6','2'].includes(t));
@@ -1777,6 +1779,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=quotation-pricelist-autofill-20261120b"></script>
+<script src="./backend/supabase-runtime.js?v=quotation-pricelist-search-20261120c"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
