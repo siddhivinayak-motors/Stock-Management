@@ -981,10 +981,10 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <summary>＋ Company, terms &amp; bank details (already filled)</summary>
     <div class="q-section-heading">Company Details</div>
     <div class="q-form-grid">
-     <label>PAN No.<input id="qPan" value="AAMCS1007J"></label>
-     <label>Company GSTIN / UIN<input id="qGstin" value="24AAMCS1007J1ZI"></label>
-     <label>Contact Person<input id="qContactPerson" value="" readonly></label>
-     <label>Contact Person Mobile<input id="qContactMobile" value="" readonly></label>
+     <label>PAN No.<input id="qPan" value="AAMCS1007J" readonly></label>
+     <label>Company GSTIN / UIN<input id="qGstin" value="24AAMCS1007J1ZI" readonly></label>
+     <label>Contact Person<input id="qContactPerson" value="" readonly autocomplete="name"></label>
+     <label>Contact Person Mobile<input id="qContactMobile" value="" readonly type="tel" inputmode="numeric" autocomplete="tel"></label>
      <label>Email ID<input id="qEmail" value="SALES.B@SIDDHIVINAYAKMOTORS.COM" readonly></label>
      <label>Branch / Sales Address<textarea id="qBranchAddress" rows="2" readonly>Press Quarter, near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004</textarea></label>
      <label>Sales Helpline<input id="qHelpline" value="9879100031 / 9925139389" readonly></label>
@@ -994,7 +994,6 @@ td,.data-table td{font-size:13px;line-height:1.45}
      <div><b>Terms &amp; Conditions</b><ol><li>All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.</li><li>Kindly insist for receipt of all payments made.</li><li>Subject to availability of stock &amp; colour.</li><li>Price prevailing at the time of delivery shall be applicable.</li><li>Prices are subject to change without any notice.</li><li>Subject to Bhavnagar Jurisdiction.</li></ol></div>
      <div><b>RTGS Details</b><p>Account Name: SIDDHIVINAYAK MOTORS PVT. LTD.<br>Bank: State Bank of India<br>Account Number: 33349775105<br>IFSC: SBIN0060231<br>Branch: Chitra, Bhavnagar</p></div>
     </div>
-    <div id="quoteCompanySettingsActions" style="display:none;margin-top:12px"><button type="button" class="btn primary" id="saveQuoteCompanySettings">Save Company Details</button><span class="card-desc" style="margin-left:10px">Only Manager, General Manager, Admin and Super Admin can update these shared details.</span></div>
    </details>
    <div class="quote-actions"><button class="btn primary" id="saveQuote">Save Quotation</button><button class="btn" id="savePrintQuote">Save &amp; Print</button><span class="card-desc">Quotation records are separated by department.</span></div>
   </div>
@@ -1854,6 +1853,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=employee-mobile-city-20261120a"></script>
+<script src="./backend/supabase-runtime.js?v=quotation-fixed-company-roles-20261120b"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
