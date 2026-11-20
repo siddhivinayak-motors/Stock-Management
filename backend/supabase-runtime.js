@@ -557,8 +557,8 @@
     ['Manager','General Manager','Admin'].includes(currentProfile?.designation) || !!currentProfile?.is_super_admin;
   window.renderQuoteManagement = () => {
     const body=$('quoteManagementRows');if(!body)return;
-    const canEdit=canManageQuotationRecords()&&has('quotation_management','edit');
-    const canDelete=canManageQuotationRecords()&&has('quotation_management','delete');
+    const canEdit=canManageQuotationRecords();
+    const canDelete=canManageQuotationRecords();
     body.innerHTML=quoteRecords.map((q,i)=>{
       const blocked=q.status==='PENDING'&&quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other));
       const approval=q.status!=='PENDING'?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button>';
@@ -582,7 +582,7 @@
     try {
       const q=quoteRecords[i];
       if(!q?.id) throw new Error('Quotation record not found.');
-      if(!canManageQuotationRecords()||!has('quotation_management','edit')) throw new Error('Edit is available only to Manager, General Manager, Admin and Super Admin with Edit permission.');
+      if(!canManageQuotationRecords()) throw new Error('Edit is available only to Manager, General Manager, Admin and Super Admin.');
       editingQuotationId=q.id;
       currentQuoteDepartment=q.department||'Personal';
       if(typeof showPage==='function') showPage('quotation');
@@ -613,7 +613,7 @@
     try {
       const q=quoteRecords[i];
       if(!q?.id) throw new Error('Quotation record not found.');
-      if(!canManageQuotationRecords()||!has('quotation_management','delete')) throw new Error('Delete is available only to Manager, General Manager, Admin and Super Admin with Delete permission.');
+      if(!canManageQuotationRecords()) throw new Error('Delete is available only to Manager, General Manager, Admin and Super Admin.');
       if(!confirm('Delete quotation '+q.no+' for '+q.customer+'? This cannot be undone.')) return;
       await call(db().from('quotation_items').delete().eq('quotation_id',q.id));
       await call(db().from('quotations').delete().eq('id',q.id));
@@ -628,7 +628,7 @@
       const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
       const model=$('qVehicle').value.trim(),variant=$('qVariant').value.trim();
       if(editingQuotationId){
-        if(!canManageQuotationRecords()||!has('quotation_management','edit')) throw new Error('You do not have quotation edit permission.');
+        if(!canManageQuotationRecords()) throw new Error('Quotation edit is restricted to Manager, General Manager, Admin and Super Admin.');
         const id=editingQuotationId;
         const payload={
           quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
