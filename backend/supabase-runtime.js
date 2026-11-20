@@ -2022,7 +2022,7 @@
     w.document.open();w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escHtml(order.order_number)+'</title><style>
 @page{size:A4 portrait;margin:5mm}
 *{box-sizing:border-box}
-html,body{width:190mm;margin:0;padding:0}
+html,body{width:auto;margin:0;padding:0}
 body{font:9.2px Arial,sans-serif;line-height:1.2;color:#18212b}
 h1{font-size:16px;margin:0;text-align:center}
 h2{font-size:10.2px;margin:6px 0 3px;border-bottom:1px solid #333;padding-bottom:2px;break-after:avoid;page-break-after:avoid}
@@ -2047,28 +2047,20 @@ th{background:#f0f2f4}
 .keep{break-inside:avoid;page-break-inside:avoid}
 @media screen{body{max-width:190mm;margin:0 auto}}
 @media print{
-html,body{width:190mm!important;height:auto!important;margin:0!important;padding:0!important}
+html,body{width:auto!important;height:auto!important;margin:0!important;padding:0!important}
 button{display:none!important}
 h2,.note,.sign{break-inside:avoid;page-break-inside:avoid}
 body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style></head><body><header><h1>SIDDHIVINAYAK MOTORS PVT. LTD.</h1><p>AUTHORISED DEALER : MAHINDRA &amp; MAHINDRA LIMITED</p><p>'+escHtml(q.branch_address)+'</p><div class="meta"><span>OTF ORDER BOOK: '+escHtml(order.order_number)+'</span><span>Date: '+escHtml(order.booking_date)+'</span></div></header><div class="grid"><div class="field"><b>Quotation No.:</b> '+escHtml(q.quote_number)+'</div><div class="field"><b>Enquiry No.:</b> '+escHtml(order.enquiry_number)+'</div><div class="field"><b>Customer ID:</b> '+escHtml(order.customer_id)+'</div><div class="field"><b>Invoice No.:</b> '+escHtml(order.invoice_number)+'</div><div class="field"><b>Quote Date:</b> '+escHtml(q.quote_date)+'</div><div class="field"><b>GSTIN:</b> '+escHtml(order.customer_gstin)+'</div><div class="field"><b>Name:</b> '+escHtml(order.customer_name)+'</div><div class="field"><b>Mobile:</b> '+escHtml(order.phone)+'</div><div class="field full"><b>Address:</b> '+escHtml(order.address)+'</div><div class="field"><b>City / District:</b> '+escHtml([order.city,order.district].filter(Boolean).join(' / '))+'</div><div class="field"><b>Email:</b> '+escHtml(order.email)+'</div><div class="field"><b>Aadhaar:</b> '+escHtml(order.aadhaar_number)+'</div><div class="field"><b>PAN:</b> '+escHtml(order.pan_number)+'</div><div class="field"><b>HPA:</b> '+escHtml(order.hpa)+'</div><div class="field"><b>Booking Amount:</b> '+otfMoney(order.booking_amount)+'</div><div class="field"><b>DOB:</b> '+escHtml(order.dob)+'</div><div class="field"><b>Marriage Anniversary:</b> '+escHtml(order.marriage_anniversary)+'</div><div class="field"><b>Nominee:</b> '+escHtml([order.nominee,order.nominee_relationship,order.nominee_age].filter(Boolean).join(' / '))+'</div><div class="field"><b>Sales Executive:</b> '+escHtml(order.sales_person)+'</div></div><h2>VEHICLE DETAILS — VERIFIED FROM STOCK REGISTER</h2><div class="grid"><div class="field"><b>Model:</b> '+escHtml(order.model)+'</div><div class="field"><b>Variant:</b> '+escHtml(order.variant)+'</div><div class="field"><b>Colour:</b> '+escHtml(order.colour)+'</div><div class="field"><b>Chassis No.:</b> '+escHtml(order.chassis_number)+'</div><div class="field"><b>Engine No.:</b> '+escHtml(order.engine_number)+'</div><div class="field"><b>Stock Stage:</b> '+escHtml(v.stage)+'</div></div><h2>QUOTATION PRICE BREAKUP</h2><table><thead><tr><th>Particular</th><th class="num">Amount</th></tr></thead><tbody>'+rows+'</tbody></table><div class="totals"><div><span>Subtotal</span><span>'+otfMoney(q.subtotal)+'</span></div><div><span>Total Discount</span><span>− '+otfMoney(q.discount)+'</span></div><div><span>GRAND TOTAL</span><span>'+otfMoney(q.total)+'</span></div></div><h2>EXCHANGE DETAILS</h2><div class="grid"><div class="field"><b>Old Car:</b> '+escHtml(exchange.model)+'</div><div class="field"><b>Registration:</b> '+escHtml(exchange.registration)+'</div><div class="field"><b>M.F. Year:</b> '+escHtml(exchange.manufacturing_year)+'</div><div class="field"><b>Old Value:</b> '+otfMoney(exchange.old_value)+'</div><div class="field"><b>Extra Support:</b> '+otfMoney(exchange.extra_support)+'</div><div class="field"><b>Total Exchange:</b> '+otfMoney(exchange.total_value)+'</div></div><h2>ACCESSORIES DETAILS</h2><table><thead><tr><th>SL</th><th>Item</th><th>Part No.</th><th class="num">Amount</th></tr></thead><tbody>'+accRows+'</tbody></table><h2>PAYMENT DETAILS</h2><table><thead><tr><th>SL</th><th>Payment</th><th>Date</th><th class="num">Amount</th><th>Mode / Reference</th></tr></thead><tbody>'+payRows+'</tbody></table><div class="note">ખાસ નોંધ: બુકિંગ કરાવ્યા બાદ વાહનના ભાવમાં જે વધઘટ થશે તે ગ્રાહકના શિરે રહેશે. વાહન ડિલિવરી સમયે જે ભાવ હશે તે જ લાગુ પડશે.</div><div class="small" style="margin-top:7px">'+(order.terms||[]).map(escHtml).join(' · ')+'<br>This order book is generated from the selected quotation and the independently verified stock chassis record.</div><div class="sign"><div>Customer Signature</div><div>SC Sign.</div><div>SM Sign.</div></div><script>
 window.onload=()=>{
-  const fitAndPrint=()=>{
-    const body=document.body;
-    body.style.width='190mm';
-    body.style.maxWidth='none';
-    body.style.zoom='1';
-    const usableHeight=286*96/25.4;
-    const contentHeight=Math.max(body.scrollHeight,document.documentElement.scrollHeight);
-    // Keep print text readable. If unusually long data exceeds this limit,
-    // allow a second page instead of shrinking the entire form illegibly.
-    const fitScale=Math.max(0.9,Math.min(1,usableHeight/contentHeight));
-    body.style.width=(190/fitScale)+'mm';
-    body.style.zoom=String(fitScale);
-    setTimeout(()=>window.print(),250);
-  };
-  requestAnimationFrame(()=>requestAnimationFrame(fitAndPrint));
+  // Do not apply CSS zoom or scale-to-fit here. Android print preview
+  // was shrinking the entire A4 document into a small strip.
+  // Let the print engine paginate naturally at the declared A4 size.
+  document.body.style.zoom='1';
+  document.body.style.transform='none';
+  document.body.style.width='auto';
+  setTimeout(()=>window.print(),300);
 };
 </script></body></html>');
     w.document.close();
