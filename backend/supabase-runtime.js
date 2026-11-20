@@ -229,6 +229,7 @@
     const roleLabel=document.querySelector('.user-role');
     if(roleLabel) roleLabel.textContent=currentProfile?.is_super_admin?'SUPER ADMIN':String(currentProfile?.designation||'EMPLOYEE').toUpperCase();
     setupQuotationVehiclePicker();
+    bindOtfUi();
     const hasAnyModule=['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'].some(m=>has(m,'view'));
     // Keep the app shell intact; enforce module and department access on the actual navigation items.
     try{await refreshDashboard();}catch(e){console.error('Dashboard data refresh failed:',e);notify('Dashboard data could not be refreshed: '+(e.message||e));}
@@ -238,6 +239,7 @@
     const viewMap={
       'view-dashboard':'dashboard','view-stock':'stock_register','view-quotation':'quotation_management',
       'view-quotation-management':'quotation_management',
+      'view-otf-order-book':'quotation_management',
       'view-upload':'common_excel_upload','view-stock-hold-central':'stock_hold_management',
       'view-price-list':'price_list_management','view-employees':'employee_management',
       'view-audit':'audit_history','view-reports':'retail_reports','view-backup-restore':'backup_restore'
@@ -248,7 +250,7 @@
       if(page.startsWith('stock-hold'))return 'stock_hold_management';
       if(page==='upload')return 'common_excel_upload';
       if(page.startsWith('stock'))return 'stock_register';
-      if(page.includes('quotation'))return 'quotation_management';
+      if(page.startsWith('otf-')||page.includes('quotation'))return 'quotation_management';
       if(page==='price-list')return 'price_list_management';
       if(page==='employees')return 'employee_management';
       // Department-specific quotation-management pages use the same module gate.
@@ -1822,6 +1824,7 @@
         if(p.startsWith('stock-')&&!p.startsWith('stock-hold-'))renderStock();
         if(p.startsWith('stock-hold-')||p==='stock-hold-central')window.holdRender();
         if(p==='reports')loadRetailReport();
+        if(p.startsWith('otf-'))loadOtfRegister().catch(e=>notify(e.message));
       },0);
     },false);
     const originalOpen=window.openDepartmentStock;
@@ -1834,6 +1837,176 @@
     $('view-stock')?.querySelector('.page-head button')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();renderStock();},true);
     void originalImportPreview;
   }
+
+  // OTF Order Book — quotation lookup and independent chassis verification.
+  let otfDepartment='Personal', otfMatches=[], otfSelectedQuote=null, otfVerifiedVehicle=null, otfSavedRows=[];
+  const otfDigits=v=>String(v||'').replace(/\\D/g,'');
+  const otfNorm=v=>String(v||'').normalize('NFD').replace(/\\p{M}/gu,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const otfValue=id=>$(id)?.value?.trim()||'';
+  const otfNumber=id=>Math.max(0,Number($(id)?.value||0)||0);
+  const otfMoney=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const otfDeptCode={Personal:'PV',EV:'EV',Commercial:'CV',LLM:'LV'};
+  function otfSetStatus(message,isError=false){const el=$('otfFormStatus');if(el){el.textContent=message;el.style.color=isError?'#b4232c':'#64748b';}}
+  function otfResetSelection(){
+    otfSelectedQuote=null;otfVerifiedVehicle=null;
+    if($('otfSelectedQuote')){$('otfSelectedQuote').hidden=true;$('otfSelectedQuote').textContent='';}
+    if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}
+    if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;
+  }
+  window.otfOpenDepartment=async function(department){
+    if(!['Personal','EV','Commercial','LLM'].includes(department))return;
+    if(!has('quotation_management','view')){notify('Quotation / OTF permission required.');return;}
+    if(!allowedDepartmentList().includes(department)){notify('You do not have access to '+department+'.');return;}
+    otfDepartment=department;otfResetSelection();otfMatches=[];
+    if($('otfPageTitle'))$('otfPageTitle').textContent=department+' — OTF Order Book';
+    if($('otfPhoneSearch'))$('otfPhoneSearch').value='';
+    if($('otfQuoteResults'))$('otfQuoteResults').innerHTML='';
+    if($('otfChassisInput'))$('otfChassisInput').value='';
+    const formIds=['otfCustomerName','otfCustomerPhone','otfEnquiryNumber','otfCustomerId','otfCustomerGstin','otfAadhaar','otfPan','otfEmail','otfAddress','otfCity','otfDistrict','otfHpa','otfBookingAmount','otfDob','otfAnniversary','otfNominee','otfNomineeRelation','otfNomineeAge','otfExchangeModel','otfExchangeReg','otfExchangeYear','otfExchangeValue','otfExchangeSupport','otfExchangeTotal'];
+    formIds.forEach(id=>{if($(id))$(id).value=id==='otfBookingAmount'?'0':'';});
+    if($('otfBookingDate'))$('otfBookingDate').value=new Date().toISOString().slice(0,10);
+    if($('otfPayments'))$('otfPayments').innerHTML='';
+    if($('otfAccessories'))$('otfAccessories').innerHTML='';
+    otfSetStatus('Select a quotation and verify the chassis number before saving.');
+    await loadOtfRegister();
+  };
+  async function searchOtfQuotes(){
+    if(!has('quotation_management','view'))throw new Error('Quotation view permission required.');
+    const phone=otfDigits(otfValue('otfPhoneSearch'));
+    if(phone.length!==10)throw new Error('Enter a valid 10-digit mobile number.');
+    const rows=await call(db().from('quotations').select('*,quotation_items(*)').eq('department',otfDepartment).order('created_at',{ascending:false}).limit(1000));
+    otfMatches=rows.filter(q=>otfDigits(q.phone)===phone);
+    const box=$('otfQuoteResults');
+    if(!otfMatches.length){box.innerHTML='<div class="empty">No quotations found for this mobile number in '+esc(otfDepartment)+'.</div>';return;}
+    box.innerHTML='<div class="card-desc" style="margin:8px 0">Found '+otfMatches.length+' quotation(s). Select the exact quotation for this booking.</div><div style="display:grid;gap:8px">'+otfMatches.map((q,i)=>'<button type="button" class="btn" data-otf-quote-index="'+i+'" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;flex-wrap:wrap"><span><b>'+esc(q.quote_number)+'</b> · '+esc(q.customer_name)+' · '+esc([q.model,q.variant].filter(Boolean).join(' / '))+'</span><b>'+otfMoney(q.total)+'</b></button>').join('')+'</div>';
+    box.querySelectorAll('[data-otf-quote-index]').forEach(btn=>btn.addEventListener('click',()=>selectOtfQuote(Number(btn.dataset.otfQuoteIndex))));
+  }
+  function selectOtfQuote(index){
+    const q=otfMatches[index];if(!q)return;
+    otfSelectedQuote=q;otfVerifiedVehicle=null;
+    if($('otfSelectedQuote')){$('otfSelectedQuote').hidden=false;$('otfSelectedQuote').textContent='Selected quotation: '+q.quote_number+' · '+q.customer_name+' · '+q.model+' / '+(q.variant||'')+' · Grand Total '+otfMoney(q.total)+'. Now enter the chassis number separately.';}
+    const set=(id,value)=>{if($(id))$(id).value=value??'';};
+    set('otfCustomerName',q.customer_name);set('otfCustomerPhone',q.phone);set('otfCustomerGstin',q.customer_gstin||'');
+    set('otfEmail',q.email||'');set('otfAddress',q.address||'');
+    set('otfCity',currentProfile?.city||'');set('otfDistrict',currentProfile?.city||'');
+    set('otfHpa',q.hypo||'');
+    if($('otfChassisInput'))$('otfChassisInput').value='';
+    if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}
+    if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;
+    otfSetStatus('Quotation selected. Chassis verification is still required.');
+  }
+  async function verifyOtfChassis(){
+    if(!otfSelectedQuote)throw new Error('Select a quotation first.');
+    const chassis=otfValue('otfChassisInput').toUpperCase().replace(/\\s+/g,'');
+    if(chassis.length<5)throw new Error('Enter the complete chassis number.');
+    const row=await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').eq('department',otfDepartment).eq('chassis_number',chassis).maybeSingle());
+    if(!row)throw new Error('This chassis number was not found in '+otfDepartment+' Stock Register.');
+    const mismatch=otfNorm(row.model)!==otfNorm(otfSelectedQuote.model)||
+      (otfNorm(row.variant)&&otfNorm(otfSelectedQuote.variant)&&otfNorm(row.variant)!==otfNorm(otfSelectedQuote.variant));
+    if(mismatch)throw new Error('Vehicle mismatch: this chassis belongs to '+[row.model,row.variant].filter(Boolean).join(' / ')+', but selected quotation is '+[otfSelectedQuote.model,otfSelectedQuote.variant].filter(Boolean).join(' / ')+'. Select the matching quotation or correct chassis.');
+    otfVerifiedVehicle=row;
+    if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent='VERIFIED · '+row.chassis_number+' · '+row.model+' / '+(row.variant||'')+' · '+(row.colour||'Colour not recorded')+' · Engine '+(row.engine_number||'Not recorded')+' · Stage '+row.stage+' · '+row.status;}
+    if($('otfPrintPreview'))$('otfPrintPreview').disabled=false;
+    otfSetStatus('Chassis verified against the live Stock Register.');
+  }
+  function otfCollectRows(selector,fields){
+    return [...document.querySelectorAll(selector)].map(row=>Object.fromEntries(fields.map(([key,sel])=>[key,row.querySelector(sel)?.value?.trim()||''])))
+      .filter(x=>Object.values(x).some(v=>v!==''));
+  }
+  function addOtfPayment(){
+    const wrap=$('otfPayments');if(!wrap)return;
+    const row=document.createElement('div');row.className='form-grid otf-payment-row';row.style.cssText='grid-template-columns:1fr 1fr 1fr 1fr auto;margin:8px 0';
+    row.innerHTML='<label class="field">Payment Type<input data-pay="type" placeholder="Booking / Loan / Other"></label><label class="field">Date<input data-pay="date" type="date"></label><label class="field">Amount (₹)<input data-pay="amount" type="number" min="0" step="0.01"></label><label class="field">Mode / Reference<input data-pay="mode" placeholder="Cash / UPI / NEFT / Cheque"></label><button type="button" class="btn soft" aria-label="Remove payment" style="align-self:end" data-remove-row>×</button>';
+    row.querySelector('[data-remove-row]').onclick=()=>row.remove();wrap.appendChild(row);
+  }
+  function addOtfAccessory(){
+    const wrap=$('otfAccessories');if(!wrap)return;
+    const row=document.createElement('div');row.className='form-grid otf-accessory-row';row.style.cssText='grid-template-columns:1.2fr 1fr 1fr auto;margin:8px 0';
+    row.innerHTML='<label class="field">Item<input data-acc="item" placeholder="Accessory name"></label><label class="field">Part Number<input data-acc="part" placeholder="Part number"></label><label class="field">Amount (₹)<input data-acc="amount" type="number" min="0" step="0.01"></label><button type="button" class="btn soft" aria-label="Remove accessory" style="align-self:end" data-remove-row>×</button>';
+    row.querySelector('[data-remove-row]').onclick=()=>row.remove();wrap.appendChild(row);
+  }
+  function buildOtfPayload(){
+    if(!otfSelectedQuote)throw new Error('Select a quotation by mobile number.');
+    if(!otfVerifiedVehicle)throw new Error('Verify the chassis number against Stock Register.');
+    const address=otfValue('otfAddress');
+    if(!address)throw new Error('Enter the customer's complete address.');
+    const aadhaar=otfDigits(otfValue('otfAadhaar')),pan=otfValue('otfPan').toUpperCase();
+    if(aadhaar&&aadhaar.length!==12)throw new Error('Aadhaar must contain 12 digits.');
+    if(pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan))throw new Error('Enter a valid 10-character PAN number.');
+    const q=otfSelectedQuote,v=otfVerifiedVehicle,code=otfDeptCode[otfDepartment]||'PV';
+    const now=new Date(),date=now.toISOString().slice(0,10).replace(/-/g,'');
+    const orderNo='OTF-'+code+'-'+date+'-'+now.getTime().toString().slice(-6)+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
+    return {
+      order_number:orderNo,department:otfDepartment,quotation_id:q.id,vehicle_id:v.id,
+      customer_name:otfValue('otfCustomerName'),phone:otfDigits(otfValue('otfCustomerPhone')),
+      address,city:otfValue('otfCity'),district:otfValue('otfDistrict'),
+      customer_gstin:otfValue('otfCustomerGstin'),aadhaar_number:aadhaar||null,pan_number:pan||null,
+      enquiry_number:otfValue('otfEnquiryNumber')||null,customer_id:otfValue('otfCustomerId')||null,
+      booking_amount:otfNumber('otfBookingAmount'),booking_date:otfValue('otfBookingDate')||date.slice(0,4)+'-'+date.slice(4,6)+'-'+date.slice(6,8),
+      hpa:otfValue('otfHpa'),dob:otfValue('otfDob')||null,marriage_anniversary:otfValue('otfAnniversary')||null,
+      email:otfValue('otfEmail')||null,nominee:otfValue('otfNominee')||null,
+      nominee_relationship:otfValue('otfNomineeRelation')||null,nominee_age:otfValue('otfNomineeAge')?Number(otfValue('otfNomineeAge')):null,
+      chassis_number:v.chassis_number,engine_number:v.engine_number,model:v.model,variant:v.variant,colour:v.colour,
+      sales_person:q.sales_person||currentProfile?.full_name||'',
+      quotation_snapshot:{quote_number:q.quote_number,quote_date:q.quote_date,subtotal:Number(q.subtotal||0),discount:Number(q.discount||0),total:Number(q.total||0),amount_words:q.amount_words||'',items:(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))},
+      vehicle_snapshot:{status:v.status,stage:v.stage,manufacturing_year:v.manufacturing_year},
+      exchange_details:{model:otfValue('otfExchangeModel'),registration:otfValue('otfExchangeReg'),manufacturing_year:otfValue('otfExchangeYear'),old_value:otfNumber('otfExchangeValue'),extra_support:otfNumber('otfExchangeSupport'),total_value:otfNumber('otfExchangeTotal')},
+      accessories_details:otfCollectRows('.otf-accessory-row',[['item','[data-acc="item"]'],['part_number','[data-acc="part"]'],['amount','[data-acc="amount"]']]),
+      payment_details:otfCollectRows('.otf-payment-row',[['type','[data-pay="type"]'],['date','[data-pay="date"]'],['amount','[data-pay="amount"]'],['mode','[data-pay="mode"]']]),
+      terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],
+      created_by:currentUser.id,updated_by:currentUser.id
+    };
+  }
+  function otfPrintDocument(order,popup){
+    const w=popup||window.open('','_blank','width=1000,height=760');
+    if(!w){notify('Allow pop-ups to print the OTF Order Book.');return;}
+    const q=order.quotation_snapshot||{},items=q.items||[],v=order.vehicle_snapshot||{},payments=order.payment_details||[],accessories=order.accessories_details||[],exchange=order.exchange_details||{};
+    const escHtml=x=>esc(x==null?'':String(x));
+    const rows=items.map(x=>'<tr><td>'+escHtml(x.particulars)+'</td><td class="num">'+otfMoney(x.amount)+'</td></tr>').join('');
+    const payRows=payments.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escHtml(x.type)+'</td><td>'+escHtml(x.date)+'</td><td class="num">'+otfMoney(x.amount)+'</td><td>'+escHtml(x.mode)+'</td></tr>').join('')||'<tr><td colspan="5">—</td></tr>';
+    const accRows=accessories.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escHtml(x.item)+'</td><td>'+escHtml(x.part_number)+'</td><td class="num">'+otfMoney(x.amount)+'</td></tr>').join('')||'<tr><td colspan="4">—</td></tr>';
+    w.document.open();w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escHtml(order.order_number)+'</title><style>@page{size:A4;margin:10mm}*{box-sizing:border-box}body{font:10px Arial,sans-serif;color:#18212b;margin:0}h1{font-size:17px;margin:0;text-align:center}h2{font-size:11px;margin:12px 0 5px;border-bottom:1px solid #333;padding-bottom:4px}header{border-bottom:2px solid #222;padding-bottom:8px;margin-bottom:8px}header p{text-align:center;margin:4px 0;font-size:10px}.meta{display:flex;justify-content:space-between;margin:8px 0;font-weight:bold}.grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px}.field{border-bottom:1px solid #d5dbe2;padding:3px 0;min-height:17px}.field b{display:inline-block;min-width:115px}.full{grid-column:1/-1}table{width:100%;border-collapse:collapse;margin-top:4px}th,td{border:1px solid #89929b;padding:4px;text-align:left}th{background:#f0f2f4}.num{text-align:right;white-space:nowrap}.totals{margin:7px 0 0 auto;width:48%;font-weight:bold}.totals div{display:flex;justify-content:space-between;padding:3px 0}.note{border:1px solid #777;padding:7px;margin-top:10px;font-weight:bold;font-size:10px}.sign{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:28px}.sign div{border-top:1px solid #222;padding-top:5px;text-align:center}.small{font-size:8px;color:#444}.keep{break-inside:avoid}@media print{button{display:none}}</style></head><body><header><h1>SIDDHIVINAYAK MOTORS PVT. LTD.</h1><p>AUTHORISED DEALER : MAHINDRA &amp; MAHINDRA LIMITED</p><div class="meta"><span>OTF ORDER BOOK: '+escHtml(order.order_number)+'</span><span>Date: '+escHtml(order.booking_date)+'</span></div></header><div class="grid"><div class="field"><b>Quotation No.:</b> '+escHtml(q.quote_number)+'</div><div class="field"><b>Enquiry No.:</b> '+escHtml(order.enquiry_number)+'</div><div class="field"><b>Customer ID:</b> '+escHtml(order.customer_id)+'</div><div class="field"><b>GSTIN:</b> '+escHtml(order.customer_gstin)+'</div><div class="field"><b>Name:</b> '+escHtml(order.customer_name)+'</div><div class="field"><b>Mobile:</b> '+escHtml(order.phone)+'</div><div class="field full"><b>Address:</b> '+escHtml(order.address)+'</div><div class="field"><b>City / District:</b> '+escHtml([order.city,order.district].filter(Boolean).join(' / '))+'</div><div class="field"><b>Email:</b> '+escHtml(order.email)+'</div><div class="field"><b>Aadhaar:</b> '+escHtml(order.aadhaar_number)+'</div><div class="field"><b>PAN:</b> '+escHtml(order.pan_number)+'</div><div class="field"><b>HPA:</b> '+escHtml(order.hpa)+'</div><div class="field"><b>Booking Amount:</b> '+otfMoney(order.booking_amount)+'</div><div class="field"><b>DOB:</b> '+escHtml(order.dob)+'</div><div class="field"><b>Marriage Anniversary:</b> '+escHtml(order.marriage_anniversary)+'</div><div class="field"><b>Nominee:</b> '+escHtml([order.nominee,order.nominee_relationship,order.nominee_age].filter(Boolean).join(' / '))+'</div><div class="field"><b>Sales Executive:</b> '+escHtml(order.sales_person)+'</div></div><h2>VEHICLE DETAILS — VERIFIED FROM STOCK REGISTER</h2><div class="grid"><div class="field"><b>Model:</b> '+escHtml(order.model)+'</div><div class="field"><b>Variant:</b> '+escHtml(order.variant)+'</div><div class="field"><b>Colour:</b> '+escHtml(order.colour)+'</div><div class="field"><b>Chassis No.:</b> '+escHtml(order.chassis_number)+'</div><div class="field"><b>Engine No.:</b> '+escHtml(order.engine_number)+'</div><div class="field"><b>Stock Stage:</b> '+escHtml(v.stage)+'</div></div><h2>QUOTATION PRICE BREAKUP</h2><table><thead><tr><th>Particular</th><th class="num">Amount</th></tr></thead><tbody>'+rows+'</tbody></table><div class="totals"><div><span>Subtotal</span><span>'+otfMoney(q.subtotal)+'</span></div><div><span>Total Discount</span><span>− '+otfMoney(q.discount)+'</span></div><div><span>GRAND TOTAL</span><span>'+otfMoney(q.total)+'</span></div></div><h2>EXCHANGE DETAILS</h2><div class="grid"><div class="field"><b>Old Car:</b> '+escHtml(exchange.model)+'</div><div class="field"><b>Registration:</b> '+escHtml(exchange.registration)+'</div><div class="field"><b>M.F. Year:</b> '+escHtml(exchange.manufacturing_year)+'</div><div class="field"><b>Old Value:</b> '+otfMoney(exchange.old_value)+'</div><div class="field"><b>Extra Support:</b> '+otfMoney(exchange.extra_support)+'</div><div class="field"><b>Total Exchange:</b> '+otfMoney(exchange.total_value)+'</div></div><h2>ACCESSORIES DETAILS</h2><table><thead><tr><th>SL</th><th>Item</th><th>Part No.</th><th class="num">Amount</th></tr></thead><tbody>'+accRows+'</tbody></table><h2>PAYMENT DETAILS</h2><table><thead><tr><th>SL</th><th>Payment</th><th>Date</th><th class="num">Amount</th><th>Mode / Reference</th></tr></thead><tbody>'+payRows+'</tbody></table><div class="note">ખાસ નોંધ: બુકિંગ કરાવ્યા બાદ વાહનના ભાવમાં જે વધઘટ થશે તે ગ્રાહકના શિરે રહેશે. વાહન ડિલિવરી સમયે જે ભાવ હશે તે જ લાગુ પડશે.</div><div class="small" style="margin-top:7px">Subject to Bhavnagar Jurisdiction. This order book is generated from the selected quotation and the independently verified stock chassis record.</div><div class="sign"><div>Customer Signature</div><div>SC Sign.</div><div>SM Sign.</div></div><script>window.onload=()=>window.print();</script></body></html>');
+    w.document.close();
+  }
+  async function loadOtfRegister(){
+    if(!has('quotation_management','view'))return;
+    const rows=await call(db().from('otf_order_books').select('*').eq('department',otfDepartment).order('created_at',{ascending:false}).limit(500));
+    otfSavedRows=rows;
+    const body=$('otfRegisterRows');if(!body)return;
+    body.innerHTML=rows.length?rows.map((r,i)=>'<tr><td><b>'+esc(r.order_number)+'</b></td><td>'+new Date(r.created_at).toLocaleDateString('en-IN')+'</td><td>'+esc(r.customer_name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc([r.model,r.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(r.chassis_number)+'</td><td>'+otfMoney(r.booking_amount)+'</td><td><span class="pill '+(r.status==='BOOKED'?'green':'red')+'">'+esc(r.status)+'</span></td><td><button class="btn small" data-otf-print="'+i+'">Print A4</button></td></tr>').join(''):'<tr><td colspan="9" class="empty">No OTF order books found for '+esc(otfDepartment)+'.</td></tr>';
+    body.querySelectorAll('[data-otf-print]').forEach(btn=>btn.addEventListener('click',()=>otfPrintDocument(otfSavedRows[Number(btn.dataset.otfPrint)])));
+  }
+  async function saveOtfOrder(printAfter=false){
+    let popup=null;
+    if(printAfter)popup=window.open('','_blank','width=1000,height=760');
+    try{
+      if(!has('quotation_management','create'))throw new Error('OTF create permission required.');
+      const payload=buildOtfPayload();
+      const saved=await call(db().from('otf_order_books').insert(payload).select('*').single());
+      await audit('quotation_management','create','Created OTF Order Book','otf_order_book',saved.id,{order_number:saved.order_number,department:saved.department,quotation_id:saved.quotation_id,vehicle_id:saved.vehicle_id});
+      await loadOtfRegister();
+      otfSetStatus('Saved successfully: '+saved.order_number);
+      if($('otfPrintPreview'))$('otfPrintPreview').disabled=false;
+      if(printAfter)otfPrintDocument(saved,popup);
+      else notify('OTF Order Book saved: '+saved.order_number);
+      return saved;
+    }catch(e){if(popup)popup.close();console.error(e);otfSetStatus(e.message||'Could not save OTF Order Book.',true);notify(e.message||'OTF save failed.');return null;}
+  }
+  function bindOtfUi(){
+    if($('otfSearchQuotes')&&!$('otfSearchQuotes').dataset.bound){
+      $('otfSearchQuotes').dataset.bound='1';
+      $('otfSearchQuotes').addEventListener('click',()=>searchOtfQuotes().catch(e=>{notify(e.message);}));
+      $('otfPhoneSearch')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchOtfQuotes().catch(x=>notify(x.message));}});
+      $('otfVerifyChassis')?.addEventListener('click',()=>verifyOtfChassis().catch(e=>{otfVerifiedVehicle=null;if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent=e.message;}if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;notify(e.message);}));
+      $('otfSaveOrder')?.addEventListener('click',()=>saveOtfOrder(false));
+      $('otfSavePrintOrder')?.addEventListener('click',()=>saveOtfOrder(true));
+      $('otfPrintPreview')?.addEventListener('click',()=>{if(otfSelectedQuote&&otfVerifiedVehicle){const draft=buildOtfPayload();otfPrintDocument({...draft,order_number:'PREVIEW',created_at:new Date().toISOString()});}});
+      $('otfAddPayment')?.addEventListener('click',addOtfPayment);
+      $('otfAddAccessory')?.addEventListener('click',addOtfAccessory);
+      $('otfRefresh')?.addEventListener('click',()=>loadOtfRegister().then(()=>notify('OTF register refreshed')).catch(e=>notify(e.message)));
+    }
+  }
+
   async function init() {
     if(!window.supabase?.createClient) throw new Error('Supabase JavaScript SDK failed to load.');
     client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -1856,6 +2029,7 @@
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
     window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit};
+    window.SVMBackend.loadOtfRegister=loadOtfRegister;
     window.dispatchEvent(new Event('svm:ready'));
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
