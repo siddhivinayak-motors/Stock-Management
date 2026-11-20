@@ -92,64 +92,43 @@
  }
  async function parseFiles(files){
   if(!window.XLSX)throw new Error('Excel reader could not load. Reload the page with internet access and try again.');
-  var stock=window.svPriceListStockRows||[],all=[],warnings=[],sheets=0,fileObjects=[];
-  for(var i=0;i<files.length;i++){var file=files[i],fileDepartments=new Set(),buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true});for(var s=0;s<wb.SheetNames.length;s++){var name=wb.SheetNames[s],matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:true}),parsed=parseSheet(matrix,file.name,name,stock);sheets++;if(parsed.items.length){all=all.concat(parsed.items);parsed.items.forEach(function(x){fileDepartments.add(x.department)})}else warnings.push(file.name+' / '+name+': '+parsed.warning);if(parsed.skippedColumns)warnings.push(file.name+' / '+name+': '+parsed.skippedColumns+' numeric column(s) without a variant name were skipped')}file.priceListDepartments=Array.from(fileDepartments);fileObjects.push(file)}
+  var all=[],warnings=[],sheets=0,fileObjects=[];
+  for(var i=0;i<files.length;i++){var file=files[i],fileDepartments=new Set(),buf=await file.arrayBuffer(),wb=XLSX.read(buf,{type:'array',cellDates:true});for(var s=0;s<wb.SheetNames.length;s++){var name=wb.SheetNames[s],matrix=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:'',raw:true}),parsed=parseSheet(matrix,file.name,name,[]);sheets++;if(parsed.items.length){all=all.concat(parsed.items);parsed.items.forEach(function(x){fileDepartments.add(x.department)})}else warnings.push(file.name+' / '+name+': '+parsed.warning);if(parsed.skippedColumns)warnings.push(file.name+' / '+name+': '+parsed.skippedColumns+' numeric column(s) without a variant name were skipped')}file.priceListDepartments=Array.from(fileDepartments);fileObjects.push(file)}
   var seen=new Set(),uniqueRows=[],duplicates=[];all.forEach(function(x){var k=norm(x.department)+'|'+norm(x.vehicle)+'|'+norm(variantKey(x.variant))+'|'+norm(x.colour);if(seen.has(k)){duplicates.push(x.vehicle+' / '+x.variant);return}seen.add(k);uniqueRows.push(x)});
   return {rows:uniqueRows,files:files.map(function(f){return f.name}),fileObjects:fileObjects,sheets:sheets,warnings:warnings,duplicates:duplicates,duplicatesSkipped:duplicates.length};
  }
  function getRows(){var by=window.plData||{},out=[];Object.keys(by).forEach(function(k){(by[k]||[]).forEach(function(x){out.push(x)})});return out}
- function getStock(){return window.svPriceListStockRows||[]}
  function unique(a){return Array.from(new Set(a.filter(Boolean))).sort(function(x,y){return String(x).localeCompare(String(y))})}
  function fillSelect(el,values,placeholder){if(!el)return;var cur=el.value,html='<option value="">'+esc(placeholder)+'</option>';values.forEach(function(v){html+='<option value="'+esc(v)+'">'+esc(v)+'</option>'});el.innerHTML=html;if(values.indexOf(cur)>=0)el.value=cur}
  function populateFilters(){
-  var stock=getStock(),model=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',models=unique(stock.map(function(r){return clean(r.model)}));
+  var rows=getRows(),model=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',models=unique(rows.map(function(r){return clean(r.vehicle)}));
   fillSelect($('plStockVehicle'),models,'All vehicles');if(model&&models.indexOf(model)>=0)$('plStockVehicle').value=model;
-  var mr=stock.filter(function(r){return !model||clean(r.model)===model}),variants=unique(mr.map(function(r){return clean(r.variant)}));
+  var mr=rows.filter(function(r){return !model||modelKey(r.vehicle)===modelKey(model)}),variants=unique(mr.map(function(r){return clean(r.variant)}));
   fillSelect($('plStockVariant'),variants,'All variants');$('plStockVariant').disabled=!model;if(variant&&variants.indexOf(variant)>=0)$('plStockVariant').value=variant;
-  var chosen=$('plStockVariant')?.value||'',cr=mr.filter(function(r){return !chosen||clean(r.variant)===chosen});
-  fillSelect($('plStockColour'),unique(cr.map(function(r){return clean(r.colour)})),'All colours');$('plStockColour').disabled=!model;
  }
- function stockFilterChanged(which){if(which==='vehicle')$('plStockVariant').value='';if(which==='vehicle'||which==='variant')$('plStockColour').value='';populateFilters();render()}
- function resetFilters(){['plStockVehicle','plStockVariant','plStockColour','plSearch'].forEach(function(id){if($(id))$(id).value=''});populateFilters();render()}
+ function stockFilterChanged(which){if(which==='vehicle')$('plStockVariant').value='';populateFilters();render()}
+ function resetFilters(){['plStockVehicle','plStockVariant','plSearch'].forEach(function(id){if($(id))$(id).value=''});populateFilters();render()}
  function breakup(item){
   var parts=(item.other_data||item).components||[];if(!parts.length)return '<span class="muted">—</span>';
   return '<details class="pl-breakup"><summary>View breakup</summary><div class="pl-breakup-content">'+parts.map(function(p){return '<div class="pl-breakup-row"><span>'+esc(p.label)+'</span><b>'+money(p.value)+'</b></div>'}).join('')+'</div></details>';
  }
  function render(){
-  populateFilters();var rows=getRows(),stock=getStock(),model=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',colour=$('plStockColour')?.value||'',q=clean($('plSearch')?.value).toLowerCase(),out=rows;
-  if(model)out=out.filter(function(x){return modelKey(x.vehicle)===modelKey(model)});if(variant)out=out.filter(function(x){return variantMatch(variant,x.variant)});if(colour){var stockVariants=unique(stock.filter(function(r){return modelKey(r.model)===modelKey(model)&&norm(r.colour)===norm(colour)&&(!variant||variantMatch(variant,r.variant))}).map(function(r){return r.variant}));if(stockVariants.length)out=out.filter(function(x){return stockVariants.some(function(v){return variantMatch(v,x.variant)})});else out=out.filter(function(x){return x.colour&&norm(x.colour)===norm(colour)})}if(q)out=out.filter(function(x){var text=[x.vehicle,x.variant,x.colour,x.source_file,x.sourceFile,x.sourceSheet].join(' ').toLowerCase();var colourHit=stock.some(function(r){return modelKey(r.model)===modelKey(x.vehicle)&&variantMatch(r.variant,x.variant)&&clean(r.colour).toLowerCase().indexOf(q)>=0});return text.indexOf(q)>=0||colourHit});
+  populateFilters();var rows=getRows(),model=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',q=clean($('plSearch')?.value).toLowerCase(),out=rows;
+  if(model)out=out.filter(function(x){return modelKey(x.vehicle)===modelKey(model)});if(variant)out=out.filter(function(x){return variantMatch(variant,x.variant)});if(q)out=out.filter(function(x){var text=[x.vehicle,x.variant,x.colour,x.source_file,x.sourceFile,x.sourceSheet].join(' ').toLowerCase();return text.indexOf(q)>=0});
   out.sort(function(a,b){return String(a.vehicle).localeCompare(String(b.vehicle))||String(a.variant).localeCompare(String(b.variant))});
   var body=$('plRows');if(body)body.innerHTML=out.length?out.map(function(x){
    var d=x.other_data||x,ex=Number(x.exShowroom!=null?x.exShowroom:x.ex_showroom||d.exShowroom||0),rto=Number(x.rto||d.rto||0),total=Number(d.onRoadTotal||d.totalOnRoad||0);
    if(!total)total=ex+Number(d.tcs||0)+Number(d.insurance||0)+rto+Number(d.other||0);
-   var matched=stock.filter(function(r){
-    if(modelKey(r.model)!==modelKey(x.vehicle)||!variantMatch(r.variant,x.variant))return false;
-    var st=clean(r.status).toLowerCase(),stage=clean(r.stage).toLowerCase();
-    if(st&&st.indexOf('delivered')>=0)return false;
-    if(stage&&(/hold|allot|deliver|sold/.test(stage)))return false;
-    return true;
-   });
-   var colours=unique(matched.map(function(r){return clean(r.colour)}));
-   var count=matched.length,stockMark=count
-    ?'<span class="pl-stock-indicator is-available"><i></i>In Stock · '+count+'</span>'
-    :'<span class="pl-stock-indicator is-unavailable"><i></i>Not in Stock</span>';
-   var colourText=colours.length?colours.join(', '):(x.colour||'—');
-   return '<tr><td>'+stockMark+'<b>'+esc(x.vehicle)+'</b></td><td>'+esc(x.variant)+'</td><td>'+esc(colourText)+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>';
+   return '<tr><td><b>'+esc(x.vehicle)+'</b></td><td>'+esc(x.variant)+'</td><td>'+esc(x.colour||'—')+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>';
   }).join(''):'<tr><td colspan="9" class="empty">'+(rows.length?'No uploaded price list matches these filters. Try another model or use direct search.':'No price lists have been uploaded yet. Use Upload Price Lists to add the Excel files.')+'</td></tr>';
   if($('plResultsSummary'))$('plResultsSummary').textContent=out.length+' variant price(s)'+(rows.length?' · '+rows.length+' total uploaded':'');
-  if($('plStockSummary'))$('plStockSummary').textContent=stock.length?unique(stock.map(function(x){return x.model})).length+' stock models available':'Stock filters unavailable — use direct search';
+  if($('plStockSummary'))$('plStockSummary').textContent='';
   try{plData=window.plData||{}}catch(e){}
- }
- if(!document.getElementById('plStockIndicatorStyles')){
-  var stockStyle=document.createElement('style');stockStyle.id='plStockIndicatorStyles';
-  stockStyle.textContent='.pl-stock-indicator{display:inline-flex;align-items:center;gap:6px;margin:0 0 5px;padding:3px 7px;border-radius:20px;font-size:10px;font-weight:800;white-space:nowrap}.pl-stock-indicator i{width:7px;height:7px;border-radius:50%;display:inline-block}.pl-stock-indicator.is-available{color:#137a43;background:#e8f7ee}.pl-stock-indicator.is-available i{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.12)}.pl-stock-indicator.is-unavailable{color:#7b8490;background:#f0f2f4}.pl-stock-indicator.is-unavailable i{background:#9ca3af}';
-  document.head.appendChild(stockStyle);
  }
  function status(msg,error){var el=$('plInlineStatus');if(el){el.textContent=msg||'';el.className='pl-inline-status'+(error?' error':'')}}
  async function refresh(){
-  status('Refreshing price lists and stock filters…');var api=window.SVMBackend;if(!api){status('Secure backend is still starting. Try Refresh again in a moment.',true);return}
-  var jobs=[api.loadPriceLists()];if(api.loadPriceListStock)jobs.push(api.loadPriceListStock().catch(function(e){status('Stock filters could not load: '+e.message,true);return []}));
-  await Promise.all(jobs);render();status('Price list is up to date.');
+  status('Refreshing price lists…');var api=window.SVMBackend;if(!api){status('Secure backend is still starting. Try Refresh again in a moment.',true);return}
+  await api.loadPriceLists();render();status('Price list is up to date.');
  }
  function showPreview(rows){var body=$('plPreviewRows');body.innerHTML=rows.slice(0,60).map(function(x){return '<tr><td>'+esc(x.sourceFile+' / '+x.sourceSheet)+'</td><td>'+esc(x.vehicle)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.department)+'</td><td>'+money(x.exShowroom)+'</td><td>'+money(x.onRoadTotal)+'</td></tr>'}).join('')+(rows.length>60?'<tr><td colspan="6" class="muted">Showing first 60 of '+rows.length+' variants. All detected variants will be saved.</td></tr>':'')}
  async function preview(){
