@@ -1056,7 +1056,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <div class="page-head stock-page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1 id="stockPageTitle">Personal — Stock Register</h1><div class="subtitle" id="stockPageSubtitle">Personal · Live operational workspace</div></div><div class="stock-page-actions"><button class="btn stock-refresh-button" type="button" onclick="toast('Stock refreshed')">⟳ &nbsp;Refresh</button><button class="btn" type="button" id="stockPrintPdfButton" onclick="window.openStockPrintPreview?.()">Print / PDF</button></div></div>
  <div class="toolbar stock-toolbar"><div class="search stock-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input placeholder="Search chassis, model, variant, colour, customer..." id="stockSearch"></div><div class="stock-filter-grid"><label class="stock-filter-control"><span>Department</span><select id="stockDepartmentFilter"><option>All Accessible Departments</option></select></label><label class="stock-filter-control"><span>Stock Status</span><select id="stockStatusFilter"><option value="All">All Statuses</option><option value="In Transit">In Transit</option><option value="Received">Received</option><option value="Delivered">Delivered</option></select></label><label class="stock-filter-control"><span>Stock Stage</span><select id="stockStageFilter"><option value="ACTIVE" selected>Active Stock</option><option value="All">All Records</option><option value="EXITED">Exited Vehicles</option><option value="OPEN">OPEN</option><option value="ALLOTED">ALLOTED</option><option value="HOLD">HOLD</option><option value="DAMAGE">DAMAGE</option><option value="RETAIL">RETAIL</option><option value="DEMO">DEMO</option><option value="TRANSFER_OUT">TRANSFER OUT</option><option value="OTHER">OTHER</option></select></label><label class="stock-filter-control"><span>Ageing Sort</span><select id="stockAgeSort" title="Sort vehicles by ageing"><option value="oldest">Oldest Age First</option><option value="newest">Newest Age First</option></select></label></div></div>
  <div class="card"><div class="card-head"><div class="card-title">0 records · Add or import stock to begin</div><button class="btn primary small" id="addVehicle">＋ Add Vehicle</button></div><div class="card-body" id="vehicleForm" style="display:none"><div class="form-grid"><div class="field" id="stockNewVehicleDepartmentWrap"><label>Department</label><select id="stockDepartmentForNewVehicle" class="field"></select></div><div class="field"><label>Chassis Number</label><input placeholder="Enter chassis number"></div><div class="field"><label>Excel Number</label><input></div><div class="field"><label>Model</label><input></div><div class="field"><label>Variant</label><input></div><div class="field"><label>Seating</label><input></div><div class="field"><label>Colour</label><input></div><div class="field"><label>Manufacturing Year</label><input></div><div class="field"><label>OEM Invoice Date</label><input type="date"></div><div class="field"><label>Engine Number</label><input></div><div class="field"><label>SC Name</label><input></div><div class="field"><label>Customer Name</label><input></div><div class="field"><label>Status</label><select><option>Received / In Stock</option><option>Delivered</option></select></div><div class="field"><label>Stage</label><select><option>OPEN</option><option>HOLD</option><option>ALLOTED</option></select></div><div class="field"><label>Place</label><input></div></div><div style="text-align:right;margin-top:14px"><button class="btn primary" onclick="toast('Demo only — connect database to save')">Save Vehicle</button></div></div>
- <div class="table-wrap"><table id="stockTable"><thead><tr><th>Chassis Number</th><th>Model / Variant</th><th>Seating</th><th>Colour</th><th>Mfg Year</th><th>OEM Invoice</th><th>Ageing</th><th>SC Name</th><th>Customer</th><th>Status</th><th>Stage</th><th>Actions</th></tr></thead><tbody><tr><td colspan="11" class="empty">No stock records yet. Add a vehicle or import a stock file.</td></tr></tbody></table></div></div>
+ <div class="table-wrap"><table id="stockTable"><thead><tr><th>SR.NO</th><th>MODEL</th><th>VARIENTS</th><th>SEATING</th><th>COLOR</th><th>MFG YEAR</th><th>OEM INVOICE DATE</th><th>CHASSIS NUMBER</th><th>ENGINE NUMBER</th><th>STATUS</th><th>PLACE</th><th>AGEING</th><th>STAGE</th><th>SC NAME</th><th>CUSTOMER NAME</th><th>ALLOTED DATE</th><th>ALLOTED AGEING</th><th>ACTIONS</th></tr></thead><tbody><tr><td colspan="18" class="empty">No stock records yet. Import the STOCK worksheet to begin.</td></tr></tbody></table></div></div>
 </section>
 <section class="view" id="view-employees">
  <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Employee Management</h1><div class="subtitle">Live operational workspace</div></div><button class="btn" onclick="window.SVMBackend?.refreshEmployees?.()">⟳ &nbsp;Refresh</button></div>
@@ -1777,7 +1777,18 @@ function quoteFindPriceMatch(){
 function quoteApplyPriceList(selectedMatch){
  const match=selectedMatch||quoteFindPriceMatch();if(!match)return false;
  const details=Array.isArray(match.components)?match.components:(Array.isArray(match.other_data?.components)?match.other_data.components:[]);
- const usable=details.filter(p=>p&&String(p.label||'').trim()&&!/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(p.label)&&!/insurance\s*\(\s*taxi/i.test(p.label)&&!/accessor|coation|coating|ceramic|\bppf\b/i.test(p.label));
+ const isEv=String(match.department||currentQuoteDepartment||'').toUpperCase()==='EV';
+ let usable;
+ if(isEv){
+  const a=details.find(p=>/^A$/i.test(String(p.label||'').trim()));
+  const b=details.find(p=>/^B$/i.test(String(p.label||'').trim()));
+  const ab=details.find(p=>/^A\\s*\\+\\s*B$/i.test(String(p.label||'').trim()));
+  const combined=ab?Number(ab.value||0):(Number(a?.value||0)+Number(b?.value||0));
+  usable=details.filter(p=>p&&String(p.label||'').trim()&&!/^A$|^B$|^A\\s*\\+\\s*B$/i.test(String(p.label||'').trim())&&!/total\\s*on[\\s-]*road|on[\\s-]*road\\s*total/i.test(p.label)&&!/insurance\\s*\\(\\s*taxi/i.test(p.label)&&!/accessor|coation|coating|ceramic|\\bppf\\b/i.test(p.label));
+  usable.unshift({label:'Ex-Showroom (A+B)',value:combined});
+ }else{
+  usable=details.filter(p=>p&&String(p.label||'').trim()&&!/total\\s*on[\\s-]*road|on[\\s-]*road\\s*total/i.test(p.label)&&!/insurance\\s*\\(\\s*taxi/i.test(p.label)&&!/accessor|coation|coating|ceramic|\\bppf\\b/i.test(p.label));
+ }
  const rows=usable.length?usable:[
   {label:'Ex-Showroom Price',value:match.exShowroom??match.ex_showroom??0},
   {label:'TCS',value:match.tcs??match.other_data?.tcs??0},
@@ -1830,6 +1841,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="././backend/supabase-runtime.js?v=quotation-date-iso-20261120c"></script>
+<script src="././backend/supabase-runtime.js?v=stock-sheet-columns-20261120a"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
