@@ -470,6 +470,7 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
 .q-form-grid input,.q-form-grid textarea{width:100%;border:1px solid #dfe5ec;border-radius:8px;padding:10px 11px;min-height:39px;font:inherit;font-weight:500;color:#25313d;background:#fff}
 .q-form-grid input:focus,.q-form-grid textarea:focus{outline:none;border-color:#e51e2a;box-shadow:0 0 0 3px #e51e2a12}
 .q-charge-name{font-size:11px;font-weight:700;line-height:1.4;padding:0 8px}
+ .q-charge-editable{width:100%;min-width:0;border:1px solid #e2e7ee;border-radius:7px;padding:8px;background:#fff;font:inherit;color:inherit}
 .quote-charge-list .charge-row{grid-template-columns:38px minmax(220px,1fr) minmax(150px,220px) 36px;align-items:center}
 .quote-charge-list .discount-charge{background:#f0fbf4;border:1px solid #cfead8;border-radius:9px}
 .discount-charge .q-charge-name,.discount-total b{color:#168447}
@@ -1242,6 +1243,7 @@ document.getElementById('addVehicle').addEventListener('click',()=>{const f=docu
 document.getElementById('stockSearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#stockTable tbody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')});
 
 const charges=document.getElementById('charges');
+const defaultQuoteChargeMarkup=charges.innerHTML;
 const quoteStoreKey='sv_quote_records_clean_v2';
 const demoQuotes=[];
 let quoteRecords;
@@ -1682,7 +1684,9 @@ function resetQuotationForm(){
  setQuotationDateTime();
  const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
  const stockSuggestions=document.getElementById('qStockSuggestions');if(stockSuggestions){stockSuggestions.hidden=true;stockSuggestions.innerHTML='';}
- charges.querySelectorAll('.amount').forEach(e=>e.value='');updateQuoteNumber();calc();
+ charges.innerHTML=defaultQuoteChargeMarkup;charges.querySelectorAll('.amount').forEach(e=>e.value='');
+ const priceStatus=document.getElementById('qPriceListStatus');if(priceStatus)priceStatus.textContent='Select a vehicle and variant to check the Price List.';
+ updateQuoteNumber();calc();
 }
 
 function refreshQuotePriceSuggestions(){
