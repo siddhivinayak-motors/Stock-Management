@@ -522,7 +522,7 @@
     if(!has('quotation_management','view')) throw new Error('No quotation view permission.');
     const out=[];let from=0,chunk=500;
     while(true){
-      const part=await call(db().from('quotations').select('*,quotation_items(*),creator:profiles!quotations_created_by_fkey(full_name)').eq('department',department).order('created_at',{ascending:false}).range(from,from+chunk-1));
+      const part=await call(db().from('quotations').select('*,quotation_items(*)').eq('department',department).order('created_at',{ascending:false}).range(from,from+chunk-1));
       out.push(...part);if(part.length<chunk)break;from+=chunk;
     }
     return out;
@@ -536,7 +536,7 @@
     address:row.address||'',vehicleNos:String(row.vehicle_count??1),hypo:row.hypo||'',
     model:row.model||'',carDescription:row.car_description||'',variant:row.variant||'',colour:row.colour||'',
     vehicle:[row.model,row.variant].filter(Boolean).join(' · '),chassis:row.chassis||'',
-    salesPerson:row.sales_person||'',by:row.creator?.full_name||'—',
+    salesPerson:row.sales_person||'',by:row.created_by_name||(row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'—'),
     contactPerson:row.contact_person||'',contactMobile:row.contact_mobile||'',email:row.email||'',
     branchAddress:row.branch_address||'',helpline:row.helpline||'',pan:row.pan||'',gstin:row.gstin||'',
     total:Number(row.total||0),subtotal:Number(row.subtotal||0),discount:Number(row.discount||0),
