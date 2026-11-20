@@ -979,6 +979,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
    <details class="quote-more"><summary>＋ More customer details (optional)</summary>
     <div class="q-form-grid">
      <label>Address<textarea id="qAddress" rows="2" placeholder="Full billing address"></textarea></label>
+     <label>Customer GSTIN No.<input id="qCustomerGSTIN" maxlength="15" placeholder="GSTIN (if applicable)" autocomplete="off"></label>
      <label>Vehicle Nos.<input id="qVehicleNos" placeholder="1"></label>
      <label>Hypothecation<input id="qHypo" placeholder="NA / CASH / Bank name"></label>
     </div>
@@ -992,11 +993,25 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <label>Stock Chassis Number<input id="qChassis" placeholder="Auto-filled when selected from Stock Register" readonly aria-readonly="true" tabindex="-1"></label>
     <label>Car Description<input id="qCarDesc" placeholder="Vehicle description"></label>
     
-    <label>Sales Consultant<input id="qSalesPerson" placeholder="Auto-filled from logged-in employee" readonly aria-readonly="true"></label>
+    <label>Sales Consultant Name<input id="qSalesPerson" placeholder="Auto-filled from logged-in employee" readonly aria-readonly="true"></label>
+    <label>Sales Consultant Mobile<input id="qSalesMobile" placeholder="Auto-filled from employee profile" readonly aria-readonly="true"></label>
    </div>
    <div class="q-section-heading">03 · PRICE DETAILS</div>
    <div class="quote-charge-heading"><div><h3>Particulars &amp; Amount</h3><p>Matching Model + Variant will load the complete current Price List breakdown. Edit or remove any line, or add your own charges.</p><small id="qPriceListStatus" class="muted">Select a vehicle and variant to check the Price List.</small></div><button class="btn small" id="addCharge">＋ Add Other Charge</button></div>
-   <div class="quote-charge-list" id="charges"><div class="charge-row"><span class="charge-index">01</span><div class="q-charge-name">EX. SHOWROOM WITH CHARGER</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="Ex. Showroom With Charger"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">02</span><div class="q-charge-name">TCS</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="TCS"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">03</span><div class="q-charge-name">INSURANCE (CONSUMABLES, RETURN TO INVOICE, ENGINE GUARD AND DEPRECIATION REIMBURSEMENT) 1+2</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="Insurance (Consumables, RTI, Engine Guard, Depreciation Reimbursement)"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">04</span><div class="q-charge-name">BMC TAX</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="BMC Tax"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">05</span><div class="q-charge-name">REGISTRATION / CRTM (IF COMPANY REG 12% TAX)</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="Registration / CRTM"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">06</span><div class="q-charge-name">HYPOTHECATION ADDITION</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="Hypothecation Addition"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">07</span><div class="q-charge-name">EXTENDED WARRANTY 4TH</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="Extended Warranty 4th"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">08</span><div class="q-charge-name">VLD DEVICE CHARGE ONLY FOR TAXI PASSING</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="VLD Device Charge"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">09</span><div class="q-charge-name">ACCESSORIES</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="Accessories"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">10</span><div class="q-charge-name">MAXI CARE / CERAMIC COATING / PPF</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="Maxi Care / Ceramic Coating / PPF"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">11</span><div class="q-charge-name">RSA</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="RSA"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row"><span class="charge-index">12</span><div class="q-charge-name">RTO CHARGE</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="" data-charge="RTO Charge"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove charge">×</button></div><div class="charge-row discount-charge"><span class="charge-index">13</span><div class="q-charge-name">(-) LESS — COMPANY DISCOUNT, DEALER MARGIN AND INSURANCE DISCOUNT</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" id="quoteDiscount" type="number" min="0" step="0.01" placeholder="0.00" value="" data-charge="Discount"></div><span class="discount-lock">LESS</span></div></div>
+   <div class="quote-charge-list" id="charges">
+    <div class="charge-row"><span class="charge-index">01</span><div class="q-charge-name">EX-SHOWROOM</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Ex-Showroom"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row"><span class="charge-index">02</span><div class="q-charge-name">TCS</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="TCS"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row"><span class="charge-index">03</span><div class="q-charge-name">INSURANCE</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Insurance"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row"><span class="charge-index">04</span><div class="q-charge-name">RTO</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="RTO"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row"><span class="charge-index">05</span><div class="q-charge-name">ACCESSORIES</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Accessories"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row"><span class="charge-index">06</span><div class="q-charge-name">SHIELD</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Shield"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row"><span class="charge-index">07</span><div class="q-charge-name">RSA</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="RSA"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row"><span class="charge-index">08</span><div class="q-charge-name">COATING</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Coating"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row"><span class="charge-index">09</span><div class="q-charge-name">BMC TAX</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="BMC Tax"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row"><span class="charge-index">10</span><div class="q-charge-name">OTHERS</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Others"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
+    <div class="charge-row discount-charge"><span class="charge-index">11</span><div class="q-charge-name">LESS RETAIL OFFER (If any)</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Retail Offer"></div><span class="discount-lock">LESS</span></div>
+    <div class="charge-row discount-charge"><span class="charge-index">12</span><div class="q-charge-name">LESS EXCHANGE BONUS (If any)</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Exchange Bonus"></div><span class="discount-lock">LESS</span></div>
+   </div>
    <div class="quote-total-panel">
     <div class="total-line"><span>Subtotal</span><b id="subtotal">₹0.00</b></div>
     <div class="total-line discount-total"><span>(-) Less / Discount</span><b id="discount">− ₹0.00</b></div>
@@ -1366,129 +1381,76 @@ function getQuotePayload(){
  const phone=document.getElementById('qPhone').value.trim();
  if(!model||!customer||phone.length!==10){toast('Enter vehicle model, customer name and valid 10-digit mobile');return null}
  const items=[];
- charges.querySelectorAll('.charge-row').forEach(r=>{const name=(r.querySelector('.q-charge-name')?.textContent||r.querySelector('select')?.value||r.querySelector('.q-charge-editable')?.value||r.querySelector('.amount')?.dataset.charge||'Charge').trim();const amount=Number(r.querySelector('.amount').value)||0;items.push({name,amount,discount:name.toLowerCase()==='discount'})});
+ charges.querySelectorAll('.charge-row').forEach(r=>{
+  const name=(r.querySelector('.q-charge-name')?.textContent||r.querySelector('.q-charge-name')?.value||r.querySelector('select')?.value||r.querySelector('.q-charge-editable')?.value||r.querySelector('.amount')?.dataset.charge||'Charge').trim();
+  const amount=Number(r.querySelector('.amount')?.value)||0;
+  items.push({name,amount,discount:isDiscountChargeRow(r)});
+ });
  const amountWords=numberWordsIndian(totals.total);
  const terms=[
-  "All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.",
-  "Kindly insist for receipt of all payments made.",
-  "Subject to availability of stock and colour.",
-  "Price prevailing at the time of delivery shall be applicable.",
-  "Prices are subject to change without any notice.",
-  "Subject to Bhavnagar jurisdiction."
+  "Price and retail offers/schemes, if any, ruling at the time of delivery will be applicable. Prices and taxes are subject to change without notice as per company policy and government regulations. Prices and taxes prevailing on the date of delivery will apply. Any new central, state or local levies will be extra.",
+  "Delivery is subject to availability of vehicles as per manufacturer supply. The dealership cannot confirm a delivery date until confirmation is received from the principal company.",
+  "No interest is payable on the booking amount given by the customer.",
+  "Payment for booking or final purchase may be made by Cheque, DD or Netbanking. Cheque payment is subject to realization."
  ];
- const bank={accountName:"SIDDHIVINAYAK MOTORS PVT. LTD.",bank:"State Bank of India",account:"33349775105",ifsc:"SBIN0060231",branch:"Chitra, Bhavnagar"};
+ const bank={accountName:"Siddhivinayak Motors Pvt. Ltd.",bank:"State Bank of India",account:"33349775105",ifsc:"SBIN0060231",branch:"Chitra, Bhavnagar",micr:"364002005"};
+ const v=id=>document.getElementById(id)?.value.trim()||'';
  return {
   no:document.getElementById('quoteNumber').textContent,customer,phone,
-  address:document.getElementById('qAddress')?.value.trim()||'',
+  address:v('qAddress'),customerGstin:v('qCustomerGSTIN'),
   vehicle:model+(variant?' · '+variant:''),model,variant,
-  chassis:document.getElementById('qChassis')?.value.trim()||window.selectedStockQuoteVehicle?.chassis_number||'',
-  carDescription:document.getElementById('qCarDesc')?.value.trim()||'',
-  colour:document.getElementById('qColour')?.value.trim()||'',
-  vehicleNos:Number(document.getElementById('qVehicleNos')?.value||1),
-  hypo:document.getElementById('qHypo')?.value.trim()||'',
-  salesPerson:document.getElementById('qSalesPerson')?.value.trim()||'',
-  contactPerson:document.getElementById('qContactPerson')?.value.trim()||'PRATIK BADHEKA (SALES MANAGER)',
-  contactMobile:document.getElementById('qContactMobile')?.value.trim()||'9879100031',
-  email:document.getElementById('qEmail')?.value.trim()||'SALES.B@SIDDHIVINAYAKMOTORS.COM',
-  branchAddress:document.getElementById('qBranchAddress')?.value.trim()||'Press Quarter, Near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004',
-  helpline:document.getElementById('qHelpline')?.value.trim()||'9925139389',
-  pan:document.getElementById('qPan')?.value.trim()||'AAMCS1007J',
-  gstin:document.getElementById('qGstin')?.value.trim()||'24AAMCS1007J1ZI',
-  by:'Rakesh Anjara',total:totals.total,subtotal:totals.subtotal,discount:totals.discount,
-  amountWords,terms,bank,status:'PENDING',prints:0,
-  date:document.getElementById('qDate')?.value||new Date().toISOString().slice(0,10),items
- };
-}
-function printQuoteDocument(q){
- const escPrint=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- const items=(q.items||[]);
- const regular=items.filter(x=>!x.discount);
- const discounts=items.filter(x=>x.discount);
- const itemRows=regular.map((x,i)=>'<tr><td class="sr">'+(i+1)+'</td><td>'+escPrint(x.name)+'</td><td class="amount">'+money(x.amount)+'</td></tr>').join('');
- const discountRows=discounts.map(x=>'<tr class="discount"><td class="sr">−</td><td>'+escPrint(x.name||'Discount')+'</td><td class="amount">− '+money(x.amount)+'</td></tr>').join('');
- const w=window.open('','_blank','width=900,height=900');
+  chassis:v('qChassis')||window.selectedStockQuoteVehicle?.chassis_number||'',
+  carDescription:v('qCarDesc'),colour:v('qColour'),
+  vehicleNos:Number(v('qVehicleNos')||1),hypo:v('qHypo'),
+  salesPerson:v('qSalesPerson'),salesMobile:v('qSalesMobile'),
+  contactPerson:v('qContactPerson')||'PRATIK BADHEKA (SALES MANAGER)',
+  contactMobile:v('qContactMobile')||'9879100031',
+  email:v('qEmail')||'SALES.B@SIDDHIVINAYAKMOTORS.COM',
+  branchAddress:v('qBranchAddress')||'Press Quarter, Near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004',
+  helpline:v('qHelpline')||'9925139389',pan:v('qPan')||'AAMCS1007J',
+  gstin:v('qGstin')||'24AAMCS1007J1ZI',by:'',total:totals.total,
+  subtotal:totals.subtotal,discount:totals.discount,amountWords,terms,bank,
+  status:'PENDING',prints:0,date:document.getElementById('qDate')?.value||new Date().toISOString().sfunction printQuoteDocument(q){
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const moneyPrint=v=>Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+ const amount=v=>Number(v||0)===0?'—':'₹ '+moneyPrint(v);
+ const all=q.items||[];
+ const regular=all.filter(x=>!x.discount);
+ const discounts=all.filter(x=>x.discount);
+ const retail=discounts.filter(x=>/retail/i.test(x.name||''));
+ const exchange=discounts.filter(x=>/exchange/i.test(x.name||''));
+ const otherDiscounts=discounts.filter(x=>!/retail|exchange/i.test(x.name||''));
+ const itemRows=regular.map((x,i)=>'<tr><td class="sl">'+(i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">'+amount(x.amount)+'</td></tr>').join('');
+ const sumRows='<tr class="sum"><td colspan="2">TOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
+  '<tr><td colspan="2">Less&nbsp; RETAIL OFFER (If any)</td><td class="amt">− '+(retail.length?'₹ '+moneyPrint(retail.reduce((a,x)=>a+Number(x.amount||0),0):'—')+'</td></tr>'+
+  '<tr><td colspan="2">Less&nbsp; EXCHANGE BONUS (If any)</td><td class="amt">− '+(exchange.length?'₹ '+moneyPrint(exchange.reduce((a,x)=>a+Number(x.amount||0),0):'—')+'</td></tr>'+
+  otherDiscounts.map(x=>'<tr><td colspan="2">Less&nbsp; '+esc(x.name)+'</td><td class="amt">− ₹ '+moneyPrint(x.amount)+'</td></tr>').join('')+
+  '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(q.total)+'</td></tr>';
+ const dateRaw=String(q.date||new Date().toISOString().slice(0,10));
+ const dateObj=new Date(dateRaw+'T00:00:00');
+ const dateText=Number.isNaN(dateObj.getTime())?dateRaw:dateObj.toLocaleDateString('en-IN');
+ const terms=Array.isArray(q.terms)?q.terms:[];
+ const bank=q.bank||{};
+ const w=window.open('','_blank','width=900,height=1000');
  if(!w){toast('Allow pop-ups to print quotation');return}
- const rawDate=q.date||new Date().toISOString().slice(0,10);
- const parsedDate=new Date(rawDate+'T00:00:00');
- const printDate=Number.isNaN(parsedDate.getTime())?rawDate:parsedDate.toLocaleDateString('en-IN');
- const terms=Array.isArray(q.terms)&&q.terms.length?q.terms:[
-  'All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.',
-  'Kindly insist for receipt of all payments made.',
-  'Subject to availability of stock and colour.',
-  'Price prevailing at the time of delivery shall be applicable.',
-  'Prices are subject to change without any notice.',
-  'Subject to Bhavnagar jurisdiction.'
- ];
- const bank=q.bank||{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'};
- const address='Press Quarter, Near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004';
- w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Quotation ${escPrint(q.no)}</title>
- <style>
- @page{size:A4 portrait;margin:10mm}
- *{box-sizing:border-box}
- html,body{margin:0;padding:0;background:#fff;color:#202a35;font-family:Arial,Helvetica,sans-serif}
- body{font-size:12px;line-height:1.4}
- .page{width:190mm;max-width:100%;margin:0 auto;padding:0}
- .header{text-align:center;padding:2mm 0 4mm;border-bottom:2px solid #244b70}
- .brand{font-size:23px;font-weight:800;letter-spacing:.35px;color:#173d60}
- .address{font-size:10px;color:#596879;margin-top:4px}
- .titlebar{display:flex;justify-content:space-between;align-items:center;margin:5mm 0 4mm;padding:3mm 4mm;background:#edf3f8;border-left:4px solid #244b70}
- h1{font-size:17px;letter-spacing:.5px;margin:0;color:#173d60}
- .ref{font-size:11px;font-weight:700;text-align:right}
- .meta{display:grid;grid-template-columns:1fr 1fr;gap:3mm 8mm;padding:3mm 4mm;margin-bottom:4mm;border:1px solid #cbd5df;border-radius:2px}
- .field{min-height:13mm}
- .label{font-size:9px;font-weight:800;color:#647487;text-transform:uppercase;letter-spacing:.45px;margin-bottom:2px}
- .value{font-size:12px;font-weight:600;color:#202a35;overflow-wrap:anywhere}
- table{width:100%;border-collapse:collapse;table-layout:fixed}
- thead th{background:#244b70;color:#fff;font-size:11px;text-align:left;padding:3mm 2.5mm}
- th.sr,td.sr{width:14mm;text-align:center}
- th.amount,td.amount{width:42mm;text-align:right;font-variant-numeric:tabular-nums}
- tbody td{font-size:11.5px;padding:2.6mm 2.5mm;border-bottom:1px solid #d8e0e8;vertical-align:top}
- tbody tr:nth-child(even){background:#f8fafc}
- tbody tr.discount{background:#f1f4f7;font-weight:700}
- .totals{width:78mm;margin:4mm 0 0 auto;border:1px solid #cbd5df}
- .total-row{display:flex;justify-content:space-between;gap:8mm;padding:2.2mm 3mm;font-size:11.5px}
- .total-row.grand{background:#edf3f8;border-top:2px solid #244b70;font-size:16px;font-weight:800;color:#173d60}
- .words{margin-top:2mm;font-size:10.5px;font-style:italic;color:#455467}
- .bottom{display:grid;grid-template-columns:1.25fr 1fr;gap:7mm;margin-top:7mm;padding-top:4mm;border-top:1px solid #aebdcb}
- .bottom h2{font-size:10px;margin:0 0 2mm;color:#173d60;letter-spacing:.45px}
- .bottom p,.bottom li{font-size:9px;line-height:1.45;margin:0;color:#344253}
- .bottom ol{margin:0;padding-left:4mm}
- .signrow{display:flex;justify-content:space-between;align-items:flex-end;margin-top:7mm;padding-top:3mm;border-top:1px solid #d8e0e8}
- .company-note{font-size:9px;color:#596879;line-height:1.5}
- .signbox{text-align:center;min-width:55mm;font-size:10px;font-weight:700;color:#344253}
- .signline{height:12mm;border-bottom:1px solid #718096;margin-bottom:2mm}
- .footer{font-size:8px;color:#788595;text-align:center;margin-top:4mm}
- @media screen{body{padding:16px;background:#e9edf2}.page{background:#fff;padding:10mm;min-height:277mm;box-shadow:0 4px 22px #0002}}
- @media print{body{padding:0}.page{width:auto;min-height:0;padding:0}.no-print{display:none!important}}
- </style></head><body><main class="page">
- <header class="header"><div class="brand">SIDDHIVINAYAK MOTORS PVT. LTD.</div><div class="address">${address}</div></header>
- <div class="titlebar"><h1>VEHICLE QUOTATION</h1><div class="ref">Quotation No.: ${escPrint(q.no)}<br>Date: ${escPrint(printDate)}</div></div>
- <section class="meta">
-  <div class="field"><div class="label">Customer Name</div><div class="value">${escPrint(q.customer)}</div></div>
-  <div class="field"><div class="label">Mobile Number</div><div class="value">${escPrint(q.phone)}</div></div>
-  <div class="field"><div class="label">Customer Address</div><div class="value">${escPrint(q.address||'—')}</div></div>
-  <div class="field"><div class="label">Vehicle Nos. / Hypothecation</div><div class="value">${escPrint(q.vehicleNos||1)} / ${escPrint(q.hypo||'—')}</div></div>
-  <div class="field"><div class="label">Model / Variant</div><div class="value">${escPrint(q.model||q.vehicle||'—')} / ${escPrint(q.variant||'—')}</div></div>
-  <div class="field"><div class="label">Car Description / Colour</div><div class="value">${escPrint(q.carDescription||'—')} / ${escPrint(q.colour||'—')}</div></div>
-  <div class="field"><div class="label">Chassis Number</div><div class="value">${escPrint(q.chassis||'—')}</div></div>
-  <div class="field"><div class="label">Prepared By / Status</div><div class="value">${escPrint(q.by||'Siddhivinayak Motors')} / ${q.status==='APPROVED'?'APPROVED':'SUBMITTED'}</div></div>
- </section>
- <table><thead><tr><th class="sr">SR.</th><th>PARTICULARS</th><th class="amount">AMOUNT (₹)</th></tr></thead><tbody>${itemRows}${discountRows}</tbody></table>
- <section class="totals">
-  <div class="total-row"><span>Subtotal</span><b>${money(q.subtotal)}</b></div>
-  <div class="total-row"><span>Discount</span><b>− ${money(q.discount)}</b></div>
-  <div class="total-row grand"><span>NET PAYABLE</span><span>${money(q.total)}</span></div>
- </section>
- <div class="words">Amount in words: <b>${escPrint(q.amountWords||'Amount not available')}</b></div>
- <section class="bottom">
-  <div><h2>TERMS &amp; CONDITIONS</h2><ol>${terms.map(t=>'<li>'+escPrint(t)+'</li>').join('')}</ol></div>
-  <div><h2>RTGS DETAILS</h2><p><b>Account Name:</b> ${escPrint(bank.accountName||'')}<br><b>Bank:</b> ${escPrint(bank.bank||'')}<br><b>Account Number:</b> ${escPrint(bank.account||'')}<br><b>IFSC:</b> ${escPrint(bank.ifsc||'')}<br><b>Branch:</b> ${escPrint(bank.branch||'')}</p></div>
- </section>
- <section class="signrow"><div class="company-note"><b>PAN:</b> ${escPrint(q.pan||'')}<br><b>GSTIN/UIN:</b> ${escPrint(q.gstin||'')}<br><b>Contact Person:</b> ${escPrint(q.contactPerson||'')}<br><b>Mobile:</b> ${escPrint(q.contactMobile||'')}<br><b>Email:</b> ${escPrint(q.email||'')}<br><b>Helpline:</b> ${escPrint(q.helpline||'')}<br>${escPrint(q.branchAddress||'')}</div><div class="signbox"><div class="signline"></div>For SIDDHIVINAYAK MOTORS PVT. LTD.<br>Authorised Signatory</div></section>
- <div class="footer">E. &amp; O. E. · Subject to stock availability and applicable terms.</div>
- </main><script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350)}<\/script></body></html>`);
- w.document.close();
+ const rows=itemRows||'<tr><td colspan="3">No charge details</td></tr>';
+ const html='<!doctype html><html><head><meta charset="utf-8"><title>Quotation '+esc(q.no)+'</title><style>'+
+ '@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#20252c;font-family:Arial,Helvetica,sans-serif}body{font-size:10px;line-height:1.25}.page{width:194mm;max-width:100%;margin:0 auto}.top{display:grid;grid-template-columns:30mm 1fr 1.45fr;align-items:center;gap:3mm;border:1px solid #333;padding:2.5mm 3mm}.mahindra{font-size:15px;font-weight:900;letter-spacing:-.5px;color:#20252c}.dealer{font-size:13px;font-weight:800;line-height:1.15}.dealer small{display:block;font-size:8px;font-weight:500;margin-top:2px}.quote-tag{text-align:center;font-size:12px;font-weight:900;border:1px solid #333;padding:1.5mm 2mm}.meta{display:flex;justify-content:space-between;padding:2mm 3mm;border:1px solid #333;border-top:0;font-weight:700}.intro{padding:2mm 3mm;border:1px solid #333;border-top:0}.customer{border:1px solid #333;border-top:0}.cust-row{display:grid;grid-template-columns:1fr 1fr;min-height:8mm}.cust-row>div{padding:1.7mm 2.5mm;border-bottom:1px solid #555}.cust-row>div+div{border-left:1px solid #555}.label{font-size:8px;color:#555}.value{font-size:10px;font-weight:700;min-height:4mm;overflow-wrap:anywhere}.vehicle-head{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #333;border-top:0;text-align:center}.vehicle-head>div{padding:1.8mm;border-right:1px solid #333}.vehicle-head>div:last-child{border:0}.vehicle-head b{display:block;font-size:10px}.vehicle-head span{display:block;font-size:10px;font-weight:700;min-height:5mm;margin-top:1mm}.content{display:grid;grid-template-columns:1.04fr 1fr;border:1px solid #333;border-top:0}.price{border-right:1px solid #333}.price table{width:100%;border-collapse:collapse;table-layout:fixed}.price th,.price td{border-bottom:1px solid #555;padding:1.45mm 1.8mm;font-size:9px}.price th{font-size:9px;font-weight:800}.price .sl{width:9mm;text-align:center}.price .amt{width:27mm;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.price tr.sum{font-weight:800;background:#f2f2f2}.price tr.grand{font-weight:900;background:#e9e9e9;font-size:11px}.price tr.grand td{font-size:10px;border-top:1.5px solid #333}.terms{padding:2mm 2.5mm}.terms h3{font-size:9px;margin:0 0 1.5mm;text-align:center}.terms ol{margin:0;padding-left:4mm}.terms li{font-size:8px;line-height:1.35;margin:0 0 2.5mm}.bank{margin-top:2mm;font-size:8px;line-height:1.4}.bank b{font-size:8px}.bottom{display:grid;grid-template-columns:1fr 1fr;border:1px solid #333;border-top:0;min-height:16mm}.sales{padding:2mm 2.5mm}.sales div{padding:1mm 0;border-bottom:1px solid #aaa;font-size:9px}.sales b{display:inline-block;min-width:32mm}.sign{text-align:right;padding:2mm 4mm;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;font-size:9px;font-weight:700}.stamp{width:28mm;height:15mm;border:1px dashed #999;border-radius:50%;margin-bottom:1mm;display:flex;align-items:center;justify-content:center;color:#888;font-size:7px;font-weight:400}.footer{text-align:center;font-size:7px;margin-top:2mm;color:#555}@media screen{body{padding:16px;background:#e8edf2}.page{background:#fff;padding:4mm;box-shadow:0 3px 18px #0002}}'+
+ '</style></head><body><main class="page">'+
+ '<header class="top"><div class="mahindra">MAHINDRA</div><div class="quote-tag">QUOTATION</div><div class="dealer">SIDDHIVINAYAK MOTORS PVT. LTD.<small>Authorised Dealer : Mahindra &amp; Mahindra Limited<br>'+esc(q.branchAddress||'Chitra, Bhavnagar, Gujarat')+'<br>GSTIN No.: '+esc(q.gstin||'24AAMCS1007J1ZI')+'</small></div></header>'+
+ '<div class="meta"><span>Date: '+esc(dateText)+'</span><span>Quotation No.: '+esc(q.no)+'</span></div>'+
+ '<div class="intro">Dear Sir,<br>We are pleased to offer best quote for Mahindra passenger vehicle as per details below.</div>'+
+ '<section class="customer"><div class="cust-row"><div><div class="label">Customer Name</div><div class="value">'+esc(q.customer)+'</div></div><div><div class="label">Address</div><div class="value">'+esc(q.address||'')+'</div></div></div>'+
+ '<div class="cust-row"><div><div class="label">Customer GSTIN No.</div><div class="value">'+esc(q.customerGstin||'')+'</div></div><div><div class="label">Mobile No.</div><div class="value">'+esc(q.phone||'')+'</div></div></div></section>'+
+ '<section class="vehicle-head"><div><b>Model</b><span>'+esc(q.model||'')+'</span></div><div><b>Variant</b><span>'+esc(q.variant||'')+'</span></div><div><b>Colour</b><span>'+esc(q.colour||'')+'</span></div></section>'+
+ '<section class="content"><div class="price"><table><thead><tr><th class="sl">SL</th><th>DETAILS</th><th class="amt">AMOUNT</th></tr></thead><tbody>'+rows+sumRows+'</tbody></table></div>'+
+ '<div class="terms"><h3>TERMS &amp; CONDITIONS</h3><ol>'+terms.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol>'+
+ '<div class="bank"><b>Payments to be made in favour of</b><br><b>Siddhivinayak Motors Pvt. Ltd.</b><br>Payable at Bhavnagar<br><br>• Bank Name: '+esc(bank.bank||'State Bank of India')+'<br>• A/C No.: '+esc(bank.account||'33349775105')+'<br>• Branch: '+esc(bank.branch||'Chitra - Bhavnagar')+'<br>• IFSC Code: '+esc(bank.ifsc||'SBIN0060231')+'<br>• MICR Code No.: '+esc(bank.micr||'364002005')+'<br>• GSTIN No.: '+esc(q.gstin||'24AAMCS1007J1ZI')+'</div></div></section>'+
+ '<section class="bottom"><div class="sales"><div><b>Sales Consultant Name</b>'+esc(q.salesPerson||'')+'</div><div><b>Mobile Number</b>'+esc(q.salesMobile||'')+'</div></div><div class="sign"><div class="stamp">AUTHORISED SIGNATORY</div>For, Siddhivinayak Motors Pvt. Ltd.</div></section>'+
+ '<div class="footer">E. &amp; O. E. · Subject to availability of vehicle and applicable terms.</div></main><script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350)}<\/script></body></html>';
+ w.document.open();w.document.write(html);w.document.close();
 }
+
 function saveQuote(printAfter){
  const q=getQuotePayload();if(!q)return;
  quoteRecords.unshift(q);saveRecords();renderQuoteManagement();updateQuoteNumber();
@@ -1891,6 +1853,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="././backend/supabase-runtime.js?v=vehicle-exit-register-20261120a"></script>
+<script src="././backend/supabase-runtime.js?v=vehicle-exit-register-20261120a-paper-quote-20261120"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
