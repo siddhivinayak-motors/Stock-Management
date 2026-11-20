@@ -792,7 +792,7 @@
       q.no=allocatedNumber;
       if($('quoteNumber'))$('quoteNumber').textContent=allocatedNumber;
       const payload={
-        quote_number:allocatedNumber,department:dept,quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
+        quote_number:allocatedNumber,department:dept,quote_date:q.date||new Date().toISOString().slice(0,10),
         customer_name:q.customer,phone:q.phone,address:$('qAddress')?.value||'',customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,
         vehicle_count:Number($('qVehicleNos')?.value||1),hypo:$('qHypo')?.value||'',
         model,car_description:$('qCarDesc')?.value||'',variant,colour:$('qColour')?.value||'',
