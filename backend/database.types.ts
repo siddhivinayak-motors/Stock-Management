@@ -276,8 +276,6 @@ export type Database = {
           approved_by: string | null
           bank_details: Json
           branch_address: string | null
-          car_description: string | null
-          chassis: string | null
           colour: string | null
           contact_mobile: string | null
           contact_person: string | null
