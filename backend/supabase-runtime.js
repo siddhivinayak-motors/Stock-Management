@@ -52,7 +52,7 @@
     email:'SALES.B@SIDDHIVINAYAKMOTORS.COM',
     branch_address:'Press Quarter, near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004',
     helplines:['9879100031','9925139389'],
-    terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],
+    terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to '+(currentProfile?.city||'Bhavnagar')+' Jurisdiction.'],
     bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar',payableAt:'Bhavnagar',micr:'364002005'}
   };
   const QUOTE_BRANCH_DETAILS = {
@@ -1864,7 +1864,7 @@
     if($('otfChassisInput'))$('otfChassisInput').value='';
     const formIds=['otfCustomerName','otfCustomerPhone','otfEnquiryNumber','otfCustomerId','otfInvoiceNumber','otfCustomerGstin','otfAadhaar','otfPan','otfEmail','otfAddress','otfCity','otfDistrict','otfHpa','otfBookingAmount','otfDob','otfAnniversary','otfNominee','otfNomineeRelation','otfNomineeAge','otfExchangeModel','otfExchangeReg','otfExchangeYear','otfExchangeValue','otfExchangeSupport','otfExchangeTotal'];
     formIds.forEach(id=>{if($(id))$(id).value=id==='otfBookingAmount'?'0':'';});
-    if($('otfBookingDate'))$('otfBookingDate').value=new Date().toISOString().slice(0,10);
+    if($('otfBookingDate')){const d=new Date();$('otfBookingDate').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
     if($('otfPayments'))$('otfPayments').innerHTML='';
     if($('otfAccessories'))$('otfAccessories').innerHTML='';
     otfSetStatus('Select a quotation and verify the chassis number before saving.');
@@ -1948,7 +1948,7 @@
       nominee_relationship:otfValue('otfNomineeRelation')||null,nominee_age:otfValue('otfNomineeAge')?Number(otfValue('otfNomineeAge')):null,
       chassis_number:v.chassis_number,engine_number:v.engine_number,model:v.model,variant:v.variant,colour:v.colour,
       sales_person:q.sales_person||currentProfile?.full_name||'',
-      quotation_snapshot:{quote_number:q.quote_number,quote_date:q.quote_date,subtotal:Number(q.subtotal||0),discount:Number(q.discount||0),total:Number(q.total||0),amount_words:q.amount_words||'',items:(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))},
+      quotation_snapshot:{quote_number:q.quote_number,quote_date:q.quote_date,branch_address:q.branch_address||'',subtotal:Number(q.subtotal||0),discount:Number(q.discount||0),total:Number(q.total||0),amount_words:q.amount_words||'',items:(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))},
       vehicle_snapshot:{status:v.status,stage:v.stage,manufacturing_year:v.manufacturing_year},
       exchange_details:{model:otfValue('otfExchangeModel'),registration:otfValue('otfExchangeReg'),manufacturing_year:otfValue('otfExchangeYear'),old_value:otfNumber('otfExchangeValue'),extra_support:otfNumber('otfExchangeSupport'),total_value:otfNumber('otfExchangeTotal')},
       accessories_details:otfCollectRows('.otf-accessory-row',[['item','[data-acc="item"]'],['part_number','[data-acc="part"]'],['amount','[data-acc="amount"]']]),
