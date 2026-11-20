@@ -69,8 +69,18 @@
     set('qContactPerson',currentProfile.full_name||currentUser.email||'');
     set('qContactMobile',currentProfile.phone||'');
     const canEditContact=canEditQuoteCompanySettings();
-    ['qPan','qGstin','qEmail','qBranchAddress','qHelpline'].forEach(id=>{const el=$(id);if(el)el.readOnly=true;});
-    ['qContactPerson','qContactMobile'].forEach(id=>{const el=$(id);if(el)el.readOnly=!canEditContact;});
+    const viewOnlyRole=['Executive','Reception','Receptionist','Driver'].includes(String(currentProfile.designation||'').trim());
+    // These roles may inspect the company block but cannot focus, click, type, paste, or alter anything in it.
+    const companyDetails=document.querySelector('#view-quotation details.quote-more');
+    const companyBody=companyDetails?.querySelector(':scope > div');
+    if(companyBody){
+      companyBody.inert=viewOnlyRole;
+      companyBody.setAttribute('aria-disabled',viewOnlyRole?'true':'false');
+      companyBody.style.pointerEvents=viewOnlyRole?'none':'';
+      companyBody.style.userSelect=viewOnlyRole?'none':'';
+    }
+    ['qPan','qGstin','qEmail','qBranchAddress','qHelpline'].forEach(id=>{const el=$(id);if(el){el.readOnly=true;el.disabled=false;el.tabIndex=-1;}});
+    ['qContactPerson','qContactMobile'].forEach(id=>{const el=$(id);if(el){el.readOnly=!canEditContact;el.disabled=viewOnlyRole;el.tabIndex=viewOnlyRole?-1:(canEditContact?0:-1);}});
     const actions=$('quoteCompanySettingsActions');if(actions)actions.style.display='none';
   }
   const db = () => { if (!client) throw new Error('Supabase client is not ready'); return client; };
