@@ -315,16 +315,6 @@
     // Database trigger synchronizes the linked stock vehicle stage atomically.
     await loadHolds();await audit('stock_hold_management','approve',decision+' hold','stock_hold',id);
   }
-  async function loadPriceListStock() {
-    if(!has('stock_register','view')&&!has('price_list_management','view')&&!has('quotation_management','view')) { window.svPriceListStockRows=[]; return []; }
-    const allowed=new Set(allowedDepartmentList());
-    let rows=[],from=0,chunk=1000;
-    while(true) {
-      const part=await call(db().from('vehicles').select('model,variant,colour,department,status,stage').order('model').range(from,from+chunk-1));
-      rows.push(...part.filter(r=>allowed.has(r.department))); if(part.length<chunk)break; from+=chunk;
-    }
-    window.svPriceListStockRows=rows; return rows;
-  }
   async function loadPriceLists() {
     // Quotation users also need read access to the current published price list to prepare a quote.
     if(!has('price_list_management','view')&&!has('quotation_management','view')) return;
@@ -1699,7 +1689,7 @@
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadPriceListStock,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit};
     window.dispatchEvent(new Event('svm:ready'));
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
