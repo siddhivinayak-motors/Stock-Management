@@ -555,16 +555,52 @@
     await audit(viaImport?'common_excel_upload':'stock_register',viaImport?'create':'edit',viaImport?'Reconciled vehicle by exact chassis':'Updated vehicle','vehicle',id);
     return row;
   }
-  async function markVehicleRetail(id) {
-    if(!canRetailStock()) throw new Error('Retail permission is limited to Manager and above, HR, DMS and Accountant.');
+  async function registerVehicleExit(id,exitType,details={}) {
+    if(!canRetailStock()) throw new Error('Vehicle exit permission is limited to Manager and above, HR, DMS and Accountant.');
     const vehicle=await call(db().from('vehicles').select('*').eq('id',id).single());
-    if(String(vehicle.stage||'').toUpperCase()==='RETAIL') throw new Error('This vehicle is already marked as Retail.');
-    const now=new Date();
-    const retailDate=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
-    const row=await call(db().from('vehicles').update({stage:'RETAIL',status:'Delivered',retail_date:retailDate,retailed_by:currentUser.id,updated_by:currentUser.id,updated_at:now.toISOString()}).eq('id',id).select().single());
+    const result=await call(db().rpc('register_vehicle_exit',{
+      p_vehicle_id:id,p_exit_type:String(exitType||'').toUpperCase(),
+      p_exit_date:details.exitDate||new Date().toISOString().slice(0,10),
+      p_reason:details.reason||null,p_destination:details.destination||null,
+      p_customer_name:details.customerName||null,p_notes:details.notes||null
+    }));
     quotationStockCache.clear();
-    await audit('stock_register','edit','Marked vehicle as Retail','vehicle',id,{chassis_number:vehicle.chassis_number,department:vehicle.department,retail_date:retailDate,customer_name:vehicle.customer_name||null});
-    return row;
+    await audit('stock_register','edit','Moved vehicle out of stock: '+String(exitType).toUpperCase(),'vehicle_exit',result.id,{
+      chassis_number:vehicle.chassis_number,department:vehicle.department,exit_type:String(exitType).toUpperCase(),
+      exit_date:details.exitDate||new Date().toISOString().slice(0,10),reason:details.reason||null
+    });
+    return result;
+  }
+  async function markVehicleRetail(id) {
+    const vehicle=await call(db().from('vehicles').select('*').eq('id',id).single());
+    return registerVehicleExit(id,'RETAIL',{exitDate:new Date().toISOString().slice(0,10),customerName:vehicle.customer_name||null});
+  }
+  function openVehicleExitDialog(vehicle) {
+    if(!vehicle||!canRetailStock()) throw new Error('Vehicle exit permission required.');
+    const old=$('svVehicleExitDialog');if(old)old.remove();
+    const wrap=document.createElement('div');wrap.id='svVehicleExitDialog';
+    wrap.style.cssText='position:fixed;inset:0;z-index:100005;background:#15202dcc;display:grid;place-items:center;padding:14px';
+    const field=(label,name,value='',type='text',required=false)=>'<label style="display:block;font-size:13px;font-weight:650;color:#344054">'+label+'<input class="field" name="'+name+'" type="'+type+'" value="'+esc(value)+'" '+(required?'required':'')+' style="width:100%;margin-top:5px"></label>';
+    wrap.innerHTML='<form id="svVehicleExitForm" style="width:min(620px,100%);max-height:92vh;overflow:auto;background:#fff;padding:21px;border-radius:14px;color:#253140"><h2 style="font-size:19px;margin:0 0 5px">Move Vehicle Out of Stock</h2><p style="font-size:12px;color:#64748b;margin:0 0 14px">Vehicle: <b>'+esc(vehicle.chassis_number)+'</b> · '+esc(vehicle.model)+' '+esc(vehicle.variant||'')+'</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px"><label style="display:block;font-size:13px;font-weight:650">Exit Type<select class="field" name="exit_type" id="svExitType" style="width:100%;margin-top:5px"><option value="RETAIL">Retail / Delivered</option><option value="DEMO">Demo</option><option value="DAMAGE">Damage</option><option value="TRANSFER_OUT">Transfer Out</option><option value="OTHER">Other</option></select></label>'+field('Exit Date','exit_date',new Date().toISOString().slice(0,10),'date',true)+field('Customer Name','customer_name',vehicle.customer_name||'')+field('Transfer / Demo Destination','destination','','text',false)+'</div><label style="display:block;font-size:13px;font-weight:650;margin-top:11px">Reason / Reference <textarea class="field" name="reason" id="svExitReason" rows="2" style="width:100%;margin-top:5px" placeholder="Required for Demo, Damage, Transfer Out and Other"></textarea></label><label style="display:block;font-size:13px;font-weight:650;margin-top:10px">Additional Notes <textarea class="field" name="notes" rows="2" style="width:100%;margin-top:5px"></textarea></label><div style="font-size:11px;color:#64748b;margin-top:9px">The vehicle will be removed from Active Stock and its complete details will remain in the permanent Vehicle Exit Register.</div><div id="svVehicleExitError" style="color:#c51c2a;font-size:12px;margin:9px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svVehicleExitCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Confirm &amp; Move Out</button></div></form>';
+    document.body.appendChild(wrap);
+    $('svVehicleExitCancel').onclick=()=>wrap.remove();
+    $('svExitType').addEventListener('change',()=>{
+      const retail=$('svExitType').value==='RETAIL';
+      $('svExitReason').required=!retail;
+      $('svExitReason').placeholder=retail?'Optional sale note':'Required: explain why this vehicle is leaving stock';
+      const dest=wrap.querySelector('[name="destination"]')?.closest('label');
+      if(dest)dest.querySelector('input').placeholder=$('svExitType').value==='TRANSFER_OUT'?'Transfer destination / branch':'Destination (optional)';
+    });
+    $('svVehicleExitForm').onsubmit=async e=>{
+      e.preventDefault();const button=e.target.querySelector('button[type=submit');button.disabled=true;button.textContent='Saving…';
+      try{
+        const values=Object.fromEntries(new FormData(e.target).entries());
+        if(values.exit_type!=='RETAIL'&&!String(values.reason||'').trim())throw new Error('Enter the reason for this stock exit.');
+        await registerVehicleExit(vehicle.id,values.exit_type,{exitDate:values.exit_date,reason:values.reason,destination:values.destination,customerName:values.customer_name,notes:values.notes});
+        selectedStockVehicle=null;wrap.remove();await renderStock();await loadRetailReport();
+        notify('Vehicle moved to '+values.exit_type.replace('_',' ')+' and saved in permanent Exit Register.');
+      }catch(ex){$('svVehicleExitError').textContent=ex.message||'Could not move vehicle out.';button.disabled=false;button.textContent='Confirm & Move Out';}
+    };
   }
   async function deleteVehicle(id) {
     if(!canManageStock()||!has('stock_register','delete')) throw new Error('Only roles above Executive with delete permission can delete stock.');
@@ -976,12 +1012,14 @@
       const stageFilter=$('stockStageFilter')?.value||'All';
       if(search) rows=rows.filter(v=>[v.chassis_number,v.model,v.variant,v.colour,v.sc_name,v.customer_name,v.status,v.stage].some(x=>String(x||'').toLowerCase().includes(search)));
       if(statusFilter!=='All') rows=rows.filter(v=>String(v.status||'').trim().toLowerCase()===statusFilter.toLowerCase());
-      if(stageFilter!=='All') rows=rows.filter(v=>String(v.stage||'').trim().toUpperCase()===stageFilter.toUpperCase());
+      if(stageFilter==='ACTIVE') rows=rows.filter(v=>['OPEN','ALLOTED','HOLD'].includes(String(v.stage||'').trim().toUpperCase()));
+      else if(stageFilter==='EXITED') rows=rows.filter(v=>['RETAIL','DEMO','DAMAGE','TRANSFER_OUT','OTHER'].includes(String(v.stage||'').trim().toUpperCase()));
+      else if(stageFilter!=='All') rows=rows.filter(v=>String(v.stage||'').trim().toUpperCase()===stageFilter.toUpperCase());
       const ageSort=$('stockAgeSort')?.value||'oldest';
       rows.sort((a,b)=>{const ta=a.oem_invoice_date?new Date(a.oem_invoice_date).getTime():NaN,tb=b.oem_invoice_date?new Date(b.oem_invoice_date).getTime():NaN;const va=Number.isFinite(ta),vb=Number.isFinite(tb);if(!va&&!vb)return 0;if(!va)return 1;if(!vb)return -1;return ageSort==='newest'?tb-ta:ta-tb;});
       const body=$('stockTable').querySelector('tbody');
       const canHold=canSubmitStockHoldRole();
-      body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'" tabindex="0" aria-label="Select vehicle '+esc(v.chassis_number)+'" aria-selected="'+(selectedStockVehicle?.id===v.id?'true':'false')+'" class="'+(selectedStockVehicle?.id===v.id?'selected-stock-row':'')+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>'+(canRetail&&String(v.stage||'').toUpperCase()!=='RETAIL'?'<button class="btn small" style="background:#16834a;color:#fff;border-color:#16834a" data-stock-retail="'+esc(v.id)+'">Retail</button>':''):(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small" style="background:#dc2626;color:#fff;border-color:#dc2626" data-stock-hold="'+esc(v.id)+'">Hold</button>':''))+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
+      body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'" tabindex="0" aria-label="Select vehicle '+esc(v.chassis_number)+'" aria-selected="'+(selectedStockVehicle?.id===v.id?'true':'false')+'" class="'+(selectedStockVehicle?.id===v.id?'selected-stock-row':'')+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>'+(canRetail&&['OPEN','ALLOTED','HOLD'].includes(String(v.stage||'').toUpperCase())?'<button class="btn small" style="background:#16834a;color:#fff;border-color:#16834a" data-stock-exit="'+esc(v.id)+'">Move Out</button>':''):(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small" style="background:#dc2626;color:#fff;border-color:#dc2626" data-stock-hold="'+esc(v.id)+'">Hold</button>':''))+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
       body.querySelectorAll('tr[data-stock-id]').forEach(row=>{
         const selectRow=()=>{
           const vehicle=rows.find(x=>String(x.id)===String(row.dataset.stockId));
@@ -996,12 +1034,10 @@
         row.addEventListener('keydown',e=>{if(e.target!==row)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();selectRow();}});
       });
       body.querySelectorAll('[data-stock-edit]').forEach(b=>b.onclick=()=>editVehicleDialog(rows.find(x=>x.id===b.dataset.stockEdit)));
-      body.querySelectorAll('[data-stock-retail]').forEach(b=>b.onclick=async()=>{
-        const vehicle=rows.find(x=>String(x.id)===String(b.dataset.stockRetail));if(!vehicle||!canRetailStock())return;
-        if(!confirm('Confirm Retail / Sold?\\n\\n'+[vehicle.chassis_number,vehicle.model,vehicle.variant].filter(Boolean).join(' · ')+'\\n\\nThis vehicle will be marked RETAIL and added to Retail Reports.'))return;
-        b.disabled=true;
-        try{await markVehicleRetail(vehicle.id);selectedStockVehicle=null;await renderStock();await loadRetailReport();notify('Vehicle marked Retail and added to Retail Reports.');}
-        catch(ex){notify(ex.message||'Unable to mark vehicle as Retail.');b.disabled=false;}
+      body.querySelectorAll('[data-stock-exit]').forEach(b=>b.onclick=()=>{
+        const vehicle=rows.find(x=>String(x.id)===String(b.dataset.stockExit));
+        if(!vehicle||!canRetailStock())return;
+        try{openVehicleExitDialog(vehicle);}catch(ex){notify(ex.message);}
       });
       body.querySelectorAll('[data-stock-hold]').forEach(b=>b.onclick=()=>openStockHoldDialog(rows.find(x=>x.id===b.dataset.stockHold)));
       body.querySelectorAll('[data-stock-quote]').forEach(b=>b.onclick=()=>window.startQuotationFromStock?.(rows.find(x=>String(x.id)===String(b.dataset.stockQuote))));
@@ -1342,7 +1378,7 @@
   window.appBackup = async () => {
     try{
       if(!has('backup_restore','export'))throw new Error('Backup permission required.');
-      const tables=['vehicles','quotations','quotation_items','price_list_versions','price_list_items','stock_holds','stock_import_batches'];
+      const tables=['vehicles','vehicle_exit_records','quotations','quotation_items','price_list_versions','price_list_items','stock_holds','stock_import_batches'];
       const payload={format:'SVM-SUPABASE-BACKUP',version:1,createdAt:new Date().toISOString(),project:'tvpaxdvqvwpblcfssgsj',data:{}};
       for(const t of tables){
         let all=[],from=0,chunk=1000;
@@ -1366,7 +1402,7 @@
       const payload=JSON.parse(await file.text());
       if(payload.format!=='SVM-SUPABASE-BACKUP'||!payload.data)throw new Error('Invalid backup format.');
       if(!confirm('Restore records from this backup? Existing rows with matching IDs may be updated.'))return;
-      const order=['vehicles','quotations','quotation_items','price_list_versions','price_list_items','stock_holds','stock_import_batches'];
+      const order=['vehicles','vehicle_exit_records','quotations','quotation_items','price_list_versions','price_list_items','stock_holds','stock_import_batches'];
       for(const t of order){const rows=payload.data[t]||[];if(rows.length)await call(db().from(t).upsert(rows));}
       await audit('backup_restore','restore','Restored operational backup');
       notify('Operational data restore completed.');
@@ -1462,50 +1498,53 @@
   }
   function renderRetailRows(rows){
     const body=$('retailRows');if(!body)return;
-    body.innerHTML=rows.length?rows.map(v=>'<tr><td>'+esc(v.retail_date||'—')+'</td><td>'+esc(v.chassis_number||'—')+'</td><td>'+esc(v.model||'—')+'</td><td>'+esc(v.variant||'—')+'</td><td>'+esc(v.department||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td><span class="pill green">Retail / Delivered</span></td></tr>').join(''):'<tr><td colspan="8" class="empty">No retail records found for the selected filters.</td></tr>';
+    const typeLabel={RETAIL:'Retail',DEMO:'Demo',DAMAGE:'Damage',TRANSFER_OUT:'Transfer Out',OTHER:'Other'};
+    body.innerHTML=rows.length?rows.map(v=>'<tr><td>'+esc(v.exit_date||'—')+'</td><td>'+esc(v.chassis_number||'—')+'</td><td>'+esc(v.model||'—')+'</td><td>'+esc(v.variant||'—')+'</td><td>'+esc(v.department||'—')+'</td><td><span class="pill '+(v.exit_type==='RETAIL'?'green':'')+'">'+esc(typeLabel[v.exit_type]||v.exit_type||'—')+'</span></td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.reason||v.destination||'—')+'</td></tr>').join(''):'<tr><td colspan="9" class="empty">No vehicle exit records found for the selected filters.</td></tr>';
   }
   async function loadRetailReport(){
     const body=$('retailRows'),section=$('view-reports');
     if(!body)return;
     const cards=section?.querySelectorAll('[data-retail-kpi]');
-    if(!has('retail_reports','view')){body.innerHTML='<tr><td colspan="8" class="empty">Retail Reports permission required.</td></tr>';cards?.forEach(x=>x.textContent='—');return;}
+    if(!has('retail_reports','view')){body.innerHTML='<tr><td colspan="9" class="empty">Vehicle Exit Reports permission required.</td></tr>';cards?.forEach(x=>x.textContent='—');return;}
     try{
-      const {start,end,mode}=retailSelectedRange();
+      const {start,end}=retailSelectedRange();
       const allowed=allowedDepartmentList();
       const chosenDept=$('retailDepartment')?.value||'';
       const departments=chosenDept?(allowed.includes(chosenDept)?[chosenDept]:[]):allowed;
       const customer=String($('retailCustomer')?.value||'').trim();
       const executive=String($('retailExecutive')?.value||'').trim();
+      const exitType=$('retailExitType')?.value||'';
       let rows=[],offset=0,chunk=1000;
       while(departments.length){
-        let q=db().from('vehicles').select('id,retail_date,chassis_number,model,variant,department,customer_name,sc_name,status,stage').eq('stage','RETAIL').gte('retail_date',start).lte('retail_date',end).in('department',departments).order('retail_date',{ascending:false}).order('created_at',{ascending:false}).range(offset,offset+chunk-1);
+        let q=db().from('vehicle_exit_records').select('*').gte('exit_date',start).lte('exit_date',end).in('department',departments).order('exit_date',{ascending:false}).order('created_at',{ascending:false}).range(offset,offset+chunk-1);
+        if(exitType)q=q.eq('exit_type',exitType);
         if(customer)q=q.ilike('customer_name','%'+customer.replace(/[%_]/g,'\\$&')+'%');
         if(executive)q=q.ilike('sc_name','%'+executive.replace(/[%_]/g,'\\$&')+'%');
         const part=await call(q);rows.push(...part);if(part.length<chunk)break;offset+=chunk;
       }
       retailReportRows=rows;
-      const count=d=>rows.filter(v=>v.department===d).length;
+      const count=type=>rows.filter(v=>v.exit_type===type).length;
       const set=(key,value)=>{const el=section?.querySelector('[data-retail-kpi="'+key+'"]');if(el)el.textContent=String(value).padStart(2,'0');};
-      set('total',rows.length);set('personal',count('Personal'));set('commercial',count('Commercial'));set('evllm',count('EV')+count('LLM'));
+      set('total',rows.length);set('retail',count('RETAIL'));set('demo',count('DEMO'));set('damage',count('DAMAGE'));set('transfer',count('TRANSFER_OUT'));set('other',count('OTHER'));
       renderRetailRows(rows);
       const fmt=x=>{const d=new Date(x+'T12:00:00');return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});};
       const period=$('retailPeriod');if(period)period.textContent=fmt(start)+' – '+fmt(end);
-      const desc=$('retailRegisterDescription');if(desc)desc.textContent=rows.length+' retail vehicles · '+start+' to '+end+' · Live Supabase data';
-      const status=$('retailReportStatus');if(status)status.textContent=rows.length+' matching retail record'+(rows.length===1?'':'s');
+      const desc=$('retailRegisterDescription');if(desc)desc.textContent=rows.length+' vehicle exits · '+start+' to '+end+' · Permanent Supabase history';
+      const status=$('retailReportStatus');if(status)status.textContent=rows.length+' matching exit record'+(rows.length===1?'':'s');
     }catch(e){
-      console.error('Retail report load failed:',e);
-      body.innerHTML='<tr><td colspan="8" class="empty">'+esc(e.message||'Unable to load retail records.')+'</td></tr>';
+      console.error('Vehicle Exit report load failed:',e);
+      body.innerHTML='<tr><td colspan="9" class="empty">'+esc(e.message||'Unable to load vehicle exit records.')+'</td></tr>';
       const status=$('retailReportStatus');if(status)status.textContent=e.message||'Unable to load report';
-      notify(e.message||'Unable to load Retail Reports.');
+      notify(e.message||'Unable to load Vehicle Exit Reports.');
     }
   }
   function exportRetailCsv(){
-    if(!retailReportRows.length){notify('There are no retail records to export.');return;}
-    const cols=[['Retail Date','retail_date'],['Chassis Number','chassis_number'],['Vehicle Model','model'],['Variant','variant'],['Department','department'],['Customer','customer_name'],['Sales Executive','sc_name'],['Status','status']];
+    if(!retailReportRows.length){notify('There are no vehicle exit records to export.');return;}
+    const cols=[['Exit Date','exit_date'],['Chassis Number','chassis_number'],['Vehicle Model','model'],['Variant','variant'],['Department','department'],['Exit Type','exit_type'],['Customer','customer_name'],['Sales Executive','sc_name'],['Reason','reason'],['Destination','destination']];
     const quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-    const csv='\uFEFF'+[cols.map(x=>quote(x[0])).join(','),...retailReportRows.map(row=>cols.map(c=>quote(row[c[1]]||'')).join(','))].join('\r\n');
+    const csv='\\uFEFF'+[cols.map(x=>quote(x[0])).join(','),...retailReportRows.map(row=>cols.map(c=>quote(row[c[1]]||'')).join(','))].join('\\r\\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Siddhivinayak-Retail-Report-'+retailDateISO(new Date())+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Siddhivinayak-Vehicle-Exit-Report-'+retailDateISO(new Date())+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
   window.applyRetailMonth=()=>loadRetailReport();
 
