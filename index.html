@@ -1018,9 +1018,14 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <div class="charge-row discount-charge"><span class="charge-index">13</span><div class="q-charge-name">LESS EXTRA DISCOUNT</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Extra Discount"></div><span class="discount-lock">LESS</span></div>
    </div>
    <div class="quote-total-panel">
-    <div class="total-line"><span>Subtotal</span><b id="subtotal">₹0.00</b></div>
-    <div class="total-line discount-total"><span>(-) Less / Discount</span><b id="discount">− ₹0.00</b></div>
-    <div class="total-line grand"><span>NET PAYABLE</span><strong id="grand">₹0.00</strong></div>
+    <div class="total-line"><span>SUBTOTAL</span><b id="subtotal">₹0.00</b></div>
+    <div class="quote-discount-list" id="quoteDiscounts">
+     <div class="charge-row discount-charge"><span class="charge-index">01</span><div class="q-charge-name">LESS RETAIL OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Retail Offer"></div><span class="discount-lock">LESS</span></div>
+     <div class="charge-row discount-charge"><span class="charge-index">02</span><div class="q-charge-name">LESS EXCHANGE OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Exchange Offer"></div><span class="discount-lock">LESS</span></div>
+     <div class="charge-row discount-charge"><span class="charge-index">03</span><div class="q-charge-name">LESS EXTRA DISCOUNT</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Extra Discount"></div><span class="discount-lock">LESS</span></div>
+    </div>
+    <div class="total-line discount-total"><span>TOTAL DISCOUNTS</span><b id="discount">− ₹0.00</b></div>
+    <div class="total-line grand"><span>GRAND TOTAL</span><strong id="grand">₹0.00</strong></div>
     <div class="q-words" id="qAmountWords">Amount in words: Zero Rupees Only</div>
    </div>
    <details class="quote-more">
@@ -1344,7 +1349,9 @@ document.getElementById('addVehicle').addEventListener('click',()=>{const f=docu
 document.getElementById('stockSearch').addEventListener('input',e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('#stockTable tbody tr').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')});
 
 const charges=document.getElementById('charges');
+const quoteDiscounts=document.getElementById('quoteDiscounts');
 const defaultQuoteChargeMarkup=charges.innerHTML;
+const defaultQuoteDiscountMarkup=quoteDiscounts.innerHTML;
 const quoteStoreKey='sv_quote_records_clean_v2';
 const demoQuotes=[];
 let quoteRecords;
@@ -1388,10 +1395,10 @@ function getQuotePayload(){
  const phone=document.getElementById('qPhone').value.trim();
  if(!model||!customer||phone.length!==10){toast('Enter vehicle model, customer name and valid 10-digit mobile');return null}
  const items=[];
- charges.querySelectorAll('.charge-row').forEach(r=>{
+ [...charges.querySelectorAll('.charge-row'),...quoteDiscounts.querySelectorAll('.charge-row')].forEach(r=>{
   const name=(r.querySelector('.q-charge-name')?.textContent||r.querySelector('.q-charge-name')?.value||r.querySelector('select')?.value||r.querySelector('.q-charge-editable')?.value||r.querySelector('.amount')?.dataset.charge||'Charge').trim();
   const amount=Number(r.querySelector('.amount')?.value)||0;
-  items.push({name,amount,discount:isDiscountChargeRow(r)});
+  items.push({name,amount,discount:r.classList.contains('discount-charge')||isDiscountChargeRow(r)});
  });
  const amountWords=numberWordsIndian(totals.total);
  const terms=[
@@ -1435,7 +1442,7 @@ function printQuoteDocumentPaper(q){
  const sumRows='<tr class="sum"><td colspan="2">TOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
   '<tr><td colspan="2">Less&nbsp; RETAIL OFFER (If any)</td><td class="amt">− '+(retail.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(retail.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
   '<tr><td colspan="2">Less&nbsp; EXCHANGE BONUS (If any)</td><td class="amt">− '+(exchange.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(exchange.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
-  otherDiscounts.map(x=>'<tr><td colspan="2">Less&nbsp; '+esc(x.name)+'</td><td class="amt">− ₹ '+moneyPrint(x.amount)+'</td></tr>').join('')+
+  otherDiscounts.map(x=>'<tr><td colspan="2">Less&nbsp; '+esc(String(x.name||'').replace(/^less\\s*/i,''))+'</td><td class="amt">− ₹ '+moneyPrint(x.amount)+'</td></tr>').join('')+
   '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(q.total)+'</td></tr>';
  const dateRaw=String(q.date||new Date().toISOString().slice(0,10));
  const dateObj=new Date(dateRaw+'T00:00:00');
@@ -1652,12 +1659,16 @@ function numberWordsIndian(n){
 function calc(){
  let subtotal=0,discount=0;
  charges.querySelectorAll('.charge-row').forEach(r=>{
-  const input=r.querySelector('.amount');const val=Math.max(0,Number(input?.value)||0);
-  if(isDiscountChargeRow(r))discount+=val;else subtotal+=val;
+  const val=Math.max(0,Number(r.querySelector('.amount')?.value)||0);
+  subtotal+=val;
+ });
+ quoteDiscounts.querySelectorAll('.charge-row').forEach(r=>{
+  const val=Math.max(0,Number(r.querySelector('.amount')?.value)||0);
+  discount+=val;
  });
  const total=Math.max(0,subtotal-discount);
  document.getElementById('subtotal').textContent=money(subtotal);
- document.getElementById('discount').textContent='− '+money(discount);
+ const discountEl=document.getElementById('discount');if(discountEl)discountEl.textContent='− '+money(discount);
  document.getElementById('grand').textContent=money(total);
  const words=document.getElementById('qAmountWords');if(words)words.textContent='Amount in words: '+numberWordsIndian(total);
  return {subtotal,discount,total};
@@ -1710,7 +1721,7 @@ function resetQuotationForm(){
  setQuotationDateTime();
  const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';const salesMobile=document.getElementById('qSalesMobile');if(salesMobile)salesMobile.value=window.SVMBackend?.profile?.phone||'';
  const priceSuggestions=document.getElementById('qPriceSuggestions');if(priceSuggestions){priceSuggestions.hidden=true;priceSuggestions.innerHTML='';}
- charges.innerHTML=defaultQuoteChargeMarkup;
+ charges.innerHTML=defaultQuoteChargeMarkup;quoteDiscounts.innerHTML=defaultQuoteDiscountMarkup;
  const priceStatus=document.getElementById('qPriceListStatus');if(priceStatus)priceStatus.textContent='Select a vehicle and variant to check the Price List.';
  updateQuoteNumber();calc();
 }
@@ -1832,26 +1843,13 @@ function quoteApplyPriceList(selectedMatch){
   wrap.append(currency,input);row.append(number,name,wrap,remove);return row;
  };
  rows.forEach((part,i)=>charges.appendChild(makeRow(part,i+1)));
- [
-  {name:'LESS RETAIL OFFER',key:'Retail Offer'},
-  {name:'LESS EXCHANGE OFFER',key:'Exchange Offer'},
-  {name:'LESS EXTRA DISCOUNT',key:'Extra Discount'}
- ].forEach((part,i)=>{
-  const row=document.createElement('div');row.className='charge-row discount-charge';
-  const number=document.createElement('span');number.className='charge-index';number.textContent=String(rows.length+i+1).padStart(2,'0');
-  const name=document.createElement('div');name.className='q-charge-name';name.textContent=part.name;
-  const wrap=document.createElement('div');wrap.className='amount-wrap discount-input';
-  const currency=document.createElement('span');currency.textContent='− ₹';
-  const input=document.createElement('input');input.className='amount';input.type='text';input.inputMode='decimal';input.placeholder='0.00';input.value='0.00';input.dataset.charge=part.key;
-  const lock=document.createElement('span');lock.className='discount-lock';lock.textContent='LESS';
-  wrap.append(currency,input);row.append(number,name,wrap,lock);charges.appendChild(row);
- });
+ quoteDiscounts.innerHTML=defaultQuoteDiscountMarkup;
  renumberCharges();calc();
  const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Price List applied: '+match.vehicle+' · '+match.variant+' · Accessories default ₹30,000 · Coating ₹0.00';
  return true;
 }
 function quoteClearPriceListRows(){
- charges.innerHTML=defaultQuoteChargeMarkup;
+ charges.innerHTML=defaultQuoteChargeMarkup;quoteDiscounts.innerHTML=defaultQuoteDiscountMarkup;
  renumberCharges();calc();
 }
 let quotePriceLookupSequence=0;
@@ -1879,6 +1877,8 @@ loadDepartmentQuotes();
 setQuotationDateTime();
 document.getElementById('charges').addEventListener('input',calc);
 document.getElementById('charges').addEventListener('change',calc);
+quoteDiscounts.addEventListener('input',calc);
+quoteDiscounts.addEventListener('change',calc);
 
 </script>
 
