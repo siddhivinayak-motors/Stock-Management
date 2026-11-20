@@ -593,6 +593,8 @@ export type Database = {
           status?: string
           updated_at?: string
           updated_by?: string | null
+          retail_date?: string | null
+          retailed_by?: string | null
           variant?: string | null
         }
         Relationships: [
@@ -610,6 +612,14 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "vehicles_retailed_by_fkey"
+            columns: ["retailed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+
         ]
       }
     }
