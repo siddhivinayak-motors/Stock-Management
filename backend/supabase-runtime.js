@@ -1284,7 +1284,7 @@
   function syncResetSelectionUI(){
     const selected=resetSelectedKeys(),all=[...document.querySelectorAll('#svResetTree input[type=checkbox]')];
     if($('svResetCheckedCount'))$('svResetCheckedCount').textContent=selected.length+' options selected';
-    if($('svResetSelectAll'))$('svResetSelectAll').checked=all.length>0&&selected.length===all.length;
+    if($('svResetSelectAll'))$('svResetSelectAll').checked=all.length>0&&selected.length===all.length;\n    document.querySelectorAll('#svResetTree input[data-reset-group]').forEach(g=>{const prefix=g.dataset.resetGroup==='workspace'?'workspace.':g.dataset.resetGroup+'.';const members=all.filter(x=>x.value.startsWith(prefix));g.checked=members.length>0&&members.every(x=>x.checked);});
   }
   window.openOperationalResetDialog=()=>{
     if(!resetIsSuperAdmin()){notify('Operational Reset is available only to an active Super Admin.');return;}
@@ -1319,9 +1319,16 @@
     }catch(e){notify(e.message);}
   };
   document.addEventListener('change',e=>{
-    if(e.target?.matches('#svResetTree input[type=checkbox]'))syncResetSelectionUI();
+    if(e.target?.matches('#svResetTree input[type=checkbox][value]'))syncResetSelectionUI();
+    if(e.target?.matches('#svResetTree input[data-reset-group]')){
+      const group=e.target.dataset.resetGroup;
+      const prefix=group==='workspace'?'workspace.':group+'.';
+      document.querySelectorAll('#svResetTree input[type=checkbox][value]').forEach(x=>{if(x.value.startsWith(prefix))x.checked=e.target.checked;});
+      syncResetSelectionUI();
+    }
     if(e.target?.id==='svResetSelectAll'){
-      document.querySelectorAll('#svResetTree input[type=checkbox]').forEach(x=>x.checked=e.target.checked);
+      document.querySelectorAll('#svResetTree input[type=checkbox][value]').forEach(x=>x.checked=e.target.checked);
+      document.querySelectorAll('#svResetTree input[data-reset-group]').forEach(x=>x.checked=e.target.checked);
       syncResetSelectionUI();
     }
   });
