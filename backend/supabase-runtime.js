@@ -1284,7 +1284,8 @@
   function syncResetSelectionUI(){
     const selected=resetSelectedKeys(),all=[...document.querySelectorAll('#svResetTree input[type=checkbox]')];
     if($('svResetCheckedCount'))$('svResetCheckedCount').textContent=selected.length+' options selected';
-    if($('svResetSelectAll'))$('svResetSelectAll').checked=all.length>0&&selected.length===all.length;\n    document.querySelectorAll('#svResetTree input[data-reset-group]').forEach(g=>{const prefix=g.dataset.resetGroup==='workspace'?'workspace.':g.dataset.resetGroup+'.';const members=all.filter(x=>x.value.startsWith(prefix));g.checked=members.length>0&&members.every(x=>x.checked);});
+    if($('svResetSelectAll'))$('svResetSelectAll').checked=all.length>0&&selected.length===all.length;
+    document.querySelectorAll('#svResetTree input[data-reset-group]').forEach(g=>{const prefix=g.dataset.resetGroup==='workspace'?'workspace.':g.dataset.resetGroup+'.';const members=all.filter(x=>x.value.startsWith(prefix));g.checked=members.length>0&&members.every(x=>x.checked);});
   }
   window.openOperationalResetDialog=()=>{
     if(!resetIsSuperAdmin()){notify('Operational Reset is available only to an active Super Admin.');return;}
