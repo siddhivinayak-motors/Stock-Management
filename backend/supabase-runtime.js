@@ -969,7 +969,7 @@
     try {
       if(!pratikStockPreviewRows.length||!pratikStockPreviewFile)throw new Error('Review STOCK worksheet first.');
       if(!confirm('FULL SYNC: Replace current Personal and EV stock with '+pratikStockPreviewRows.length+' STOCK rows? Commercial and LLM stay unchanged. Old stock and exit history will be archived.'))return;
-      const result=await call(db().rpc('sync_pratik_personal_ev_stock',{p_rows:pratikStockPreviewRows.map(({decision,...x})=>x),p_file_name:pratikStockPreviewFile}));
+      const result=await call(db().rpc('sync_pratik_personal_ev_stock',{p_rows:pratikStockPreviewRows.map(({decision,...x})=>({...x,chassis_number:x.chassis})),p_file_name:pratikStockPreviewFile}));
       quotationStockCache.clear();pratikStockPreviewRows=[];pratikStockPreviewFile=null;
       $('pratikStockApply').disabled=true;
       $('pratikStockSummary').textContent='Sync completed. Uploaded: '+result.uploaded_rows+' · Personal: '+result.personal_rows+' · EV: '+result.ev_rows+' · Removed: '+result.removed_rows+'. Commercial and LLM unchanged.';
