@@ -1024,7 +1024,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <div class="charge-row"><span class="charge-index">09</span><div class="q-charge-name">RSA</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="RSA"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
     <div class="charge-row"><span class="charge-index">10</span><div class="q-charge-name">COATING</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Coating"></div></div>
    </div>
-   <div class="total-line quote-subtotal-line"><span>SUBTOTAL</span><b id="subtotal">₹0.00</b></div>
+   <div class="total-line quote-subtotal-line"><span class="charge-index subtotal-index"></span><span class="subtotal-label">SUBTOTAL</span><b id="subtotal">₹0.00</b><span class="subtotal-spacer" aria-hidden="true"></span></div>
    <div class="quote-charge-list quote-discount-list" id="quoteDiscounts">
     <div class="charge-row discount-charge"><span class="charge-index">11</span><div class="q-charge-name">LESS RETAIL OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Retail Offer"></div><span class="discount-lock"></span></div>
     <div class="charge-row discount-charge"><span class="charge-index">12</span><div class="q-charge-name">LESS EXCHANGE OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Exchange Offer"></div><span class="discount-lock"></span></div>
@@ -1493,7 +1493,25 @@ function printQuoteDocumentPaper(q){
  const rows=itemRows||'<tr><td colspan="3">No charge details</td></tr>';
  const html='<!doctype html><html><head><meta charset="utf-8"><title>Quotation '+esc(q.no)+'</title><style>'+
  '@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#20252c;font-family:Arial,Helvetica,sans-serif}body{font-size:10px;line-height:1.25}.page{width:194mm;max-width:100%;margin:0 auto}.top{display:grid;grid-template-columns:30mm 1fr 1.45fr;align-items:center;gap:3mm;border:1px solid #333;padding:2.5mm 3mm}.mahindra{font-size:15px;font-weight:900;letter-spacing:-.5px;color:#20252c}.dealer{font-size:13px;font-weight:800;line-height:1.15}.dealer small{display:block;font-size:8px;font-weight:500;margin-top:2px}.quote-tag{text-align:center;font-size:12px;font-weight:900;border:1px solid #333;padding:1.5mm 2mm}.meta{display:flex;justify-content:space-between;padding:2mm 3mm;border:1px solid #333;border-top:0;font-weight:700}.intro{padding:2mm 3mm;border:1px solid #333;border-top:0}.customer{border:1px solid #333;border-top:0}.cust-row{display:grid;grid-template-columns:1fr 1fr;min-height:8mm}.cust-row>div{padding:1.7mm 2.5mm;border-bottom:1px solid #555}.cust-row>div+div{border-left:1px solid #555}.label{font-size:8px;color:#555}.value{font-size:10px;font-weight:700;min-height:4mm;overflow-wrap:anywhere}.vehicle-head{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #333;border-top:0;text-align:center}.vehicle-head>div{padding:1.8mm;border-right:1px solid #333}.vehicle-head>div:last-child{border:0}.vehicle-head b{display:block;font-size:10px}.vehicle-head span{display:block;font-size:10px;font-weight:700;min-height:5mm;margin-top:1mm}.content{display:grid;grid-template-columns:1.04fr 1fr;border:1px solid #333;border-top:0}.price{border-right:1px solid #333}.price table{width:100%;border-collapse:collapse;table-layout:fixed}.price th,.price td{border-bottom:1px solid #555;padding:1.45mm 1.8mm;font-size:9px}.price th{font-size:9px;font-weight:800}.price .sl{width:9mm;text-align:center}.price .amt{width:27mm;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.price tr.sum{font-weight:800;background:#f2f2f2}.price tr.grand{font-weight:900;background:#e9e9e9;font-size:11px}.price tr.grand td{font-size:10px;border-top:1.5px solid #333}.terms{padding:2mm 2.5mm}.terms h3{font-size:9px;margin:0 0 1.5mm;text-align:center}.terms ol{margin:0;padding-left:4mm}.terms li{font-size:8px;line-height:1.35;margin:0 0 2.5mm}.bank{margin-top:2mm;font-size:8px;line-height:1.4}.bank b{font-size:8px}.bottom{display:grid;grid-template-columns:1fr 1fr;border:1px solid #333;border-top:0;min-height:16mm}.sales{padding:2mm 2.5mm}.sales div{padding:1mm 0;border-bottom:1px solid #aaa;font-size:9px}.sales b{display:inline-block;min-width:32mm}.sign{text-align:right;padding:2mm 4mm;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;font-size:9px;font-weight:700}.stamp{width:28mm;height:15mm;border:1px dashed #999;border-radius:50%;margin-bottom:1mm;display:flex;align-items:center;justify-content:center;color:#888;font-size:7px;font-weight:400}.footer{text-align:center;font-size:7px;margin-top:2mm;color:#555}@media screen{body{padding:16px;background:#e8edf2}.page{background:#fff;padding:4mm;box-shadow:0 3px 18px #0002}}'+
- '</style></head><body><main class="page">'+
+ '
+/* Align subtotal amount exactly with the quotation charge amount column */
+.quote-subtotal-line{
+ display:grid!important;
+ grid-template-columns:38px minmax(220px,1fr) minmax(150px,220px) 36px;
+ align-items:center;
+ gap:9px;
+}
+.quote-subtotal-line .subtotal-index{grid-column:1}
+.quote-subtotal-line .subtotal-label{grid-column:2;padding:0 8px}
+.quote-subtotal-line #subtotal{grid-column:3;text-align:right;padding:0 10px;font-variant-numeric:tabular-nums}
+.quote-subtotal-line .subtotal-spacer{grid-column:4}
+@media(max-width:560px){
+ .quote-subtotal-line{grid-template-columns:26px minmax(130px,1fr) minmax(110px,140px) 30px;gap:5px;padding:10px 6px}
+ .quote-subtotal-line .subtotal-label{padding:0 2px}
+ .quote-subtotal-line #subtotal{padding:0 7px;font-size:12px}
+}
+
+</style></head><body><main class="page">'+
  '<header class="top"><div class="mahindra">MAHINDRA</div><div class="quote-tag">QUOTATION</div><div class="dealer">SIDDHIVINAYAK MOTORS PVT. LTD.<small>Authorised Dealer : Mahindra &amp; Mahindra Limited<br>'+esc(q.branchAddress||'Chitra, Bhavnagar, Gujarat')+'<br>GSTIN No.: '+esc(q.gstin||'24AAMCS1007J1ZI')+'</small></div></header>'+
  '<div class="meta"><span>Date &amp; Time: '+esc(dateText+(timeText?' · '+timeText:''))+'</span><span>Quotation No.: '+esc(q.no)+'</span></div>'+
  '<div class="intro">Dear Sir,<br>We are pleased to offer best quote for Mahindra passenger vehicle as per details below.</div>'+
@@ -1926,6 +1944,6 @@ quoteDiscounts.addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="././backend/supabase-runtime.js?v=workspace-upload-reset-20261120a"></script>
+<script src="././backend/supabase-runtime.js?v=quotation-subtotal-align-20261120a"></script>
 <script src="./backend/price-list-module.js?v=quotation-row-layout-20261120d"></script>
 </body></html>
