@@ -964,6 +964,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <div id="qPriceSuggestions" class="q-stock-suggestions" hidden role="listbox" aria-label="Matching Price List vehicles"></div>
     <label>Variant<input id="qVariant" placeholder="Type variant, e.g. BS6.0" autocomplete="off"></label>
     <label>Colour<input id="qColour" placeholder="Type colour or code, e.g. WH" autocomplete="off"></label>
+    <label>Stock Chassis Number<input id="qChassis" placeholder="Auto-filled when selected from Stock Register" readonly aria-readonly="true" tabindex="-1"></label>
     <label>Car Description<input id="qCarDesc" placeholder="Vehicle description"></label>
     
     <label>Sales Consultant<input id="qSalesPerson" placeholder="Auto-filled from logged-in employee" readonly aria-readonly="true"></label>
@@ -1343,6 +1344,7 @@ function getQuotePayload(){
   no:document.getElementById('quoteNumber').textContent,customer,phone,
   address:document.getElementById('qAddress')?.value.trim()||'',
   vehicle:model+(variant?' · '+variant:''),model,variant,
+  chassis:document.getElementById('qChassis')?.value.trim()||window.selectedStockQuoteVehicle?.chassis_number||'',
   carDescription:document.getElementById('qCarDesc')?.value.trim()||'',
   colour:document.getElementById('qColour')?.value.trim()||'',
   vehicleNos:Number(document.getElementById('qVehicleNos')?.value||1),
@@ -1729,7 +1731,8 @@ function printQuoteDocument(q){
  w.document.close();
 }
 function resetQuotationForm(){
- ['qCustomer','qPhone','qAddress','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qContactPerson','qContactMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+ window.selectedStockQuoteVehicle=null;
+ ['qCustomer','qPhone','qAddress','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qChassis','qContactPerson','qContactMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
  setQuotationDateTime();
  const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
  const priceSuggestions=document.getElementById('qPriceSuggestions');if(priceSuggestions){priceSuggestions.hidden=true;priceSuggestions.innerHTML='';}
@@ -1755,12 +1758,16 @@ function setQuotationDepartment(department){
 }
 window.setQuotationDepartment=setQuotationDepartment;
 window.startQuotationFromStock=async function(vehicle){
- if(!vehicle||!setQuotationDepartment(vehicle.department)){toast('Selected stock vehicle has no valid department.');return;}
+ if(!vehicle){toast('Select a vehicle from Stock Register first.');return;}
+ if(!window.SVMBackend?.has?.('quotation_management','create')){toast('You do not have permission to create quotations.');return;}
+ if(!setQuotationDepartment(vehicle.department)){toast('Selected stock vehicle has no valid department.');return;}
  showPage('quotation');
  resetQuotationForm();
+ window.selectedStockQuoteVehicle={id:vehicle.id,department:vehicle.department,chassis_number:vehicle.chassis_number||'',model:vehicle.model||'',variant:vehicle.variant||'',colour:vehicle.colour||''};
  document.getElementById('qVehicle').value=vehicle.model||'';
  document.getElementById('qVariant').value=vehicle.variant||'';
  document.getElementById('qColour').value=vehicle.colour||'';
+ document.getElementById('qChassis').value=vehicle.chassis_number||'';
  document.getElementById('qSalesPerson').value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
  document.getElementById('quotationPageTitle').textContent=currentQuoteDepartment+' — Quotation';
  updateQuoteNumber();
@@ -1858,6 +1865,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=quotation-viewonly-roles-20261120c"></script>
+<script src="././backend/supabase-runtime.js?v=stock-quotation-launch-20261120a"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
