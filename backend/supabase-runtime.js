@@ -976,6 +976,7 @@
       await renderStock();await loadImportHistory();notify('Manager Personal / EV stock synchronized.');
     } catch(e) {console.error(e);notify(e.message||'Stock sync failed.');}
   };
+  let robinStockPreviewRows = [];
   window.robinStockPreview = async () => {
     try{
       const file=$('robinStockFile')?.files?.[0];if(!file)throw new Error('Select the Robin Commercial / LLM stock report Excel file.');
