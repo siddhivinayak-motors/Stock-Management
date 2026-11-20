@@ -1148,7 +1148,8 @@ td,.data-table td{font-size:13px;line-height:1.45}
   <div class="table-wrap"><table class="data-table pl-preview-table"><thead><tr><th>File / Sheet</th><th>Vehicle</th><th>Variant</th><th>Department (automatic)</th><th>Ex-Showroom</th><th>On-Road Total</th></tr></thead><tbody id="plPreviewRows"></tbody></table></div>
   <div class="pl-preview-footer"><span id="plPreviewWarnings"></span><div><button class="btn" type="button" onclick="plCancelPreview()">Cancel</button> <button class="btn primary" id="plPublishButton" type="button" onclick="plPublish()">Save Price Lists</button></div></div>
  </div>
- <div class="pl-inline-status" id="plInlineStatus" role="status" aria-live="polite"></div>\n            <div class="pl-inline-status" id="plUploadReport" role="status" aria-live="polite" style="display:none"></div>
+ <div class="pl-inline-status" id="plInlineStatus" role="status" aria-live="polite"></div>
+            <div class="pl-inline-status" id="plUploadReport" role="status" aria-live="polite" style="display:none"></div>
 </section>
 
 
@@ -1787,8 +1788,10 @@ function quoteApplyPriceList(selectedMatch){
  const isEv=String(match.department||currentQuoteDepartment||'').toUpperCase()==='EV';
  details.forEach(part=>{
   const label=String(part.label||'').trim(),v=Number(part.value||0);if(!label)return;
+  // EV quotations use the workbook's EX-SHOWROOM PRICE (A+B) row only.
+  // Do not add the individual A (vehicle) and B (charger) components again.
+  if(isEv&&/^A$|^B$/i.test(label))return;
   if(isEv&&/^A\s*\+\s*B$/i.test(label)){amounts['EX-SHOWROOM']+=v;return;}
-  if(isEv&&/^A$|^B$/i.test(label)){amounts['EX-SHOWROOM']+=v;return;}
   if(/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(label))return;
   if(/insurance\s*\(\s*taxi/i.test(label))return;
   if(/ex[\s-]*showroom|vehicle\s*price/i.test(label))amounts['EX-SHOWROOM']+=v;
@@ -1853,6 +1856,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="././backend/supabase-runtime.js?v=live-deploy-20261120d"></script>
-<script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
+<script src="././backend/supabase-runtime.js?v=price-list-fix-20261120a"></script>
+<script src="./backend/price-list-module.js?v=price-list-fix-20261120a"></script>
 </body></html>
