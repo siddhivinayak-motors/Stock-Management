@@ -686,6 +686,29 @@
     $('qmApproved').textContent=quoteRecords.filter(q=>q.status==='APPROVED').length;
     $('qmPrints').textContent=quoteRecords.reduce((sum,q)=>sum+Number(q.prints||0),0);
   };
+  let quotationRealtimeChannel=null, quoteRealtimeDebounce=null;
+  function startQuotationRealtime(){
+    if(!currentUser||!has('quotation_management','view'))return;
+    if(quotationRealtimeChannel)return;
+    try{
+      const uid=currentUser.id;
+      quotationRealtimeChannel=db().channel('svm-quotation-live-'+uid)
+        .on('postgres_changes',{event:'*',schema:'public',table:'quotations'},()=>{
+          clearTimeout(quoteRealtimeDebounce);
+          quoteRealtimeDebounce=setTimeout(()=>reloadQuoteList().catch(e=>console.warn('Live quotation refresh failed:',e)),250);
+        })
+        .on('postgres_changes',{event:'*',schema:'public',table:'quotation_items'},()=>{
+          clearTimeout(quoteRealtimeDebounce);
+          quoteRealtimeDebounce=setTimeout(()=>reloadQuoteList().catch(e=>console.warn('Live quotation item refresh failed:',e)),350);
+        })
+        .subscribe((status,error)=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')console.warn('Quotation live updates unavailable:',error||status);});
+    }catch(e){console.warn('Quotation realtime subscription could not start:',e);}
+  }
+  function stopQuotationRealtime(){
+    if(quotationRealtimeChannel){try{db().removeChannel(quotationRealtimeChannel);}catch(_e){}quotationRealtimeChannel=null;}
+    if(quoteRealtimeDebounce)clearTimeout(quoteRealtimeDebounce);
+    quoteRealtimeDebounce=null;
+  }
   async function reloadQuoteList() {
     if(!has('quotation_management','view')) return;
     const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
@@ -713,7 +736,7 @@
       if($('quoteNumber'))$('quoteNumber').textContent=q.no;
       document.querySelectorAll('#view-quotation details').forEach(d=>d.open=true);
       const escAttr=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-      const rows=(q.items||[]).map((x,n)=>{const isDiscount=!!x.discount||/discount|\\bless\\b/i.test(String(x.name||''));return '<div class="charge-row'+(isDiscount?' discount-charge':'')+'"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap'+(isDiscount?' discount-input':'')+'"><span>'+(isDiscount?'− ₹':'₹')+'</span><input class="amount" type="number" min="0" step="0.01" value="'+Number(x.amount||0)+'" data-charge="'+escAttr(x.name)+'"></div>'+(isDiscount?'<span class="discount-lock">LESS</span>':'<button class="icon-btn remove-charge" aria-label="Remove charge">×</button>')+'</div>';}).join('');
+      const editItems=[...(q.items||[])];if(!editItems.some(x=>/extra\\s+discount/i.test(String(x.name||''))))editItems.push({name:'LESS EXTRA DISCOUNT (If any)',amount:0,discount:true});const rows=editItems.map((x,n)=>{const isDiscount=!!x.discount||/discount|\\bless\\b/i.test(String(x.name||''));return '<div class="charge-row'+(isDiscount?' discount-charge':'')+'"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap'+(isDiscount?' discount-input':'')+'"><span>'+(isDiscount?'− ₹':'₹')+'</span><input class="amount" type="number" min="0" step="0.01" value="'+Number(x.amount||0)+'" data-charge="'+escAttr(x.name)+'"></div>'+(isDiscount?'<span class="discount-lock">LESS</span>':'<button class="icon-btn remove-charge" aria-label="Remove charge">×</button>')+'</div>';}).join('');
       $('charges').innerHTML=rows;
       if($('quotationPageTitle'))$('quotationPageTitle').textContent=currentQuoteDepartment+' — Edit Quotation';
       const head=document.querySelector('#view-quotation .card-title');if(head)head.textContent='Edit Quotation';
@@ -788,7 +811,9 @@
         Math.round(Number(row.total||0)*100)===Math.round(Number(q.total||0)*100)
       );
       if(duplicate) throw new Error('આ ગ્રાહકના આ મોબાઇલ નંબર અને આ જ ગાડીનું આ જ Grand Total વાળું quotation પહેલેથી નોંધાયેલું છે ('+duplicate.quote_number+'). ભાવ અથવા quotation detailsમાં ફેરફાર કર્યા વગર ફરીથી quotation બનાવી શકાશે નહીં.');
-      const allocatedNumber=await call(db().rpc('next_quote_number',{p_department:dept}));
+      // Keep the existing production numbering convention: SV-YYYYMMDD-00001.
+      // The database daily counter allocates the number atomically at save time.
+      const allocatedNumber=await call(db().rpc('next_quote_number'));
       q.no=allocatedNumber;
       if($('quoteNumber'))$('quoteNumber').textContent=allocatedNumber;
       const payload={
@@ -1689,10 +1714,10 @@
     // Re-apply permission-dependent controls only after the authenticated profile is loaded.
     // The initial call above runs before currentProfile exists and must not hide Super Admin actions.
     if(currentUser) installScreenHooks();
-    if(currentUser){await startApp();await applyQuoteCompanyDetails();syncOperationalResetVisibility();await recordSessionLogin();} else {syncOperationalResetVisibility();showLogin();}
+    if(currentUser){await startApp();startQuotationRealtime();await applyQuoteCompanyDetails();syncOperationalResetVisibility();await recordSessionLogin();} else {syncOperationalResetVisibility();showLogin();}
     db().auth.onAuthStateChange(async(_event,session)=>{
-      if(!session){currentUser=null;currentProfile=null;permissions.clear();sessionLoginRecordedFor=null;syncOperationalResetVisibility();showLogin();return;}
-      try{await refreshIdentity();await startApp();await applyQuoteCompanyDetails();await recordSessionLogin();}catch(e){console.error(e);showLogin();}
+      if(!session){stopQuotationRealtime();currentUser=null;currentProfile=null;permissions.clear();sessionLoginRecordedFor=null;syncOperationalResetVisibility();showLogin();return;}
+      try{await refreshIdentity();await startApp();startQuotationRealtime();await applyQuoteCompanyDetails();await recordSessionLogin();}catch(e){console.error(e);showLogin();}
     });
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
