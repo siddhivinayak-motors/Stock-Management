@@ -2005,11 +2005,11 @@
     body.innerHTML=rows.length?rows.map(r=>'<tr><td><b>'+esc(r.order_number)+'</b></td><td>'+new Date(r.created_at).toLocaleDateString('en-IN')+'</td><td>'+esc(r.customer_name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc([r.model,r.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(r.chassis_number)+'</td><td>'+otfMoney(r.booking_amount)+'</td><td>'+esc(r.department)+'</td><td><select class="field" data-otf-status="'+esc(r.id)+'" style="min-width:125px;min-height:32px;padding:5px"><option '+(r.status==='BOOKED'?'selected':'')+'>BOOKED</option><option '+(r.status==='IN PROCESS'?'selected':'')+'>IN PROCESS</option><option '+(r.status==='DELIVERED'?'selected':'')+'>DELIVERED</option><option '+(r.status==='CANCELLED'?'selected':'')+'>CANCELLED</option></select></td><td><div style="display:flex;gap:5px"><button class="btn small" data-otf-mprint="'+esc(r.id)+'">Print</button><button class="btn small primary" data-otf-edit="'+esc(r.id)+'">Edit</button></div></td></tr>').join(''):'<tr><td colspan="10" class="empty">No OTF records found for the selected filters.</td></tr>';
     if(!canManageOtf()){body.querySelectorAll('[data-otf-status]').forEach(sel=>sel.disabled=true);body.querySelectorAll('[data-otf-edit]').forEach(btn=>btn.hidden=true);}
     body.querySelectorAll('[data-otf-mprint]').forEach(btn=>btn.addEventListener('click',()=>{const r=otfManagementRows.find(x=>x.id===btn.dataset.otfMprint);if(r)otfPrintDocument(r);}));
-    body.querySelectorAll('[data-otf-status]').forEach(sel=>sel.addEventListener('change',async()=>{try{if(!canManageOtf())throw new Error('Only Manager and above can change OTF status.');await call(db().from('otf_order_books').update({status:sel.value,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',sel.dataset.otfStatus));await audit('otf_management','edit','Updated OTF status','otf_order_book',sel.dataset.otfStatus,{status:sel.value});notify('OTF status updated.');await loadOtfManagement();}catch(e){notify(e.message);await loadOtfManagement().catch(()=>{});}}));
+    body.querySelectorAll('[data-otf-status]').forEach(sel=>sel.addEventListener('change',async()=>{try{if(!canManageOtf()||!has('otf_management','edit'))throw new Error('OTF edit permission is required to change status.');await call(db().from('otf_order_books').update({status:sel.value,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',sel.dataset.otfStatus));await audit('otf_management','edit','Updated OTF status','otf_order_book',sel.dataset.otfStatus,{status:sel.value});notify('OTF status updated.');await loadOtfManagement();}catch(e){notify(e.message);await loadOtfManagement().catch(()=>{});}}));
     body.querySelectorAll('[data-otf-edit]').forEach(btn=>btn.addEventListener('click',()=>openOtfForEdit(btn.dataset.otfEdit)));
   }
   function openOtfForEdit(id){
-    if(!canManageOtf())return notify('Only Manager and above can edit OTF records.');
+    if(!canManageOtf()||!has('otf_management','edit'))return notify('OTF edit permission is required.');
     const r=otfManagementRows.find(x=>x.id===id);if(!r)return;
     window.otfOpenDepartment(r.department).then(()=>{
       otfEditingId=r.id;otfSelectedQuote={id:r.quotation_id,quote_number:r.quotation_snapshot?.quote_number||'',quote_date:r.quotation_snapshot?.quote_date||'',customer_name:r.customer_name,phone:r.phone,customer_gstin:r.customer_gstin,email:r.email,address:r.address,hypo:r.hpa,model:r.model,variant:r.variant,total:r.quotation_snapshot?.total||0,subtotal:r.quotation_snapshot?.subtotal||0,discount:r.quotation_snapshot?.discount||0,amount_words:r.quotation_snapshot?.amount_words||'',quotation_items:r.quotation_snapshot?.items||[],sales_person:r.sales_person};
@@ -2036,7 +2036,7 @@
       const payload=buildOtfPayload();
       let saved;
       if(wasEditing){
-        if(!canManageOtf())throw new Error('Only Manager and above can edit OTF records.');
+        if(!canManageOtf()||!has('otf_management','edit'))throw new Error('OTF edit permission is required.');
         const existing=otfManagementRows.find(x=>x.id===otfEditingId);if(existing)payload.order_number=existing.order_number;
         saved=await call(db().from('otf_order_books').update({...payload,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',otfEditingId).select('*').single());
         await audit('otf_management','edit','Updated OTF Order Book','otf_order_book',saved.id,{order_number:saved.order_number,department:saved.department});
