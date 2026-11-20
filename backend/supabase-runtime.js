@@ -1047,7 +1047,7 @@
       const title=$('stockTable').closest('.card')?.querySelector('.card-head .card-title');
       if(title)title.textContent=rows.length+' records · '+(dept==='All'?(selectedDept==='All Accessible Departments'?'All accessible departments':selectedDept):dept);
       const head=$('stockTable').querySelector('thead tr');
-      if(head&&head.children.length!==18){head.innerHTML='<th>SR.NO</th><th>MODEL</th><th>VARIENTS</th><th>SEATING</th><th>COLOR</th><th>MFG YEAR</th><th>OEM INVOICE DATE</th><th>CHASSIS NUMBER</th><th>ENGINE NUMBER</th><th>STATUS</th><th>PLACE</th><th>AGEING</th><th>STAGE</th><th>SC NAME</th><th>CUSTOMER NAME</th><th>ALLOTED DATE</th><th>ALLOTED AGEING</th><th>ACTIONS</th>;}
+      if(head&&head.children.length!==18){head.innerHTML='<th>SR.NO</th><th>MODEL</th><th>VARIENTS</th><th>SEATING</th><th>COLOR</th><th>MFG YEAR</th><th>OEM INVOICE DATE</th><th>CHASSIS NUMBER</th><th>ENGINE NUMBER</th><th>STATUS</th><th>PLACE</th><th>AGEING</th><th>STAGE</th><th>SC NAME</th><th>CUSTOMER NAME</th><th>ALLOTED DATE</th><th>ALLOTED AGEING</th><th>ACTIONS</th>';}
     }catch(e){console.error(e);notify(e.message);}
   }
   function openStockHoldDialog(vehicle){
