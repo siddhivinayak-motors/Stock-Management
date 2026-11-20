@@ -1929,7 +1929,7 @@
     if(!otfSelectedQuote)throw new Error('Select a quotation by mobile number.');
     if(!otfVerifiedVehicle)throw new Error('Verify the chassis number against Stock Register.');
     const address=otfValue('otfAddress');
-    if(!address)throw new Error('Enter the customer's complete address.');
+    if(!address)throw new Error('Enter the complete customer address.');
     const aadhaar=otfDigits(otfValue('otfAadhaar')),pan=otfValue('otfPan').toUpperCase();
     if(aadhaar&&aadhaar.length!==12)throw new Error('Aadhaar must contain 12 digits.');
     if(pan&&!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan))throw new Error('Enter a valid 10-character PAN number.');
