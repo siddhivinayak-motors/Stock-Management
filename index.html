@@ -1395,6 +1395,8 @@ function getQuotePayload(){
  ];
  const bank={accountName:"Siddhivinayak Motors Pvt. Ltd.",bank:"State Bank of India",account:"33349775105",ifsc:"SBIN0060231",branch:"Chitra, Bhavnagar",micr:"364002005"};
  const v=id=>document.getElementById(id)?.value.trim()||'';
+ const dateValue=document.getElementById('qDate')?.value||'';
+ const quoteDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(dateValue)?dateValue:getQuoteDateTime().date;
  return {
   no:document.getElementById('quoteNumber').textContent,customer,phone,
   address:v('qAddress'),customerGstin:v('qCustomerGSTIN'),
@@ -1410,7 +1412,10 @@ function getQuotePayload(){
   helpline:v('qHelpline')||'9925139389',pan:v('qPan')||'AAMCS1007J',
   gstin:v('qGstin')||'24AAMCS1007J1ZI',by:'',total:totals.total,
   subtotal:totals.subtotal,discount:totals.discount,amountWords,terms,bank,
-  status:'PENDING',prints:0,date:document.getElementById('qDate')?.value||new Date().toISOString().sfunction printQuoteDocument(q){
+  status:'PENDING',prints:0,date:quoteDate,items
+ };
+}
+function printQuoteDocumentPaper(q){
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const moneyPrint=v=>Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
  const amount=v=>Number(v||0)===0?'—':'₹ '+moneyPrint(v);
@@ -1689,40 +1694,12 @@ function saveQuote(printAfter){
  if(printAfter)printSavedQuote(0);
 }
 function amountINR(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function printQuoteDocument(q){
- const regular=(q.items||[]).filter(x=>!x.discount),less=(q.items||[]).filter(x=>x.discount).reduce((a,x)=>a+Number(x.amount||0),0);
- const rows=regular.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td class="amt">${amountINR(x.amount)}</td></tr>`).join('');
- const w=window.open('','_blank','width=980,height=1000');if(!w){toast('Allow pop-ups to print quotation');return}
- const d=q.date?new Date(q.date+'T00:00:00'):new Date();
- const dateText=q.dateTime||(isNaN(d.getTime())?q.date:d.toLocaleDateString('en-IN')); 
- w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(q.no)}</title><style>
- @page{size:A4;margin:10mm 12mm}*{box-sizing:border-box}body{font:11.5px Arial,sans-serif;color:#222;margin:0}
- .sheet{width:100%;max-width:190mm;margin:auto}.brandhead{height:34mm;border:1px solid #d5d9df;border-bottom:3px solid #e51e2a;display:flex;align-items:center;justify-content:center;text-align:center;font-size:18px;font-weight:800;letter-spacing:.5px}
- .brandhead small{display:block;font-size:10px;letter-spacing:1.3px;margin-top:5px}.topmeta{display:flex;justify-content:space-between;padding:8px 2px;font-weight:bold}
- table{width:100%;border-collapse:collapse;table-layout:fixed}td,th{border:1px solid #bfc5cc;padding:5px 7px;vertical-align:top;font-size:11.5px;line-height:1.4}th{background:#f1f3f5;text-align:left;font-size:11px}.amt{text-align:right;white-space:nowrap;width:26%}
- .details td{height:22px}.details td:nth-child(odd){font-weight:bold;width:16%;background:#fafafa}.details td:nth-child(even){width:34%}
- .charges th:first-child,.charges td:first-child{width:9%;text-align:center}.charges td:nth-child(3){text-align:right}
- .net{display:flex;justify-content:space-between;border:2px solid #333;padding:8px;font-size:13px;font-weight:bold;margin-top:6px}
- .words{padding:6px 2px;font-weight:bold}.lower{display:grid;grid-template-columns:1.15fr .85fr;gap:8px;margin-top:8px}.lower h4{margin:0 0 5px;font-size:11px}.lower ol{padding-left:17px;margin:0;font-size:10.5px;line-height:1.55}.bank{font-size:10.5px;line-height:1.6}
- .company{margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px;border-top:1px solid #aaa;padding-top:7px}.sign{text-align:right;margin-top:25px;font-weight:bold}
- @media screen{body{background:#e9edf2;padding:15px}.sheet{background:#fff;padding:8mm;box-shadow:0 3px 20px #0002}}
- </style></head><body><div class="sheet">
- <div class="brandhead"><div>SIDDHIVINAYAK MOTORS PVT. LTD.<small>MAHINDRA AUTHORISED DEALERSHIP · BHAVNAGAR</small></div></div>
- <div class="topmeta"><span>QUOTATION · ${esc(q.department||'')}</span><span>SR. NO.: ${esc(q.no)}</span></div>
- <table class="details"><tr><td>NAME / M/S.</td><td colspan="3">${esc(q.customer)}</td></tr><tr><td>VEHICLE NOS.</td><td>${esc(q.vehicleNos||'1')}</td><td>DATE &amp; TIME</td><td>${esc(dateText)}</td></tr><tr><td>ADDRESS</td><td colspan="3">${esc(q.address)}</td></tr><tr><td>MODEL</td><td>${esc(q.model)}</td><td>VARIANT</td><td>${esc(q.variant)}</td></tr><tr><td>CAR DESCRIPTION</td><td colspan="3">${esc(q.carDescription)}</td></tr><tr><td>HYPO</td><td>${esc(q.hypo)}</td><td>COLOUR</td><td>${esc(q.colour)}</td></tr></table>
- <table class="charges" style="margin-top:8px"><thead><tr><th>SR.NO.</th><th>PARTICULARS</th><th>AMOUNT</th></tr></thead><tbody>${rows}<tr class="discount-row"><td>—</td><td>(-) LESS — INCLUDING COMPANY DISCOUNT, DEALER MARGIN AND INSURANCE DISCOUNT</td><td class="amt">− ${amountINR(less)}</td></tr></tbody></table>
- <div class="net"><span>NET PAYABLE</span><span>${amountINR(q.total)}</span></div><div class="words">Amount in Words: ${esc(q.amountWords||numberWordsIndian(q.total))}</div>
- <div class="company"><div>PAN NO.: ${esc(q.pan)}</div><div>COMPANY GSTIN/UIN: ${esc(q.gstin)}</div></div>
- <div class="lower"><div><h4>TERMS &amp; CONDITIONS</h4><ol>${(q.terms||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div><div class="bank"><h4>RTGS DETAILS</h4>Account Name: ${esc(q.bank?.accountName)}<br>Bank: ${esc(q.bank?.bank)}<br>Account Number: ${esc(q.bank?.account)}<br>IFSC Code: ${esc(q.bank?.ifsc)}<br>Branch: ${esc(q.bank?.branch)}</div></div>
- <div class="sign">Authorised Signatory</div><div class="company"><div>Contact Person: ${esc(q.contactPerson)} · ${esc(q.contactMobile)}</div><div>Mob. No. / Helpline: ${esc(q.helpline)}</div><div>Email: ${esc(q.email)}</div><div>Sales Consultant: ${esc(q.salesPerson)}</div><div style="grid-column:1/-1">${esc(q.branchAddress)}</div></div>
- </div><script>window.onload=()=>window.print()<\/script></body></html>`);
- w.document.close();
-}
+function printQuoteDocument(q){ return printQuoteDocumentPaper(q); }
 function resetQuotationForm(){
  window.selectedStockQuoteVehicle=null;
- ['qCustomer','qPhone','qAddress','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qChassis','qContactPerson','qContactMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+ ['qCustomer','qPhone','qAddress','qCustomerGSTIN','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qChassis','qContactPerson','qContactMobile','qSalesMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
  setQuotationDateTime();
- const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
+ const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';const salesMobile=document.getElementById('qSalesMobile');if(salesMobile)salesMobile.value=window.SVMBackend?.profile?.phone||'';
  const priceSuggestions=document.getElementById('qPriceSuggestions');if(priceSuggestions){priceSuggestions.hidden=true;priceSuggestions.innerHTML='';}
  charges.innerHTML=defaultQuoteChargeMarkup;charges.querySelectorAll('.amount').forEach(e=>e.value='');
  const priceStatus=document.getElementById('qPriceListStatus');if(priceStatus)priceStatus.textContent='Select a vehicle and variant to check the Price List.';
