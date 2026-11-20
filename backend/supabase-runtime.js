@@ -914,12 +914,12 @@
       const t=v=>String(v??'').trim();
       const dt=v=>{if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');if(typeof v==='number'&&v>0){const z=XLSX.SSF.parse_date_code(v);if(z)return new Date(Date.UTC(z.y,z.m-1,z.d)).toISOString().slice(0,10);}if(v){const d=new Date(v);if(!isNaN(d))return d.toISOString().slice(0,10);}return null;};
       const num=v=>{if(v===null||v===undefined||t(v)==='')return null;const n=Number(String(v).replace(/,/g,''));return Number.isFinite(n)?n:null;};
-      const dept=m=>{const x=t(m).toUpperCase();return x==='BEV'||x.includes('EV')||x.includes('ELECTRIC')?'EV':'Personal';};
+      const dept=m=>{const x=t(m).toUpperCase();return x==='BEV'||x.includes('EV')||x.includes('ELECTRIC')||/^BE\s*6\b/.test(x)?'EV':'Personal';};
       const stages=new Set(['OPEN','HOLD','ALLOTED','DAMAGE','RETAIL','DEMO','TRANSFER_OUT','OTHER','BILLING DONE','DEALER','DAMO']);
       const seen=new Set();let placeholderNo=0;
       pratikStockPreviewRows=raw.map((r,i)=>{
-        const model=t(get(r,'MODEL')),variant=t(get(r,'VARIENTS','VARIANTS','VARIANT'));
-        const original=t(get(r,'CHASSIS NUMBER','CHASSISNUMBER','CHASSIS')).toUpperCase();
+        const model=t(get(r,'MODEL','MODEL NAME','VEHICLE MODEL')),variant=t(get(r,'VARIENTS','VARIANTS','VARIANT'));
+        const original=t(get(r,'CHASSIS NUMBER','CHASSISNUMBER','CHASSIS','CHASSIS NO','CHASIS NUMBER','CHASIS NO')).toUpperCase();
         const chassis=original||(model?'XXXX-'+String(++placeholderNo).padStart(3,'0'):'');
         const explicitDept=t(get(r,'DEPARTMENT','SEGMENT','SEGMENT CODE')).toUpperCase();
         const department=/\b(EV|BEV|ELECTRIC)\b/.test(explicitDept)||explicitDept.includes('ELECTRIC')? 'EV' : /PERSONAL/.test(explicitDept)?'Personal':dept(model);
