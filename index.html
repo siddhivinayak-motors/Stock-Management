@@ -258,11 +258,15 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
 .amount-wrap{height:39px;display:flex;align-items:center;gap:5px;border:1px solid #e3e8ee;border-radius:7px;padding:0 10px;color:#7a8794;font-size:12px;font-weight:700}
 .amount-wrap input{width:100%;min-width:0;border:0;outline:0;background:transparent;text-align:right;font-size:13px;font-weight:750;color:#283443;appearance:none;-moz-appearance:textfield}.amount-wrap input::-webkit-outer-spin-button,.amount-wrap input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .quote-charge-list .remove-charge{width:30px;height:30px;border:1px solid #f0d9db;border-radius:7px;color:#d52a34;background:#fff7f7;font-size:18px}
-.discount-charge{background:#fff9f9!important;border-color:#f1d5d8!important}
-.discount-charge select{background:#fff0f1;color:#c9212c;font-weight:800}
-.discount-input{border-color:#f0c9cd;background:#fff}
-.discount-lock{font-size:8px;font-weight:900;letter-spacing:.5px;color:#c9212c;text-align:center}
-.quote-total-panel{width:min(100%,390px);margin:17px 0 0 auto;padding:13px 15px;border:1px solid #e5e9ef;border-radius:11px;background:#f8fafc}
+.quote-subtotal-line{display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px;padding:10px 13px;border:1px solid #e5e9ef;border-radius:9px;background:#f8fafc;font-size:13px;color:#5f6b78}
+.quote-subtotal-line b{color:#202a36;font-weight:850;font-variant-numeric:tabular-nums}
+.quote-discount-list{margin-top:0}
+.discount-charge{background:#f4fbf6!important;border-color:#d7eadc!important}
+.discount-charge .q-charge-name{color:#16834c;font-weight:800}
+.discount-input{border-color:#d4e8da;background:#fff}
+.discount-input>span,.discount-input input{color:#16834c!important}
+.discount-charge .discount-lock{display:none}
+.quote-total-panel{width:min(100%,390px);margin:14px 0 0 auto;padding:13px 15px;border:1px solid #e5e9ef;border-radius:11px;background:#f8fafc}
 .quote-total-panel .total-line{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;color:#5f6b78}
 .quote-total-panel .total-line b{color:#2d3744;font-variant-numeric:tabular-nums}
 .quote-total-panel .discount-total b{color:#17834e}
@@ -1014,13 +1018,13 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <div class="charge-row"><span class="charge-index">09</span><div class="q-charge-name">RSA</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="RSA"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
     <div class="charge-row"><span class="charge-index">10</span><div class="q-charge-name">COATING</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Coating"></div></div>
    </div>
+   <div class="total-line quote-subtotal-line"><span>SUBTOTAL</span><b id="subtotal">₹0.00</b></div>
+   <div class="quote-charge-list quote-discount-list" id="quoteDiscounts">
+    <div class="charge-row discount-charge"><span class="charge-index">11</span><div class="q-charge-name">LESS RETAIL OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Retail Offer"></div><span class="discount-lock"></span></div>
+    <div class="charge-row discount-charge"><span class="charge-index">12</span><div class="q-charge-name">LESS EXCHANGE OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Exchange Offer"></div><span class="discount-lock"></span></div>
+    <div class="charge-row discount-charge"><span class="charge-index">13</span><div class="q-charge-name">LESS EXTRA DISCOUNT</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Extra Discount"></div><span class="discount-lock"></span></div>
+   </div>
    <div class="quote-total-panel">
-    <div class="total-line"><span>SUBTOTAL</span><b id="subtotal">₹0.00</b></div>
-    <div class="quote-discount-list" id="quoteDiscounts">
-     <div class="charge-row discount-charge"><span class="charge-index">11</span><div class="q-charge-name">LESS RETAIL OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Retail Offer"></div><span class="discount-lock">LESS</span></div>
-     <div class="charge-row discount-charge"><span class="charge-index">12</span><div class="q-charge-name">LESS EXCHANGE OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Exchange Offer"></div><span class="discount-lock">LESS</span></div>
-     <div class="charge-row discount-charge"><span class="charge-index">13</span><div class="q-charge-name">LESS EXTRA DISCOUNT</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Extra Discount"></div><span class="discount-lock">LESS</span></div>
-    </div>
     <div class="total-line discount-total"><span>TOTAL DISCOUNTS</span><b id="discount">− ₹0.00</b></div>
     <div class="total-line grand"><span>GRAND TOTAL</span><strong id="grand">₹0.00</strong></div>
     <div class="q-words" id="qAmountWords">Amount in words: Zero Rupees Only</div>
