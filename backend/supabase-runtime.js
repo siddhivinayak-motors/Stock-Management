@@ -96,7 +96,7 @@
     });
   }
   let quotationPickerBound = false;
-  const quoteSearchNorm = value => String(value || '').normalize('NFD').replace(/\\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const quoteSearchNorm = value => String(value || '').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
   async function setupQuotationVehiclePicker() {
     const model=$('qVehicle'),variant=$('qVariant'),colour=$('qColour'),box=$('qPriceSuggestions');
     if(!model||!variant||!colour||!box)return;
@@ -114,7 +114,7 @@
         if(!window.SVMBackend||typeof window.SVMBackend.loadPriceLists!=='function')throw new Error('Price List service unavailable');
         await window.SVMBackend.loadPriceLists();
         const rows=(window.plData&&window.plData[dept])||[];
-        const tokens=query.split(/\\s+/).filter(Boolean);
+        const tokens=query.split(/\s+/).filter(Boolean);
         const matches=rows.filter(row=>{
           const hay=quoteSearchNorm([row.vehicle,row.variant,row.colour].join(' '));
           return tokens.every(token=>hay.includes(token));
