@@ -912,7 +912,7 @@
       const nk=k=>String(k??'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
       const get=(r,...names)=>{const keys=Object.keys(r||{});for(const n of names){const k=keys.find(x=>nk(x)===nk(n));if(k!==undefined)return r[k];}return '';};
       const t=v=>String(v??'').trim();
-      const dt=v=>{if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);if(typeof v==='number'&&v>0){const z=XLSX.SSF.parse_date_code(v);if(z)return new Date(Date.UTC(z.y,z.m-1,z.d)).toISOString().slice(0,10);}if(v){const d=new Date(v);if(!isNaN(d))return d.toISOString().slice(0,10);}return null;};
+      const dt=v=>{if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');if(typeof v==='number'&&v>0){const z=XLSX.SSF.parse_date_code(v);if(z)return new Date(Date.UTC(z.y,z.m-1,z.d)).toISOString().slice(0,10);}if(v){const d=new Date(v);if(!isNaN(d))return d.toISOString().slice(0,10);}return null;};
       const num=v=>{if(v===null||v===undefined||t(v)==='')return null;const n=Number(String(v).replace(/,/g,''));return Number.isFinite(n)?n:null;};
       const dept=m=>{const x=t(m).toUpperCase();return x==='BEV'||x.includes('EV')||x.includes('ELECTRIC')?'EV':'Personal';};
       const stages=new Set(['OPEN','HOLD','ALLOTED','DAMAGE','RETAIL','DEMO','TRANSFER_OUT','OTHER','BILLING DONE','DEALER','DAMO']);
