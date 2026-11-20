@@ -965,7 +965,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
 </div></div></div>
 </section>
 <section class="view" id="view-quotation">
- <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1 id="quotationPageTitle">Personal — Quotation</h1><div class="subtitle">Quotation format based on the supplied Siddhivinayak Motors reference workbook</div></div><button class="btn" onclick="resetQuotationForm()">＋ &nbsp;New Quotation</button></div>
+ <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1 id="quotationPageTitle">Personal — Quotation</h1><div class="subtitle">Quotation layout matching the Siddhivinayak Motors printed quotation format</div></div><button class="btn" onclick="resetQuotationForm()">＋ &nbsp;New Quotation</button></div>
  <div class="card quote-create-card">
   <div class="card-head"><div><div class="card-title">Create New Quotation</div><div class="card-desc">Complete customer and vehicle details, review all charge heads, then save or print.</div></div><span class="pill red">NEW</span></div>
   <div class="card-body">
@@ -1396,7 +1396,7 @@ function getQuotePayload(){
  const bank={accountName:"Siddhivinayak Motors Pvt. Ltd.",bank:"State Bank of India",account:"33349775105",ifsc:"SBIN0060231",branch:"Chitra, Bhavnagar",micr:"364002005"};
  const v=id=>document.getElementById(id)?.value.trim()||'';
  const dateValue=document.getElementById('qDate')?.value||'';
- const quoteDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(dateValue)?dateValue:getQuoteDateTime().date;
+ const quoteDate=dateValue.length===10&&dateValue[4]==='-'?dateValue:getQuoteDateTime().date;
  return {
   no:document.getElementById('quoteNumber').textContent,customer,phone,
   address:v('qAddress'),customerGstin:v('qCustomerGSTIN'),
