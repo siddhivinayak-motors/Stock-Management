@@ -1164,7 +1164,7 @@
       </style></head><body>
       <div class="toolbar"><button onclick="window.print()">🖨 Print</button><button class="pdf" onclick="window.print()">↓ Save as PDF</button></div>
       <main class="sheet"><header class="brand"><div><div class="tag">SIDDHIVINAYAK MAHINDRA</div><h1>${safe(department)} — Stock Register</h1><div class="sub">Stock Management System · Vehicle Inventory Report</div></div><div class="sub" style="text-align:right">Generated<br>${safe(printed)}</div></header>
-      <div class="meta"><span><b>Department:</b> ${safe(department)}</span><span><b>Status:</b> ${safe(status)}</span><span><b>Stage:</b> ${safe(stage)}</span><span><b>Sorting:</b> ${safe(sort)}</span>${search?'<span><b>Search:</b> '+safe(search)+'</span>':''}</div>
+      <div class="meta"><span><b>Department:</b> ${safe(department)}</span><span><b>Status:</b> ${safe(status)}</span><span><b>Stage:</b> ${safe(stage)}</span>${search?'<span><b>Search:</b> '+safe(search)+'</span>':''}</div>
       <div class="count">${table.querySelectorAll('tbody tr').length===1&&table.querySelector('tbody td[colspan]')?'0':' '+table.querySelectorAll('tbody tr').length} records · Filtered Stock Register</div>
       ${table.outerHTML}<footer class="foot"><span>Siddhivinayak Mahindra · Confidential Internal Stock Report</span><span>Page <span class="page"></span></span></footer></main>
       </body></html>`);
