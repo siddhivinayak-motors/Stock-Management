@@ -2017,7 +2017,7 @@
       if($('otfSaveOrder'))$('otfSaveOrder').textContent='Update OTF Order Book';
       if($('otfSavePrintOrder'))$('otfSavePrintOrder').textContent='Update & Print A4';
       if($('otfFormStatus'))$('otfFormStatus').textContent='Editing '+r.order_number;
-      window.showPage?.('otf-personal');
+      window.showPage?.('otf-order-book');
     }).catch(e=>notify(e.message));
   }
   let otfEditingId=null;
