@@ -1067,7 +1067,7 @@
     wrap.innerHTML='<form id="svVehicleEditForm" style="width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Stock Vehicle</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+fields+'</div><div id="svVehicleEditError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px"><button type="button" id="svVehicleDeleteInside" class="btn" style="color:#b4232c">Delete Vehicle</button><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svVehicleEditCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Save Changes</button></div></div></form>';
     document.body.appendChild(wrap);
     $('svVehicleEditCancel').onclick=()=>wrap.remove();
-    $('svVehicleDeleteInside').style.display=has('stock_register','delete')?'':'none';
+    $('svVehicleDeleteInside').style.display=has('stock_register','delete')&&!['RETAIL','DAMAGE','DEMO','TRANSFER_OUT','OTHER'].includes(String(vehicle.stage||'').toUpperCase())?'':'none';
     $('svVehicleDeleteInside').onclick=async()=>{if(!confirm('Permanently delete this vehicle?'))return;const b=$('svVehicleDeleteInside');b.disabled=true;try{await deleteVehicle(vehicle.id);wrap.remove();await renderStock();notify('Vehicle deleted.');}catch(ex){$('svVehicleEditError').textContent=ex.message;b.disabled=false;}};
     $('svVehicleEditForm').onsubmit=async e=>{
       e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;
