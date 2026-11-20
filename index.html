@@ -1722,7 +1722,7 @@ function quoteFindPriceMatch(){
 function quoteApplyPriceList(){
  const match=quoteFindPriceMatch();if(!match)return false;
  const details=Array.isArray(match.components)?match.components:(Array.isArray(match.other_data?.components)?match.other_data.components:[]);
- const usable=details.filter(p=>p&&String(p.label||'').trim()&&!/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(p.label)&&!/insurance\s*\(\s*taxi/i.test(p.label)&&!/accessor|coating|ceramic|\bppf\b/i.test(p.label));
+ const usable=details.filter(p=>p&&String(p.label||'').trim()&&!/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(p.label)&&!/insurance\s*\(\s*taxi/i.test(p.label)&&!/accessor|coation|coating|ceramic|\bppf\b/i.test(p.label));
  const rows=usable.length?usable:[
   {label:'Ex-Showroom Price',value:match.exShowroom??match.ex_showroom??0},
   {label:'TCS',value:match.tcs??match.other_data?.tcs??0},
