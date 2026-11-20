@@ -628,7 +628,7 @@
     const contactPerson=canEditContact?String(q.contactPerson||'').trim():(currentProfile?.full_name||currentUser?.email||'');
     let contactMobile=canEditContact?String(q.contactMobile||'').trim():String(currentProfile?.phone||'').trim();
     if(contactMobile){
-      const digits=contactMobile.replace(/\\D/g,'');
+      const digits=contactMobile.replace(/\D/g,'');
       const normalized=digits.length===12&&digits.startsWith('91')?digits.slice(2):digits.length===11&&digits.startsWith('0')?digits.slice(1):digits;
       if(normalized.length!==10)throw new Error('Contact Person Mobile must be a valid 10-digit number.');
       contactMobile=normalized;
@@ -1840,8 +1840,8 @@
 
   // OTF Order Book — quotation lookup and independent chassis verification.
   let otfDepartment='Personal', otfMatches=[], otfSelectedQuote=null, otfVerifiedVehicle=null, otfSavedRows=[];
-  const otfDigits=v=>String(v||'').replace(/\\D/g,'');
-  const otfNorm=v=>String(v||'').normalize('NFD').replace(/\\p{M}/gu,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const otfDigits=v=>String(v||'').replace(/\D/g,'');
+  const otfNorm=v=>String(v||'').normalize('NFD').replace(/\p{M}/gu,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const otfValue=id=>$(id)?.value?.trim()||'';
   const otfNumber=id=>Math.max(0,Number($(id)?.value||0)||0);
   const otfMoney=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
