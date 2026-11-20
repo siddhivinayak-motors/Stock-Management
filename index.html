@@ -275,6 +275,9 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
 .quote-summary span{display:block;font-size:10px;color:#7d8996;font-weight:800;text-transform:uppercase;letter-spacing:.55px}
 .quote-summary strong{display:block;font-size:25px;color:#26313e;margin-top:7px}
 #quoteManagementRows td{white-space:nowrap}
+#quoteManagementRows .qm-date{min-width:145px;color:#657386;font-size:10px;font-variant-numeric:tabular-nums}
+#quoteManagementRows .qm-vehicle{min-width:225px}
+#quoteManagementRows .qm-department{min-width:105px}
 .qm-action{display:flex;gap:5px}
 .qm-action .btn{padding:6px 9px;font-size:10px}
 @media(max-width:700px){
@@ -1049,7 +1052,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
   <div class="quote-summary"><span>Total Print Copies</span><strong id="qmPrints">0</strong></div>
  </div>
  <div class="card"><div class="card-head"><div><div class="card-title">Quotation Register</div><div class="card-desc">Quotation owner, approval status and number of printed copies.</div></div></div>
-  <div class="table-wrap"><table><thead><tr><th>Quotation No.</th><th>Customer</th><th>Vehicle</th><th>Department</th><th>Created By</th><th>Grand Total</th><th>Status</th><th>Print Count</th><th>Action</th></tr></thead><tbody id="quoteManagementRows"></tbody></table></div>
+  <div class="table-wrap"><table><thead><tr><th>Quotation No.</th><th>Date &amp; Time</th><th>Customer</th><th>Vehicle</th><th>Department</th><th>Created By</th><th>Grand Total</th><th>Status</th><th>Print Count</th><th>Action</th></tr></thead><tbody id="quoteManagementRows"></tbody></table></div>
  </div>
 </section>
 <section class="view" id="view-stock">
@@ -1343,7 +1346,7 @@ const demoQuotes=[];
 let quoteRecords;
 try{quoteRecords=JSON.parse(localStorage.getItem(quoteStoreKey)||'null')||demoQuotes.map(x=>({...x}));}catch(e){quoteRecords=demoQuotes.map(x=>({...x}));}
 function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function nextQuoteNumber(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');const prefix=`SV-${y}${m}${day}-`;const count=quoteRecords.filter(q=>q.no.startsWith(prefix)).length+1;return prefix+String(count).padStart(5,'0')}
+function nextQuoteNumber(){const prefix=({Personal:'PV',EV:'EV',Commercial:'COM',LLM:'LLM'}[currentQuoteDepartment]||'PV');const count=quoteRecords.filter(q=>String(q.no||'').startsWith(prefix+'-')).length+1;return prefix+'-'+String(count).padStart(3,'0')}
 function updateQuoteNumber(){const el=document.getElementById('quoteNumber');if(el)el.textContent=nextQuoteNumber()}
 function isDiscountChargeRow(r){
  const name=(r?.querySelector('.q-charge-name')?.textContent||r?.querySelector('.q-charge-name')?.value||r?.querySelector('select')?.value||r?.querySelector('.q-charge-editable')?.value||r?.querySelector('.amount')?.dataset?.charge||'').trim();
@@ -1841,6 +1844,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="././backend/supabase-runtime.js?v=stock-sheet-columns-20261120a"></script>
+<script src="././backend/supabase-runtime.js?v=quotation-dept-number-datetime-20261120b"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
