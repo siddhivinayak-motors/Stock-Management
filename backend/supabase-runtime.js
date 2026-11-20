@@ -57,6 +57,11 @@
   }
   function roleLevel(){const levels={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Driver':10};return currentProfile?.is_super_admin?100:(levels[currentProfile?.designation]??0);}
   function canManageStock(){return roleLevel()>30;}
+  const STOCK_EDIT_ROLES=new Set(['Super Admin','Admin','General Manager','Manager','HR','DMS','Accountant']);
+  const STOCK_HOLD_ROLES=new Set(['Executive','Reception','Driver']);
+  function canEditStockRole(){return !!currentProfile?.is_super_admin||STOCK_EDIT_ROLES.has(String(currentProfile?.designation||''));}
+  function canRetailStock(){return canEditStockRole();}
+  function canSubmitStockHoldRole(){return STOCK_HOLD_ROLES.has(String(currentProfile?.designation||''));}
   function canManageHolds(){return roleLevel()>=70;}
   function allowedDepartmentList(){
     if(currentProfile?.is_super_admin || ['Admin','General Manager'].includes(currentProfile?.designation)) return ['Personal','EV','Commercial','LLM'];
@@ -499,11 +504,22 @@
     return row;
   }
   async function updateVehicle(id,data,viaImport=false) {
-    if(!canManageStock()&&!viaImport) throw new Error('Executive and junior roles cannot edit stock.');
+    if(!canEditStockRole()&&!viaImport) throw new Error('Only Manager, General Manager, Admin, Super Admin, HR, DMS and Accountant roles can edit stock.');
     if(viaImport&&!has('common_excel_upload','create')) throw new Error('Common Excel Upload permission required.');
     const row=await call(db().from('vehicles').update({...data,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',id).select().single());
     quotationStockCache.clear();
     await audit(viaImport?'common_excel_upload':'stock_register',viaImport?'create':'edit',viaImport?'Reconciled vehicle by exact chassis':'Updated vehicle','vehicle',id);
+    return row;
+  }
+  async function markVehicleRetail(id) {
+    if(!canRetailStock()) throw new Error('Retail permission is limited to Manager and above, HR, DMS and Accountant.');
+    const vehicle=await call(db().from('vehicles').select('*').eq('id',id).single());
+    if(String(vehicle.stage||'').toUpperCase()==='RETAIL') throw new Error('This vehicle is already marked as Retail.');
+    const now=new Date();
+    const retailDate=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
+    const row=await call(db().from('vehicles').update({stage:'RETAIL',status:'Delivered',retail_date:retailDate,retailed_by:currentUser.id,updated_by:currentUser.id,updated_at:now.toISOString()}).eq('id',id).select().single());
+    quotationStockCache.clear();
+    await audit('stock_register','edit','Marked vehicle as Retail','vehicle',id,{chassis_number:vehicle.chassis_number,department:vehicle.department,retail_date:retailDate,customer_name:vehicle.customer_name||null});
     return row;
   }
   async function deleteVehicle(id) {
@@ -895,7 +911,7 @@
     if(!$('stockTable')) return;
     try{
       const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
-      const canEdit=canManageStock(),canDelete=canManageStock()&&has('stock_register','delete');
+      const canEdit=canEditStockRole(),canRetail=canRetailStock(),canDelete=canEditStockRole()&&has('stock_register','delete');
       const deptFilter=$('stockDepartmentFilter');
       const selectedDept=dept==='All'?(deptFilter?.value||'All Accessible Departments'):dept;
       let rows=await loadVehicles(dept==='All'&&selectedDept!=='All Accessible Departments'?selectedDept:dept);
@@ -908,8 +924,8 @@
       const ageSort=$('stockAgeSort')?.value||'oldest';
       rows.sort((a,b)=>{const ta=a.oem_invoice_date?new Date(a.oem_invoice_date).getTime():NaN,tb=b.oem_invoice_date?new Date(b.oem_invoice_date).getTime():NaN;const va=Number.isFinite(ta),vb=Number.isFinite(tb);if(!va&&!vb)return 0;if(!va)return 1;if(!vb)return -1;return ageSort==='newest'?tb-ta:ta-tb;});
       const body=$('stockTable').querySelector('tbody');
-      const canHold=!canManageStock()&&roleLevel()<=30&&has('stock_hold_management','create');
-      body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'" tabindex="0" aria-label="Select vehicle '+esc(v.chassis_number)+'" aria-selected="'+(selectedStockVehicle?.id===v.id?'true':'false')+'" class="'+(selectedStockVehicle?.id===v.id?'selected-stock-row':'')+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(has('quotation_management','view')?'<button class="btn small" data-stock-quote="'+esc(v.id)+'">Quotation</button>':'')+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>':(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small" style="background:#dc2626;color:#fff;border-color:#dc2626" data-stock-hold="'+esc(v.id)+'">Hold</button>':''))+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
+      const canHold=canSubmitStockHoldRole();
+      body.innerHTML=rows.length?rows.map(v=>'<tr data-stock-id="'+esc(v.id)+'" tabindex="0" aria-label="Select vehicle '+esc(v.chassis_number)+'" aria-selected="'+(selectedStockVehicle?.id===v.id?'true':'false')+'" class="'+(selectedStockVehicle?.id===v.id?'selected-stock-row':'')+'"><td>'+esc(v.chassis_number)+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td>'+(v.oem_invoice_date?Math.max(0,Math.floor((Date.now()-new Date(v.oem_invoice_date).getTime())/86400000))+' days':'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.status)+'</td><td>'+esc(v.stage)+'</td><td>'+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>'+(canRetail&&String(v.stage||'').toUpperCase()!=='RETAIL'?'<button class="btn small" style="background:#16834a;color:#fff;border-color:#16834a" data-stock-retail="'+esc(v.id)+'">Retail</button>':''):(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small" style="background:#dc2626;color:#fff;border-color:#dc2626" data-stock-hold="'+esc(v.id)+'">Hold</button>':''))+'</td></tr>').join(''):'<tr><td colspan="12" class="empty">No stock records yet.</td></tr>';
       body.querySelectorAll('tr[data-stock-id]').forEach(row=>{
         const selectRow=()=>{
           const vehicle=rows.find(x=>String(x.id)===String(row.dataset.stockId));
@@ -924,6 +940,13 @@
         row.addEventListener('keydown',e=>{if(e.target!==row)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();selectRow();}});
       });
       body.querySelectorAll('[data-stock-edit]').forEach(b=>b.onclick=()=>editVehicleDialog(rows.find(x=>x.id===b.dataset.stockEdit)));
+      body.querySelectorAll('[data-stock-retail]').forEach(b=>b.onclick=async()=>{
+        const vehicle=rows.find(x=>String(x.id)===String(b.dataset.stockRetail));if(!vehicle||!canRetailStock())return;
+        if(!confirm('Confirm Retail / Sold?\\n\\n'+[vehicle.chassis_number,vehicle.model,vehicle.variant].filter(Boolean).join(' · ')+'\\n\\nThis vehicle will be marked RETAIL and added to Retail Reports.'))return;
+        b.disabled=true;
+        try{await markVehicleRetail(vehicle.id);selectedStockVehicle=null;await renderStock();await loadRetailReport();notify('Vehicle marked Retail and added to Retail Reports.');}
+        catch(ex){notify(ex.message||'Unable to mark vehicle as Retail.');b.disabled=false;}
+      });
       body.querySelectorAll('[data-stock-hold]').forEach(b=>b.onclick=()=>openStockHoldDialog(rows.find(x=>x.id===b.dataset.stockHold)));
       body.querySelectorAll('[data-stock-quote]').forEach(b=>b.onclick=()=>window.startQuotationFromStock?.(rows.find(x=>String(x.id)===String(b.dataset.stockQuote))));
 
@@ -934,7 +957,7 @@
     }catch(e){console.error(e);notify(e.message);}
   }
   function openStockHoldDialog(vehicle){
-    if(!vehicle||String(vehicle.stage||'').toUpperCase()!=='OPEN')return;
+    if(!vehicle||!canSubmitStockHoldRole()||String(vehicle.stage||'').toUpperCase()!=='OPEN')return;
     const old=$('svStockHoldDialog');if(old)old.remove();
     const wrap=document.createElement('div');wrap.id='svStockHoldDialog';wrap.style.cssText='position:fixed;inset:0;z-index:99992;background:#15202dcc;display:grid;place-items:center;padding:16px';
     const field=(label,value)=>'<label style="display:block;font-size:13px;color:#526174">'+label+'<input class="field" value="'+esc(value||'—')+'" readonly style="width:100%;margin-top:4px;background:#f6f8fb"></label>';
@@ -943,12 +966,12 @@
     $('svStockHoldForm').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button[type=submit]');b.disabled=true;try{const values=Object.fromEntries(new FormData(e.target).entries());const mobile=String(values.customer_mobile||'').replace(/\D/g,'');if(!/^[0-9]{10}$/.test(mobile))throw new Error('Enter a valid 10-digit customer mobile number.');await call(db().from('stock_holds').insert({vehicle_id:vehicle.id,department:vehicle.department,vehicle:vehicle.model,variant:[vehicle.variant,vehicle.colour].filter(Boolean).join(' / '),vin:vehicle.chassis_number,executive:currentProfile?.full_name||currentUser.email,reason:values.reason.trim(),customer_name:values.customer_name.trim(),customer_mobile:mobile,created_by:currentUser.id}));await audit('stock_hold_management','create','Submitted customer vehicle hold request','stock_hold',null,{chassis_number:vehicle.chassis_number,department:vehicle.department,customer_name:values.customer_name.trim()});wrap.remove();notify('Customer hold request sent to Manager for approval.');}catch(ex){$('svStockHoldError').textContent=ex.message;b.disabled=false;}};
   }
   function editVehicleDialog(vehicle){
-    if(!vehicle)return;
+    if(!vehicle||!canEditStockRole())return;
     const existing=$('svVehicleDialog');if(existing)existing.remove();
     const labels={department:'Department',chassis_number:'Chassis Number',excel_number:'Excel Number',model:'Model',variant:'Variant',seating:'Seating',colour:'Colour',manufacturing_year:'Manufacturing Year',oem_invoice_date:'OEM Invoice Date',engine_number:'Engine Number',sc_name:'SC Name',customer_name:'Customer Name',status:'Status',stage:'Stage',place:'Place'};
     const wrap=document.createElement('div');wrap.id='svVehicleDialog';
     wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
-    const fields=Object.entries(labels).map(([k,label])=>{let control='';if(k==='department')control='<select class="field" name="department">'+allowedDepartmentList().map(d=>'<option value="'+esc(d)+'" '+(vehicle.department===d?'selected':'')+'>'+esc(d)+'</option>').join('')+'</select>';else if(k==='status')control='<select class="field" name="status">'+['Received','In Transit'].map(v=>'<option '+(String(vehicle.status||'').toLowerCase()===v.toLowerCase()?'selected':'')+'>'+v+'</option>').join('')+'</select>';else if(k==='stage')control='<select class="field" name="stage">'+['OPEN','ALLOTED','HOLD','DAMAGE'].map(v=>'<option '+(String(vehicle.stage||'').toUpperCase()===v?'selected':'')+'>'+v+'</option>').join('')+'</select>';else control='<input class="field" name="'+k+'" value="'+esc(vehicle[k]??'')+'" '+(k==='chassis_number'?'readonly':'')+'>';return '<label style="display:block;font-size:12px;font-weight:650">'+label+control+'</label>';}).join('');
+    const fields=Object.entries(labels).map(([k,label])=>{let control='';if(k==='department')control='<select class="field" name="department">'+allowedDepartmentList().map(d=>'<option value="'+esc(d)+'" '+(vehicle.department===d?'selected':'')+'>'+esc(d)+'</option>').join('')+'</select>';else if(k==='status')control='<select class="field" name="status">'+['Received','In Transit','Delivered'].map(v=>'<option '+(String(vehicle.status||'').toLowerCase()===v.toLowerCase()?'selected':'')+'>'+v+'</option>').join('')+'</select>';else if(k==='stage')control='<select class="field" name="stage">'+['OPEN','ALLOTED','HOLD','DAMAGE','RETAIL'].map(v=>'<option '+(String(vehicle.stage||'').toUpperCase()===v?'selected':'')+'>'+v+'</option>').join('')+'</select>';else control='<input class="field" name="'+k+'" value="'+esc(vehicle[k]??'')+'" '+(k==='chassis_number'?'readonly':'')+'>';return '<label style="display:block;font-size:12px;font-weight:650">'+label+control+'</label>';}).join('');
     wrap.innerHTML='<form id="svVehicleEditForm" style="width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Stock Vehicle</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+fields+'</div><div id="svVehicleEditError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px"><button type="button" id="svVehicleDeleteInside" class="btn" style="color:#b4232c">Delete Vehicle</button><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svVehicleEditCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Save Changes</button></div></div></form>';
     document.body.appendChild(wrap);
     $('svVehicleEditCancel').onclick=()=>wrap.remove();
@@ -1349,11 +1372,22 @@
   });
   window.resetAllExceptEmployees=window.openOperationalResetDialog;
   async function loadRetailReport(){
-    // Retail Date is a separate sales event. OEM Invoice Date is not a valid substitute.
-    if($('retailRows'))$('retailRows').innerHTML='<tr><td colspan="7" class="empty">Retail sales date data is not yet connected. This report is disabled rather than using OEM invoice dates as retail dates.</td></tr>';
-    const cards=$('view-reports')?.querySelectorAll('.retail-kpi strong');
-    cards?.forEach(x=>x.textContent='—');
-    notify('Retail reporting needs an approved retail-sale source and retail date field.');
+    const body=$('retailRows'),cards=$('view-reports')?.querySelectorAll('.retail-kpi strong');
+    if(!body)return;
+    if(!has('retail_reports','view')){body.innerHTML='<tr><td colspan="7" class="empty">Retail Reports permission required.</td></tr>';cards?.forEach(x=>x.textContent='—');return;}
+    try{
+      const month=$('retailMonth')?.value||new Date().toISOString().slice(0,7),parts=month.split('-').map(Number),year=parts[0],monthNo=parts[1];
+      if(!year||!monthNo||monthNo<1||monthNo>12)throw new Error('Select a valid report month.');
+      const start=month+'-01',last=new Date(year,monthNo,0).getDate(),end=month+'-'+String(last).padStart(2,'0'),departments=allowedDepartmentList();
+      const rows=departments.length?await call(db().from('vehicles').select('*').eq('stage','RETAIL').gte('retail_date',start).lte('retail_date',end).in('department',departments).order('retail_date',{ascending:false}).order('created_at',{ascending:false})):[];
+      const count=d=>rows.filter(v=>v.department===d).length;
+      if(cards?.[0])cards[0].textContent=String(rows.length).padStart(2,'0');
+      if(cards?.[1])cards[1].textContent=String(count('Personal')).padStart(2,'0');
+      if(cards?.[2])cards[2].textContent=String(count('Commercial')).padStart(2,'0');
+      if(cards?.[3])cards[3].textContent=String(count('EV')+count('LLM')).padStart(2,'0');
+      body.innerHTML=rows.length?rows.map(v=>'<tr><td>'+esc(v.retail_date||'—')+'</td><td>'+esc(v.chassis_number||'—')+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / ')||'—')+'</td><td>'+esc(v.department||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td><span class="pill green">Retail / Delivered</span></td></tr>').join(''):'<tr><td colspan="7" class="empty">No retail records for this period.</td></tr>';
+      const desc=body.closest('.card')?.querySelector('.card-desc');if(desc)desc.textContent=rows.length+' retail vehicles · '+start+' to '+end+' · Live Supabase data';
+    }catch(e){console.error('Retail report load failed:',e);body.innerHTML='<tr><td colspan="7" class="empty">'+esc(e.message||'Unable to load retail records.')+'</td></tr>';notify(e.message||'Unable to load Retail Reports.');}
   }
   window.applyRetailMonth=()=>loadRetailReport();
 
@@ -1429,6 +1463,7 @@
     const addButton=$('addVehicle');if(addButton){addButton.style.display=canManageStock()?'':'none';addButton.disabled=!canManageStock();}
     const newVehicleDept=$('stockDepartmentForNewVehicle');
     if(newVehicleDept){newVehicleDept.innerHTML=permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');newVehicleDept.value=permittedDepartments[0]||'';}
+    $('retailRefresh')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();loadRetailReport();},true);
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
     $('holdDeptFilter')?.addEventListener('change',()=>window.holdRender());
     // Let the original UI's own click handlers perform navigation.
@@ -1492,7 +1527,7 @@
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadPriceListStock,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadPriceListStock,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,audit};
     window.dispatchEvent(new Event('svm:ready'));
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
