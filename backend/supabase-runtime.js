@@ -113,14 +113,14 @@
       try{
         if(!window.SVMBackend||typeof window.SVMBackend.loadPriceLists!=='function')throw new Error('Price List service unavailable');
         await window.SVMBackend.loadPriceLists();
-        const rows=Object.entries(window.plData||{}).flatMap(([department,items])=>(items||[]).map(row=>({...row,department:row.department||department})));
+        const rows=((window.plData&&window.plData[dept])||[]).map(row=>({...row,department:row.department||dept}));
         const tokens=query.split(/\s+/).filter(Boolean);
         const matches=rows.filter(row=>{
           const hay=quoteSearchNorm([row.vehicle,row.variant,row.colour].join(' '));
           return tokens.every(token=>hay.includes(token));
         }).sort((a,b)=>String(a.vehicle||'').localeCompare(String(b.vehicle||''))||String(a.variant||'').localeCompare(String(b.variant||''))||String(a.colour||'').localeCompare(String(b.colour||'')));
-        if(!matches.length){box.innerHTML='<div class="q-stock-empty">No matching Model / Variant / Colour found in accessible department Price Lists.</div>';return;}
-        box.innerHTML='<div class="q-stock-count">'+matches.length+' Price List match(es) · All accessible departments</div>'+matches.slice(0,60).map((row,i)=>'<button type="button" class="q-stock-option" data-quote-price-index="'+i+'"><span class="q-stock-main"><b>'+esc(row.vehicle||'—')+'</b><span>'+esc(row.variant||'Variant not listed')+' · '+esc(row.colour||'Colour not listed')+'</span></span><span class="q-stock-meta"><small>'+esc(row.department||'PRICE LIST')+'</small></span></button>').join('')+(matches.length>60?'<div class="q-stock-count">Showing first 60 matches. Type more model or variant text to narrow the list.</div>':'');
+        if(!matches.length){box.innerHTML='<div class="q-stock-empty">No matching Model / Variant / Colour found in the '+esc(dept)+' Price List.</div>';return;}
+        box.innerHTML='<div class="q-stock-count">'+matches.length+' Price List match(es) · '+esc(dept)+'</div>'+matches.slice(0,60).map((row,i)=>'<button type="button" class="q-stock-option" data-quote-price-index="'+i+'"><span class="q-stock-main"><b>'+esc(row.vehicle||'—')+'</b><span>'+esc(row.variant||'Variant not listed')+' · '+esc(row.colour||'Colour not listed')+'</span></span><span class="q-stock-meta"><small>'+esc(row.department||'PRICE LIST')+'</small></span></button>').join('')+(matches.length>60?'<div class="q-stock-count">Showing first 60 matches. Type more model or variant text to narrow the list.</div>':'');
         box.querySelectorAll('[data-quote-price-index]').forEach(button=>button.addEventListener('click',()=>{
           const row=matches[Number(button.dataset.quotePriceIndex)];if(!row)return;
           if(typeof window.setQuotationDepartment==='function')window.setQuotationDepartment(row.department);
