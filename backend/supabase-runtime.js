@@ -736,7 +736,7 @@
       set('qEmail',q.email);set('qBranchAddress',q.branchAddress);set('qHelpline',q.helpline);
       set('qPan',q.pan);set('qGstin',q.gstin);
       if($('quoteNumber'))$('quoteNumber').textContent=q.no;
-      document.querySelectorAll('#view-quotation details').forEach(d=>d.open=true);
+      document.querySelectorAll('#view-quotation details').forEach(d=>d.open=false);
       const escAttr=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       const allItems=q.items||[];
       const isDiscountItem=x=>!!x.discount||/discount|\\bless\\b/i.test(String(x.name||''));
@@ -832,9 +832,8 @@
         Math.round(Number(row.total||0)*100)===Math.round(Number(q.total||0)*100)
       );
       if(duplicate) throw new Error('આ ગ્રાહકના આ મોબાઇલ નંબર અને આ જ ગાડીનું આ જ Grand Total વાળું quotation પહેલેથી નોંધાયેલું છે ('+duplicate.quote_number+'). ભાવ અથવા quotation detailsમાં ફેરફાર કર્યા વગર ફરીથી quotation બનાવી શકાશે નહીં.');
-      // Keep the existing production numbering convention: SV-YYYYMMDD-00001.
-      // The database daily counter allocates the number atomically at save time.
-      const allocatedNumber=await call(db().rpc('next_quote_number'));
+      // Allocate a department-specific PV / EV / CV / LV number atomically per India-local day.
+      const allocatedNumber=await call(db().rpc('next_quote_number',{p_department:dept}));
       q.no=allocatedNumber;
       if($('quoteNumber'))$('quoteNumber').textContent=allocatedNumber;
       const payload={
@@ -859,7 +858,7 @@
       if(printAfter) window.printSavedQuote(quoteRecords.findIndex(x=>x.id===saved.id));
     } catch(e){console.error(e);const duplicateError=e.code==='23505'||String(e.message||'').includes('Duplicate quotation');notify(duplicateError?'આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી નોંધાયેલું છે. ફરીથી એન્ટ્રી કરી શકાશે નહીં.':(e.message||'Could not save quotation.'));}
   };
-  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; if(typeof original==='function')original(); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Complete customer and vehicle details, review all charge heads, then save or print.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('savePrintQuote'))$('savePrintQuote').textContent='Save & Print';})(window.resetQuotationForm);
+  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Complete customer and vehicle details, review all charge heads, then save or print.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('savePrintQuote'))$('savePrintQuote').textContent='Save & Print';})(window.resetQuotationForm);
   window.saveRecords = () => {}; // Quotation records now live in Supabase, not localStorage.
   window.loadDepartmentQuotes = () => { reloadQuoteList().catch(e=>{console.error(e);notify(e.message);}); };
   window.approveQuote = async (i) => {
