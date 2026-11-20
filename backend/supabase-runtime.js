@@ -545,9 +545,20 @@
     status:String(row.status||'Pending').toUpperCase(),prints:Number(row.print_count||0),
     date:row.quote_date,items:(row.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount}))
   });
+  const sameQuoteKey=(a,b)=>
+    String(a.department||'').trim().toLowerCase()===String(b.department||'').trim().toLowerCase() &&
+    String(a.customer||'').trim().replace(/\s+/g,' ').toLowerCase()===String(b.customer||'').trim().replace(/\s+/g,' ').toLowerCase() &&
+    String(a.phone||'').replace(/\D/g,'')===String(b.phone||'').replace(/\D/g,'') &&
+    String(a.model||'').trim().replace(/\s+/g,' ').toLowerCase()===String(b.model||'').trim().replace(/\s+/g,' ').toLowerCase() &&
+    String(a.variant||'').trim().replace(/\s+/g,' ').toLowerCase()===String(b.variant||'').trim().replace(/\s+/g,' ').toLowerCase() &&
+    Math.round(Number(a.total||0)*100)===Math.round(Number(b.total||0)*100);
   window.renderQuoteManagement = () => {
     const body=$('quoteManagementRows');if(!body)return;
-    body.innerHTML=quoteRecords.map((q,i)=>'<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.vehicle)+'</td><td>'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+(q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red')+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+(q.status==='PENDING'?'<button class="btn small" onclick="approveQuote('+i+')">Approve</button>':'')+'</div></td></tr>').join('');
+    body.innerHTML=quoteRecords.map((q,i)=>{
+      const blocked=q.status==='PENDING'&&quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other));
+      const approval=q.status!=='PENDING'?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button>';
+      return '<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.vehicle)+'</td><td>'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+(q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red')+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+approval+'</div></td></tr>';
+    }).join('');
     $('qmTotal').textContent=quoteRecords.length;
     $('qmPending').textContent=quoteRecords.filter(q=>q.status==='PENDING').length;
     $('qmApproved').textContent=quoteRecords.filter(q=>q.status==='APPROVED').length;
@@ -610,6 +621,7 @@
     try{
       const q=quoteRecords[i];if(!q?.id) return;
       if(!has('quotation_management','approve')) throw new Error('You do not have approval permission.');
+      if(quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી APPROVED છે. આ duplicate quotation approve નહીં થાય.');
       const {data,error}=await db().from('quotations').update({status:'Approved',approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id).eq('status','Pending').select('id');
       if(error)throw error;
       if(!data?.length)throw new Error('Quotation is not pending or was already approved.');
