@@ -64,12 +64,13 @@
     const {data:{user},error}=await db().auth.getUser();
     if(error) throw error;
     currentUser=user;
-    if(!user){currentProfile=null;permissions.clear();return;}
+    if(!user){currentProfile=null;permissions.clear();syncOperationalResetVisibility();return;}
     const p=await call(db().from('profiles').select('*').eq('user_id',user.id).maybeSingle());
     currentProfile=p;
     const rows=await call(db().from('employee_permissions').select('module,actions').eq('user_id',user.id));
     permissions=new Map(rows.map(x=>[x.module,x.actions||[]]));
     if(!p || p.status!=='active') { await db().auth.signOut(); throw new Error('Your employee account is not active. Contact Admin.'); }
+    syncOperationalResetVisibility();
   }
   function showLogin() {
     if($('svAuthGate')) return;
@@ -1279,7 +1280,15 @@
     'llm.stock':'LLM · Stock Register','llm.holds':'LLM · Stock Hold Management','llm.quotations':'LLM · Quotations','llm.price_list':'LLM · Price List','llm.excel_upload':'LLM · Excel Upload History',
     'workspace.price_list_imports':'Workspace · Price List Import History','workspace.common_excel_upload':'Workspace · Common Excel Upload History','workspace.audit_history':'Workspace · Audit History','workspace.retail_reports':'Workspace · Retail Reports'
   };
-  function resetIsSuperAdmin(){return !!currentUser&&(!!currentProfile?.is_super_admin||String(currentProfile?.designation||'').toLowerCase()==='super admin');}
+  const RESET_OWNER_UID='236565a9-1892-41ee-b54a-c81bde3b9b01';
+  function resetIsSuperAdmin(){return !!currentUser&&currentUser.id===RESET_OWNER_UID&&currentProfile?.user_id===RESET_OWNER_UID&&currentProfile?.is_super_admin===true&&String(currentProfile?.status||'').toLowerCase()==='active';}
+  function syncOperationalResetVisibility(){
+    const allowed=resetIsSuperAdmin();
+    const area=$('svOperationalResetArea'),dialog=$('svResetDialog');
+    if(area)area.hidden=!allowed;
+    if(!allowed&&dialog)dialog.hidden=true;
+    if(!allowed&&$('svResetSelectionSummary'))$('svResetSelectionSummary').hidden=true;
+  }
   function resetSelectedKeys(){return [...document.querySelectorAll('#svResetTree input[type=checkbox][value]:checked')].map(x=>x.value);}
   function syncResetSelectionUI(){
     const selected=resetSelectedKeys(),all=[...document.querySelectorAll('#svResetTree input[type=checkbox][value]')];
@@ -1472,7 +1481,7 @@
     if(currentUser) installScreenHooks();
     if(currentUser){await startApp();await recordSessionLogin();} else showLogin();
     db().auth.onAuthStateChange(async(_event,session)=>{
-      if(!session){currentUser=null;currentProfile=null;permissions.clear();sessionLoginRecordedFor=null;showLogin();return;}
+      if(!session){currentUser=null;currentProfile=null;permissions.clear();sessionLoginRecordedFor=null;syncOperationalResetVisibility();showLogin();return;}
       try{await refreshIdentity();await startApp();await recordSessionLogin();}catch(e){console.error(e);showLogin();}
     });
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
