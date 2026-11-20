@@ -561,9 +561,11 @@
     const canDelete=canManageQuotationRecords();
     body.innerHTML=quoteRecords.map((q,i)=>{
       const blocked=q.status==='PENDING'&&quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other));
-      const approval=q.status!=='PENDING'?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button>';
-      const manage=(canEdit?'<button class="btn small" onclick="editSavedQuote('+i+')">Edit</button>':'')+(canDelete?'<button class="btn small danger" onclick="deleteSavedQuote('+i+')">Delete</button>':'');
-      return '<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.vehicle)+'</td><td>'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+(q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red')+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+approval+manage+'</div></td></tr>';
+      const canReview=has('quotation_management','approve');
+      const approval=q.status!=='PENDING'||!canReview?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>';
+      const manage=(canDelete?'<button class="btn small danger" onclick="deleteSavedQuote('+i+')">Delete</button>':'')+(canEdit?'<button class="btn small" onclick="editSavedQuote('+i+')">Edit</button>':'');
+      const statusClass=q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red';
+      return '<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.vehicle)+'</td><td>'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+statusClass+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+manage+approval+'</div></td></tr>';
     }).join('');
     $('qmTotal').textContent=quoteRecords.length;
     $('qmPending').textContent=quoteRecords.filter(q=>q.status==='PENDING').length;
@@ -710,6 +712,24 @@
       if(!data?.length)throw new Error('Quotation is not pending or was already approved.');
       await audit('quotation_management','approve','Approved quotation','quotation',q.id);
       await reloadQuoteList();notify('Quotation approved.');
+    }catch(e){notify(e.message);}
+  };
+  window.denyQuote = async (i) => {
+    try{
+      const q=quoteRecords[i];if(!q?.id) return;
+      if(!has('quotation_management','approve')) throw new Error('You do not have quotation review permission.');
+      if(q.status!=='PENDING') throw new Error('Only pending quotations can be denied.');
+      const reason=prompt('Deny quotation '+q.no+'. Enter a reason (optional):','');
+      if(reason===null) return;
+      if(!confirm('Are you sure you want to mark quotation '+q.no+' as DENIED?')) return;
+      const {data,error}=await db().from('quotations')
+        .update({status:'Denied',updated_by:currentUser.id,updated_at:new Date().toISOString()})
+        .eq('id',q.id).eq('status','Pending').select('id');
+      if(error) throw error;
+      if(!data?.length) throw new Error('Quotation is no longer pending. Refresh and try again.');
+      await audit('quotation_management','deny','Denied quotation','quotation',q.id,{quote_number:q.no,reason:reason.trim()});
+      await reloadQuoteList();
+      notify('Quotation marked as Denied.');
     }catch(e){notify(e.message);}
   };
   window.printSavedQuote = async (i) => {
