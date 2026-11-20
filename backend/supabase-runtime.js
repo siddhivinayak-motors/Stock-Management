@@ -736,8 +736,26 @@
       if($('quoteNumber'))$('quoteNumber').textContent=q.no;
       document.querySelectorAll('#view-quotation details').forEach(d=>d.open=true);
       const escAttr=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-      const rows=(q.items||[]).map((x,n)=>{const isDiscount=!!x.discount||/discount|\\bless\\b/i.test(String(x.name||''));return '<div class="charge-row'+(isDiscount?' discount-charge':'')+'"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap'+(isDiscount?' discount-input':'')+'"><span>'+(isDiscount?'− ₹':'₹')+'</span><input class="amount" type="number" min="0" step="0.01" value="'+Number(x.amount||0)+'" data-charge="'+escAttr(x.name)+'"></div>'+(isDiscount?'<span class="discount-lock">LESS</span>':'<button class="icon-btn remove-charge" aria-label="Remove charge">×</button>')+'</div>';}).join('');
-      $('charges').innerHTML=rows;
+      const allItems=q.items||[];
+      const isDiscountItem=x=>!!x.discount||/discount|\\bless\\b/i.test(String(x.name||''));
+      const regularItems=allItems.filter(x=>!isDiscountItem(x));
+      const discountItems=allItems.filter(isDiscountItem);
+      const regularRows=regularItems.map((x,n)=>'<div class="charge-row"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" value="'+Number(x.amount||0).toFixed(2)+'" data-charge="'+escAttr(x.name)+'"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>').join('');
+      const discountDefs=[
+        {name:'LESS RETAIL OFFER',match:/retail/i},
+        {name:'LESS EXCHANGE OFFER',match:/exchange/i},
+        {name:'LESS EXTRA DISCOUNT',match:/extra|discount/i}
+      ];
+      const usedDiscounts=new Set();
+      const discountRow=(name,amount,n)=>'<div class="charge-row discount-charge"><span class="charge-index">'+String(n).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(name)+'</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" value="'+Number(amount||0).toFixed(2)+'" data-charge="'+escAttr(name)+'"></div><span class="discount-lock">LESS</span></div>';
+      let discountRows=discountDefs.map((def,n)=>{
+        const found=discountItems.find(x=>!usedDiscounts.has(x)&&def.match.test(String(x.name||'')));
+        if(found)usedDiscounts.add(found);
+        return discountRow(def.name,found?.amount||0,n+1);
+      }).join('');
+      discountItems.filter(x=>!usedDiscounts.has(x)).forEach((x,n)=>{discountRows+=discountRow(x.name, x.amount, discountDefs.length+n+1);});
+      $('charges').innerHTML=regularRows;
+      if($('quoteDiscounts'))$('quoteDiscounts').innerHTML=discountRows;
       if($('quotationPageTitle'))$('quotationPageTitle').textContent=currentQuoteDepartment+' — Edit Quotation';
       const head=document.querySelector('#view-quotation .card-title');if(head)head.textContent='Edit Quotation';
       const desc=document.querySelector('#view-quotation .card-desc');if(desc)desc.textContent='Edit quotation details, save changes, then print the revised quotation.';
