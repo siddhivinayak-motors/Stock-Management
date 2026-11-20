@@ -1332,7 +1332,7 @@ function showPage(page){
 document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>{
  const page=b.dataset.page;
  const otfRoute={'otf-personal':'Personal','otf-ev':'EV','otf-commercial':'Commercial','otf-llm':'LLM'};
- if(otfRoute[page]){showPage('otf-order-book');window.otfOpenDepartment?.(otfRoute[page]);return;}
+ if(otfRoute[page]){showPage('otf-order-book');document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n===b));window.otfOpenDepartment?.(otfRoute[page]);return;}
  const quoteRoute={'quotation':'Personal','quotation-management':'Personal','ev-quotation':'EV','ev-management':'EV','commercial-quotation':'Commercial','commercial-management':'Commercial','llm-quotation':'LLM','llm-management':'LLM'};
  if(quoteRoute[page]){currentQuoteDepartment=quoteRoute[page];loadDepartmentQuotes();refreshQuotePriceSuggestions();showPage(page.includes('management')?'quotation-management':'quotation');document.getElementById('quotationPageTitle').textContent=currentQuoteDepartment+' — Quotation';document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n===b));updateQuoteNumber();calc();renderQuoteManagement();return;}
  if(page.startsWith('stock-hold-')){showPage('stock-hold-central');holdRender();return;}
