@@ -1874,7 +1874,8 @@
     if(!has('quotation_management','view'))throw new Error('Quotation view permission required.');
     const phone=otfDigits(otfValue('otfPhoneSearch'));
     if(phone.length!==10)throw new Error('Enter a valid 10-digit mobile number.');
-    const rows=await call(db().from('quotations').select('*,quotation_items(*)').eq('department',otfDepartment).order('created_at',{ascending:false}).limit(1000));
+    const phoneVariants=[phone,'+91'+phone,'91'+phone,'0'+phone];
+    const rows=await call(db().from('quotations').select('*,quotation_items(*)').eq('department',otfDepartment).in('phone',phoneVariants).order('created_at',{ascending:false}).limit(100));
     otfMatches=rows.filter(q=>otfDigits(q.phone)===phone);
     const box=$('otfQuoteResults');
     if(!otfMatches.length){box.innerHTML='<div class="empty">No quotations found for this mobile number in '+esc(otfDepartment)+'.</div>';return;}
