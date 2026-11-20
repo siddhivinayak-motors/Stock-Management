@@ -898,7 +898,7 @@
   window.pratikStockPreview = async () => {
     try {
       const file=$('pratikStockFile')?.files?.[0];
-      if(!file)throw new Error('Select Pratik Bhadeka Excel file first.');
+      if(!file)throw new Error('Select Manager Excel file first.');
       if(!has('common_excel_upload','create'))throw new Error('Common Excel Upload permission required.');
       const allowed=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
       const root=!!currentProfile?.is_super_admin;
@@ -921,12 +921,16 @@
         const model=t(get(r,'MODEL')),variant=t(get(r,'VARIENTS','VARIANTS','VARIANT'));
         const original=t(get(r,'CHASSIS NUMBER','CHASSISNUMBER','CHASSIS')).toUpperCase();
         const chassis=original||(model?'XXXX-'+String(++placeholderNo).padStart(3,'0'):'');
-        const department=dept(model),stage=t(get(r,'STAGE')).toUpperCase()||'OPEN';
+        const explicitDept=t(get(r,'DEPARTMENT','SEGMENT','SEGMENT CODE')).toUpperCase();
+        const department=/\b(EV|BEV|ELECTRIC)\b/.test(explicitDept)||explicitDept.includes('ELECTRIC')? 'EV' : /PERSONAL/.test(explicitDept)?'Personal':dept(model);
+        const rawStage=t(get(r,'STAGE')).toUpperCase();
+        const stageAliases={'IN TRANSIT':'OPEN','TRANSIT':'OPEN','RECEIVED':'OPEN','IN STOCK':'OPEN','AVAILABLE':'OPEN','ALLOTTED':'ALLOTED','ALLOCATED':'ALLOTED','DELIVERED':'RETAIL','RETAILED':'RETAIL','TRANSFER OUT':'TRANSFER_OUT','TRANSFER-OUT':'TRANSFER_OUT','BILLING':'BILLING DONE','BILLING COMPLETED':'BILLING DONE'};
+        const stage=stageAliases[rawStage]||rawStage||'OPEN';
         let decision='Ready';
         if(!model)decision='Review: Missing model';
         else if(!chassis)decision='Review: Missing chassis';
         else if(seen.has(chassis))decision='Review: Duplicate chassis';
-        else if(!stages.has(stage))decision='Review: Unknown stage';
+        else if(!stages.has(stage))decision='Review: Unknown stage "'+rawStage+'" at Excel row '+(i+2);
         else if(!root&&!allowed.has(department.toLowerCase()))decision='Review: No department access';
         seen.add(chassis);
         const mfg=t(get(r,'MFG YEAR')),ym=mfg.match(/(?:19|20)\d{2}/);
@@ -940,7 +944,7 @@
       }).filter(x=>x.model||x.chassis);
       if(!pratikStockPreviewRows.length)throw new Error('No vehicle rows found in STOCK worksheet.');
       const bad=pratikStockPreviewRows.filter(x=>x.decision!=='Ready');
-      if(bad.length)throw new Error('Review found '+bad.length+' invalid rows. Correct the Excel file before sync.');
+      if(bad.length)throw new Error('Review found '+bad.length+' invalid rows. '+bad.slice(0,5).map(x=>'Excel row '+x.source_row+': '+x.decision).join(' · ')+'. No data changed.');
       const existing=[];
       for(let from=0;;from+=1000){const part=await call(db().from('vehicles').select('chassis_number,department,stage,status').in('department',['Personal','EV']).range(from,from+999));existing.push(...part);if(part.length<1000)break;}
       const incoming=new Set(pratikStockPreviewRows.map(x=>x.chassis));
@@ -969,12 +973,12 @@
       quotationStockCache.clear();pratikStockPreviewRows=[];pratikStockPreviewFile=null;
       $('pratikStockApply').disabled=true;
       $('pratikStockSummary').textContent='Sync completed. Uploaded: '+result.uploaded_rows+' · Personal: '+result.personal_rows+' · EV: '+result.ev_rows+' · Removed: '+result.removed_rows+'. Commercial and LLM unchanged.';
-      await renderStock();await loadImportHistory();notify('Pratik Bhadeka Personal / EV stock synchronized.');
+      await renderStock();await loadImportHistory();notify('Manager Personal / EV stock synchronized.');
     } catch(e) {console.error(e);notify(e.message||'Stock sync failed.');}
   };
-  window.stockImportPreview = async () => {
+  window.robinStockPreview = async () => {
     try{
-      const file=$('stockReportFile')?.files?.[0];if(!file)throw new Error('Select the standard stock report Excel file.');
+      const file=$('robinStockFile')?.files?.[0];if(!file)throw new Error('Select the Robin Commercial / LLM stock report Excel file.');
       if(!has('common_excel_upload','create'))throw new Error('You do not have Excel Upload permission.');
       const rows=await readWorkbook(file);
       const existing=[];
@@ -995,7 +999,7 @@
         if(value){const d=new Date(value);if(!isNaN(d))return d;}
         return null;
       };
-      stockPreviewRows=rows.filter(r=>Object.values(r||{}).some(v=>v!==null&&v!==undefined&&String(v).trim()!=='')).map(r=>{
+      robinStockPreviewRows=rows.filter(r=>Object.values(r||{}).some(v=>v!==null&&v!==undefined&&String(v).trim()!=='')).map(r=>{
         const segment=String(plHeader(r,['segmentcode','segment'])||'').trim().toUpperCase();
         const department=mapSegment(segment);
         const chassis=String(plHeader(r,['chassisnumber','chassis'])||'').trim().toUpperCase();
@@ -1004,6 +1008,7 @@
         const invoiceDate=toDateValue(date);
         let decision='Import';
         if(!department)decision='Review: Unknown Segment';
+        else if(!['Commercial','LLM'].includes(department))decision='Skip: Manager handles Personal / EV';
         else if(!allowedDepartments.has(String(department).toLowerCase()))decision='Review: Outside your department';
         else if(!chassis)decision='Review: Missing Chassis Number';
         else if(!invoiceDate)decision='Review: Missing Invoice Date';
@@ -1013,21 +1018,21 @@
         else {seenChassis.add(chassis);if(vin)seenVin.add(vin);}
         return {chassis,vin,model:String(plHeader(r,['model'])||''),variant:String(plHeader(r,['variantdesc','variant'])||''),segment,department,status:String(plHeader(r,['vehiclestatus','status'])||'Received'),stockType:String(plHeader(r,['stocktype'])||''),date,raw:r,decision};
       });
-      const count=k=>stockPreviewRows.filter(x=>x.decision===k).length;
-      const review=stockPreviewRows.filter(x=>x.decision.startsWith('Review')).length;
-      const duplicates=stockPreviewRows.filter(x=>x.decision.startsWith('Duplicate')||x.decision.startsWith('Skip:')).length;
-      $('stockImportSummary').style.display='block';
-      $('stockImportSummary').textContent='Rows: '+rows.length+' · Importable: '+count('Import')+' · Duplicates skipped: '+duplicates+' · Needs review: '+review+' · Department: Personal '+stockPreviewRows.filter(x=>x.department==='Personal'&&x.decision==='Import').length+' / Commercial '+stockPreviewRows.filter(x=>x.department==='Commercial'&&x.decision==='Import').length+' / EV '+stockPreviewRows.filter(x=>x.department==='EV'&&x.decision==='Import').length+' / LLM '+stockPreviewRows.filter(x=>x.department==='LLM'&&x.decision==='Import').length;
-      $('stockImportRows').innerHTML=stockPreviewRows.slice(0,500).map(x=>'<tr><td>'+esc(x.chassis||'—')+'</td><td>'+esc(x.model)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.segment)+'</td><td>'+esc(x.department||'Review')+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No valid rows found.</td></tr>';
+      const count=k=>robinStockPreviewRows.filter(x=>x.decision===k).length;
+      const review=robinStockPreviewRows.filter(x=>x.decision.startsWith('Review')).length;
+      const duplicates=robinStockPreviewRows.filter(x=>x.decision.startsWith('Duplicate')||x.decision.startsWith('Skip:')).length;
+      $('robinStockSummary').style.display='block';
+      $('robinStockSummary').textContent='Rows: '+rows.length+' · Importable: '+count('Import')+' · Duplicates skipped: '+duplicates+' · Needs review: '+review+' · Department: Personal '+robinStockPreviewRows.filter(x=>x.department==='Personal'&&x.decision==='Import').length+' / Commercial '+robinStockPreviewRows.filter(x=>x.department==='Commercial'&&x.decision==='Import').length+' / EV '+robinStockPreviewRows.filter(x=>x.department==='EV'&&x.decision==='Import').length+' / LLM '+robinStockPreviewRows.filter(x=>x.department==='LLM'&&x.decision==='Import').length;
+      $('robinStockRows').innerHTML=robinStockPreviewRows.slice(0,500).map(x=>'<tr><td>'+esc(x.chassis||'—')+'</td><td>'+esc(x.model)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.segment)+'</td><td>'+esc(x.department||'Review')+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No valid rows found.</td></tr>';
     }catch(e){console.error(e);notify(e.message);}
   };
-  window.stockImportCommit = async () => {
+  window.robinStockCommit = async () => {
     try{
-      if(!Array.isArray(stockPreviewRows)||!stockPreviewRows.length)throw new Error('Generate Preview before uploading.');
+      if(!Array.isArray(robinStockPreviewRows)||!robinStockPreviewRows.length)throw new Error('Generate Preview before uploading.');
       if(!has('common_excel_upload','create'))throw new Error('You do not have Excel Upload permission.');
-      const file=$('stockReportFile')?.files?.[0];
-      const ready=stockPreviewRows.filter(x=>x.decision==='Import');
-      if(!ready.length)throw new Error('No new vehicles to import.');
+      const file=$('robinStockFile')?.files?.[0];
+      const ready=robinStockPreviewRows.filter(x=>x.decision==='Import'&&['Commercial','LLM'].includes(x.department));
+      if(!ready.length)throw new Error('No new Commercial / LLM vehicles to import.');
       if(!confirm('Upload '+ready.length+' new vehicles? Existing chassis numbers and duplicate rows will be skipped.'))return;
       const records=ready.map(x=>{
         const r=x.raw||{},inv=x.date;
@@ -1036,20 +1041,20 @@
         else if(typeof inv==='number'&&window.XLSX){const z=XLSX.SSF.parse_date_code(inv);if(z)invoice=new Date(Date.UTC(z.y,z.m-1,z.d)).toISOString().slice(0,10);}
         else if(inv&&!isNaN(Date.parse(inv)))invoice=new Date(inv).toISOString().slice(0,10);
         const stockType=String(x.stockType||'').trim().toUpperCase();
-        return {department:x.department,chassis_number:x.chassis,excel_number:x.vin||null,model:x.model||'Unknown',variant:x.variant||null,seating:String(plHeader(r,['seating','seat'])||'')||null,colour:String(plHeader(r,['colour','color'])||'')||null,oem_invoice_date:invoice,engine_number:String(plHeader(r,['enginenumber','engine'])||'')||null,sc_name:String(plHeader(r,['scname','salesconsultant'])||'')||null,customer_name:String(plHeader(r,['customername','customer'])||'')||null,status:x.status||'Received',stage:stockType==='ALLOTED'||stockType==='ALLOTTED'?'ALLOTED':'OPEN',place:String(plHeader(r,['physicallocation','dealerlocationname'])||'')||null,source:'standard_stock_report',imported_at:new Date().toISOString(),created_by:currentUser.id};
+        return {department:x.department,chassis_number:x.chassis,excel_number:x.vin||null,model:x.model||'Unknown',variant:x.variant||null,seating:String(plHeader(r,['seating','seat'])||'')||null,colour:String(plHeader(r,['colour','color'])||'')||null,oem_invoice_date:invoice,engine_number:String(plHeader(r,['enginenumber','engine'])||'')||null,sc_name:String(plHeader(r,['scname','salesconsultant'])||'')||null,customer_name:String(plHeader(r,['customername','customer'])||'')||null,status:x.status||'Received',stage:stockType==='ALLOTED'||stockType==='ALLOTTED'?'ALLOTED':'OPEN',place:String(plHeader(r,['physicallocation','dealerlocationname'])||'')||null,source:'robin_commercial_llm_stock_report',imported_at:new Date().toISOString(),created_by:currentUser.id};
       });
       const imported=await call(db().rpc('import_stock_vehicles',{p_rows:records,p_file_name:file?.name||'Stock Report'}));
-      const skipped=stockPreviewRows.length-imported;
-      const byDepartment=['Personal','EV','Commercial','LLM'];
+      const skipped=robinStockPreviewRows.filter(x=>x.decision!=='Import').length;
+      const byDepartment=['Commercial','LLM'];
       for(const dept of byDepartment){
-        const deptRows=stockPreviewRows.filter(x=>x.department===dept);
+        const deptRows=robinStockPreviewRows.filter(x=>x.department===dept);
         if(!deptRows.length)continue;
         const deptImported=records.filter(x=>x.department===dept).length;
         await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Report',department:dept,imported_rows:deptImported,skipped_rows:deptRows.length-deptImported,error_rows:0,created_by:currentUser.id}));
       }
-      await audit('common_excel_upload','create','Uploaded standard stock report','stock_import_batch',null,{imported,skipped,file:file?.name||'',departments:['Personal','EV','Commercial','LLM'].filter(d=>records.some(x=>x.department===d))});
-      quotationStockCache.clear();stockPreviewRows=[];await renderStock();await loadImportHistory();
-      $('stockImportSummary').textContent='Upload complete · Imported '+imported+' · Skipped '+skipped+'.';
+      await audit('common_excel_upload','create','Uploaded Robin Commercial / LLM stock report','stock_import_batch',null,{imported,skipped,file:file?.name||'',departments:['Commercial','LLM'].filter(d=>records.some(x=>x.department===d))});
+      quotationStockCache.clear();robinStockPreviewRows=[];await renderStock();await loadImportHistory();
+      $('robinStockSummary').textContent='Upload complete · Imported '+imported+' · Skipped '+skipped+'.';
       notify(imported+' vehicles imported; '+skipped+' duplicates or review rows skipped.');
     }catch(e){console.error(e);notify(e.message);}
   };
