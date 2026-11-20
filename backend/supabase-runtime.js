@@ -1889,7 +1889,7 @@
     const set=(id,value)=>{if($(id))$(id).value=value??'';};
     set('otfCustomerName',q.customer_name);set('otfCustomerPhone',q.phone);set('otfCustomerGstin',q.customer_gstin||'');
     set('otfEmail',q.email||'');set('otfAddress',q.address||'');
-    set('otfCity',currentProfile?.city||'');set('otfDistrict',currentProfile?.city||'');
+    set('otfCity','');set('otfDistrict','');
     set('otfHpa',q.hypo||'');
     if($('otfChassisInput'))$('otfChassisInput').value='';
     if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}
@@ -1903,7 +1903,7 @@
     const row=await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').eq('department',otfDepartment).eq('chassis_number',chassis).maybeSingle());
     if(!row)throw new Error('This chassis number was not found in '+otfDepartment+' Stock Register.');
     const mismatch=otfNorm(row.model)!==otfNorm(otfSelectedQuote.model)||
-      (otfNorm(row.variant)&&otfNorm(otfSelectedQuote.variant)&&otfNorm(row.variant)!==otfNorm(otfSelectedQuote.variant));
+      (otfNorm(row.variant)!==otfNorm(otfSelectedQuote.variant));
     if(mismatch)throw new Error('Vehicle mismatch: this chassis belongs to '+[row.model,row.variant].filter(Boolean).join(' / ')+', but selected quotation is '+[otfSelectedQuote.model,otfSelectedQuote.variant].filter(Boolean).join(' / ')+'. Select the matching quotation or correct chassis.');
     otfVerifiedVehicle=row;
     if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent='VERIFIED · '+row.chassis_number+' · '+row.model+' / '+(row.variant||'')+' · '+(row.colour||'Colour not recorded')+' · Engine '+(row.engine_number||'Not recorded')+' · Stage '+row.stage+' · '+row.status;}
