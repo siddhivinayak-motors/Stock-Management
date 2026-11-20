@@ -838,7 +838,32 @@ td,.data-table td{font-size:13px;line-height:1.45}
 }
 
 </style>
-<style id="svResetTreeStyles">#svResetTree .sv-reset-options{display:grid;gap:10px}#svResetTree .sv-reset-options label{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45;color:#344054;cursor:pointer}#svResetTree input[type=checkbox],#svResetSelectAll{accent-color:#d71927;flex:0 0 auto;width:17px;height:17px;margin:0}#svResetTree h3{margin:0 0 13px}#svResetDialog .card{box-shadow:none;border:1px solid #e5eaf0}@media(max-width:600px){#svResetDialog{padding:8px}#svResetDialog>div{margin:4px auto}#svResetDialog>div>div:nth-child(2){padding:12px;max-height:70vh}}</style></head>
+<style id="svResetTreeStyles">#svResetTree .sv-reset-options{display:grid;gap:10px}#svResetTree .sv-reset-options label{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45;color:#344054;cursor:pointer}#svResetTree input[type=checkbox],#svResetSelectAll{accent-color:#d71927;flex:0 0 auto;width:17px;height:17px;margin:0}#svResetTree h3{margin:0 0 13px}#svResetDialog .card{box-shadow:none;border:1px solid #e5eaf0}@media(max-width:600px){#svResetDialog{padding:8px}#svResetDialog>div{margin:4px auto}#svResetDialog>div>div:nth-child(2){padding:12px;max-height:70vh}}</style><style id="retail-report-dashboard-styles">
+#view-reports .retail-filter-card{margin-bottom:16px}
+#view-reports .retail-control-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:end}
+#view-reports .retail-field{display:flex;flex-direction:column;gap:7px;min-width:0;color:#526071;font-size:13px;font-weight:650}
+#view-reports .retail-field input,#view-reports .retail-field select{width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid #d8dee7;border-radius:10px;background:#fff;color:#202a36;font:inherit;font-weight:500}
+#view-reports .retail-secondary-filters{margin-top:15px;padding-top:15px;border-top:1px solid #edf0f4}
+#view-reports .retail-period{display:flex;flex-direction:column;gap:6px;min-width:0;padding:10px 12px;border-radius:10px;background:#f6f8fb}
+#view-reports .retail-period span{font-size:11px;letter-spacing:.07em;color:#7a8795;font-weight:700}
+#view-reports .retail-period strong{font-size:14px;color:#273342;overflow-wrap:anywhere}
+#view-reports .retail-filter-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+#view-reports #retailReportStatus{font-size:12px;color:#788494;margin-left:auto}
+#view-reports .retail-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+#view-reports .retail-kpi{min-width:0;padding:16px;border:1px solid #e3e8ef;border-radius:14px;background:#fff;box-shadow:0 4px 14px rgba(23,35,52,.045);display:flex;flex-direction:column;gap:6px}
+#view-reports .retail-kpi span{font-size:13px;color:#637083;font-weight:650}
+#view-reports .retail-kpi strong{font-size:27px;line-height:1.15;color:#202b38;font-weight:800;font-variant-numeric:tabular-nums}
+#view-reports .retail-kpi small{font-size:11px;color:#8993a0}
+#view-reports .retail-register-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+#view-reports .retail-export-actions{display:flex;gap:8px;flex-wrap:wrap}
+#view-reports .retail-table-wrap{overflow-x:auto}
+#view-reports #retailRows td{white-space:nowrap}
+#view-reports #retailRows .empty{white-space:normal;text-align:center;padding:28px 12px;color:#8792a0}
+@media(max-width:760px){#view-reports .retail-control-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}#view-reports .retail-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}#view-reports .retail-kpi{padding:13px}#view-reports .retail-kpi strong{font-size:24px}#view-reports .retail-register-head{align-items:flex-start}#view-reports .retail-export-actions{width:100%}#view-reports .retail-export-actions .btn{flex:1;font-size:12px;padding:9px 10px}}
+@media(max-width:420px){#view-reports .retail-control-grid{grid-template-columns:1fr}#view-reports #retailReportStatus{width:100%;margin-left:0}}
+@media print{body *{visibility:hidden!important}#view-reports,#view-reports *{visibility:visible!important}#view-reports{position:absolute;left:0;top:0;width:100%;padding:0!important}#view-reports .page-head button,#view-reports .retail-filter-card,#view-reports .retail-export-actions{display:none!important}#view-reports .retail-kpi-grid{grid-template-columns:repeat(4,1fr)}#view-reports .retail-register-card{box-shadow:none;border:0}#view-reports .retail-table-wrap{overflow:visible}#view-reports table{font-size:10px}}
+</style>
+</head>
 <body>
 <header class="topbar">
  <div class="brand-lockup" id="brandHome" role="button" tabindex="0" aria-label="Go to Dashboard" title="Go to Dashboard">
@@ -1036,25 +1061,35 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <div class="card" style="margin-top:16px"><div class="card-head"><div class="card-title">Upload History</div></div><div class="table-wrap"><table><thead><tr><th>File Name</th><th>Status</th><th>Imported</th><th>Skipped / Duplicate</th><th>Errors</th><th>Created At</th></tr></thead><tbody><tr><td colspan="6" class="empty">No import history yet.</td></tr></tbody></table></div></div>
 </section>
 <section class="view" id="view-reports">
- <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Retail Reports</h1><div class="subtitle">Monthly retail performance · Day 01 to month end</div></div><button class="btn" id="retailRefresh">⟳ &nbsp;Refresh</button></div>
- <div class="card">
+ <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Retail Reports</h1><div class="subtitle">Daily · Weekly · Monthly · Custom retail performance</div></div><button class="btn" id="retailRefresh" type="button">⟳ &nbsp;Refresh</button></div>
+ <div class="card retail-filter-card">
   <div class="card-body">
-   <div class="retail-filter-row">
-    <div><label for="retailMonth">Report Month</label><input id="retailMonth" type="month" value="2026-11"></div>
-    <div class="retail-period"><span>REPORT PERIOD</span><strong id="retailPeriod">01 Nov 2026 – 30 Nov 2026</strong></div>
-    <button class="btn primary" id="applyRetailMonth">Apply Month</button>
+   <div class="retail-control-grid">
+    <label class="retail-field"><span>Report Type</span><select id="retailReportType"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly" selected>Monthly</option><option value="custom">Custom Date Range</option></select></label>
+    <label class="retail-field retail-date-field" id="retailDailyWrap"><span>Select Date</span><input id="retailDailyDate" type="date"></label>
+    <label class="retail-field retail-date-field" id="retailWeeklyWrap" hidden><span>Week Starting (Monday)</span><input id="retailWeekStart" type="date"></label>
+    <label class="retail-field retail-date-field" id="retailMonthlyWrap"><span>Report Month</span><input id="retailMonth" type="month"></label>
+    <label class="retail-field retail-date-field" id="retailFromWrap" hidden><span>From Date</span><input id="retailFrom" type="date"></label>
+    <label class="retail-field retail-date-field" id="retailToWrap" hidden><span>To Date</span><input id="retailTo" type="date"></label>
    </div>
+   <div class="retail-control-grid retail-secondary-filters">
+    <label class="retail-field"><span>Department</span><select id="retailDepartment"><option value="">All Accessible Departments</option><option value="Personal">Personal</option><option value="Commercial">Commercial</option><option value="EV">EV</option><option value="LLM">LLM</option></select></label>
+    <label class="retail-field"><span>Customer Name</span><input id="retailCustomer" type="search" placeholder="Search customer name"></label>
+    <label class="retail-field"><span>Sales Executive</span><input id="retailExecutive" type="search" placeholder="Search executive name"></label>
+    <div class="retail-period"><span>REPORT PERIOD</span><strong id="retailPeriod">Select a period</strong></div>
+   </div>
+   <div class="retail-filter-actions"><button class="btn primary" id="applyRetailMonth" type="button">Apply Filters</button><button class="btn" id="retailClearFilters" type="button">Clear Filters</button><span id="retailReportStatus" role="status">Ready to generate report</span></div>
   </div>
  </div>
- <div class="retail-kpi-grid">
-  <div class="retail-kpi"><span>Retail Delivered</span><strong>00</strong><small>Selected month</small></div>
-  <div class="retail-kpi"><span>Personal</span><strong>00</strong><small>Retail vehicles</small></div>
-  <div class="retail-kpi"><span>Commercial</span><strong>00</strong><small>Retail vehicles</small></div>
-  <div class="retail-kpi"><span>EV / LLM</span><strong>00</strong><small>Retail vehicles</small></div>
+ <div class="retail-kpi-grid" aria-label="Retail report summary">
+  <div class="retail-kpi"><span>Retail Delivered</span><strong data-retail-kpi="total">00</strong><small>Selected period</small></div>
+  <div class="retail-kpi"><span>Personal</span><strong data-retail-kpi="personal">00</strong><small>Retail vehicles</small></div>
+  <div class="retail-kpi"><span>Commercial</span><strong data-retail-kpi="commercial">00</strong><small>Retail vehicles</small></div>
+  <div class="retail-kpi"><span>EV / LLM</span><strong data-retail-kpi="evllm">00</strong><small>Retail vehicles</small></div>
  </div>
- <div class="card">
-  <div class="card-head"><div><div class="card-title">Monthly Retail Register</div><div class="card-desc">Retail records for the selected monthly period.</div></div></div>
-  <div class="table-wrap"><table><thead><tr><th>Retail Date</th><th>Chassis Number</th><th>Vehicle Model</th><th>Department</th><th>Customer</th><th>Sales Executive</th><th>Status</th></tr></thead><tbody id="retailRows"><tr><td colspan="7" class="empty">No retail records for this period.</td></tr></table></div>
+ <div class="card retail-register-card">
+  <div class="card-head retail-register-head"><div><div class="card-title">Retail Register</div><div class="card-desc" id="retailRegisterDescription">Detailed retail records will appear here.</div></div><div class="retail-export-actions"><button class="btn" id="retailExportCsv" type="button">↓ Export Excel (CSV)</button><button class="btn" id="retailPrint" type="button">Print / PDF</button></div></div>
+  <div class="table-wrap retail-table-wrap"><table><thead><tr><th>Retail Date</th><th>Chassis Number</th><th>Vehicle Model</th><th>Variant</th><th>Department</th><th>Customer</th><th>Sales Executive</th><th>Status</th></tr></thead><tbody id="retailRows"><tr><td colspan="8" class="empty">Apply filters to view retail records.</td></tr></tbody></table></div>
  </div>
 </section>
 <section class="view" id="view-generic">
@@ -1474,18 +1509,7 @@ document.getElementById('addCharge').addEventListener('click',()=>{
 });
 updateQuoteNumber();calc();renderQuoteManagement();
 
-const retailMonth=document.getElementById('retailMonth');
-function applyRetailMonth(){
- if(!retailMonth)return;
- const [year,month]=retailMonth.value.split('-').map(Number);
- if(!year||!month)return;
- const last=new Date(year,month,0).getDate();
- const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
- document.getElementById('retailPeriod').textContent=`01 ${names[month-1]} ${year} – ${String(last).padStart(2,'0')} ${names[month-1]} ${year}`;
-}
-document.getElementById('applyRetailMonth')?.addEventListener('click',applyRetailMonth);
-document.getElementById('retailRefresh')?.addEventListener('click',()=>{applyRetailMonth();toast('Retail report refreshed')});
-applyRetailMonth();
+// Retail report filters and live data are bound by the Supabase runtime.
 
 // ===== Final requirements: browser-local demonstration modules =====
 const APP_STORE_KEY='svm_clean_workspace_v2';
