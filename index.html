@@ -1726,7 +1726,7 @@ function quoteApplyPriceList(){
   {label:'RTO Charge',value:match.rto??0}
  ];
  const discount=charges.querySelector('.discount-charge');
- charges.querySelectorAll('.charge-row:not(.discount-charge)').forEach(r=>r.remove());
+ charges.querySelectorAll('.charge-row:not(.discount-charge)').forEach(r=>{if(r.classList.contains('price-list-charge')||r.querySelector('[data-charge]'))r.remove();});
  rows.forEach(part=>{
   const row=document.createElement('div');row.className='charge-row price-list-charge';
   row.innerHTML='<span class="charge-index"></span><div class="q-charge-name"></div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove price-list charge">×</button>';
@@ -1738,10 +1738,15 @@ function quoteApplyPriceList(){
  const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Price List applied: '+match.vehicle+' · '+match.variant;
  return true;
 }
+function quoteClearPriceListRows(){
+ charges.querySelectorAll('.charge-row.price-list-charge').forEach(r=>r.remove());
+ renumberCharges();calc();
+}
 function quoteAutoFillPrice(){
  const model=document.getElementById('qVehicle').value.trim(),variant=document.getElementById('qVariant').value.trim();
- if(!model||!variant)return;
- if(!quoteApplyPriceList()){const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Matching Model + Variant not found in Price List. Add charges manually.';}
+ const status=document.getElementById('qPriceListStatus');
+ if(!model||!variant){quoteClearPriceListRows();if(status)status.textContent='Select a matching Model + Variant to load Price List.';return;}
+ if(!quoteApplyPriceList()){quoteClearPriceListRows();if(status)status.textContent='Matching Model + Variant not found in Price List. Add charges manually.';}
 }
 document.getElementById('qVehicle').addEventListener('change',quoteAutoFillPrice);
 document.getElementById('qVariant').addEventListener('change',quoteAutoFillPrice);
