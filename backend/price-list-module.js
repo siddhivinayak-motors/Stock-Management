@@ -99,7 +99,6 @@
   return {rows:uniqueRows,files:files.map(function(f){return f.name}),fileObjects:fileObjects,sheets:sheets,warnings:warnings,duplicates:duplicates,duplicatesSkipped:duplicates.length};
  }
  function getRows(){var by=window.plData||{},out=[];Object.keys(by).forEach(function(k){(by[k]||[]).forEach(function(x){out.push(x)})});return out}
- function getStock(){return window.svPriceListStockRows||[]}
  function unique(a){return Array.from(new Set(a.filter(Boolean))).sort(function(x,y){return String(x).localeCompare(String(y))})}
  function fillSelect(el,values,placeholder){if(!el)return;var cur=el.value,html='<option value="">'+esc(placeholder)+'</option>';values.forEach(function(v){html+='<option value="'+esc(v)+'">'+esc(v)+'</option>'});el.innerHTML=html;if(values.indexOf(cur)>=0)el.value=cur}
  function populateFilters(){
