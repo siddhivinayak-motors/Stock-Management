@@ -1861,7 +1861,7 @@
     if(!['Personal','EV','Commercial','LLM'].includes(department))return;
     if(!has('quotation_management','view')){notify('Quotation / OTF permission required.');return;}
     if(!allowedDepartmentList().includes(department)){notify('You do not have access to '+department+'.');return;}
-    otfDepartment=department;otfResetSelection();otfMatches=[];
+    otfEditingId=null;otfDepartment=department;otfResetSelection();otfMatches=[];
     if($('otfPageTitle'))$('otfPageTitle').textContent=department+' — OTF Order Book';
     if($('otfPhoneSearch'))$('otfPhoneSearch').value='';
     if($('otfQuoteResults'))$('otfQuoteResults').innerHTML='';
@@ -2011,9 +2011,9 @@
       set('otfCustomerName',r.customer_name);set('otfCustomerPhone',r.phone);set('otfCustomerGstin',r.customer_gstin);set('otfEmail',r.email);set('otfAddress',r.address);set('otfCity',r.city);set('otfDistrict',r.district);set('otfHpa',r.hpa);set('otfBookingAmount',r.booking_amount);set('otfBookingDate',r.booking_date);set('otfEnquiryNumber',r.enquiry_number);set('otfCustomerId',r.customer_id);set('otfInvoiceNumber',r.invoice_number);set('otfAadhaar',r.aadhaar_number);set('otfPan',r.pan_number);set('otfDob',r.dob);set('otfAnniversary',r.marriage_anniversary);set('otfNominee',r.nominee);set('otfNomineeRelation',r.nominee_relationship);set('otfNomineeAge',r.nominee_age);set('otfChassisInput',r.chassis_number);
       if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent='VERIFIED · '+r.chassis_number+' · '+r.model+' / '+(r.variant||'');}
       if($('otfSelectedQuote')){$('otfSelectedQuote').hidden=false;$('otfSelectedQuote').textContent='Editing OTF '+r.order_number+' · '+r.customer_name;}
-      const ex=r.exchange_details||{};set('otfExchangeModel',ex.model);set('otfExchangeReg',ex.registration);set('otfExchangeYear',ex.year);set('otfExchangeValue',ex.value);set('otfExchangeSupport',ex.support);set('otfExchangeTotal',ex.total);
+      const ex=r.exchange_details||{};set('otfExchangeModel',ex.model);set('otfExchangeReg',ex.registration);set('otfExchangeYear',ex.manufacturing_year);set('otfExchangeValue',ex.old_value);set('otfExchangeSupport',ex.extra_support);set('otfExchangeTotal',ex.total_value);
       $('otfPayments').innerHTML='';(r.payment_details||[]).forEach(p=>{addOtfPayment();const row=$('otfPayments').lastElementChild;if(row){for(const [k,v] of Object.entries({type:p.type,date:p.date,amount:p.amount,mode:p.mode}))row.querySelector('[data-pay="'+k+'"]').value=v??'';}});
-      $('otfAccessories').innerHTML='';(r.accessories_details||[]).forEach(p=>{addOtfAccessory();const row=$('otfAccessories').lastElementChild;if(row){for(const [k,v] of Object.entries({item:p.item,part_number:p.part_number,amount:p.amount}))row.querySelector('[data-accessory="'+k+'"]').value=v??'';}});
+      $('otfAccessories').innerHTML='';(r.accessories_details||[]).forEach(p=>{addOtfAccessory();const row=$('otfAccessories').lastElementChild;if(row){for(const [k,v] of Object.entries({item:p.item,part:p.part_number,amount:p.amount}))row.querySelector('[data-acc="'+k+'"]').value=v??'';}});
       if($('otfSaveOrder'))$('otfSaveOrder').textContent='Update OTF Order Book';
       if($('otfSavePrintOrder'))$('otfSavePrintOrder').textContent='Update & Print A4';
       if($('otfFormStatus'))$('otfFormStatus').textContent='Editing '+r.order_number;
@@ -2025,7 +2025,8 @@
     let popup=null;
     if(printAfter)popup=window.open('','_blank','width=1000,height=760');
     try{
-      if(!has('quotation_management','create'))throw new Error('OTF create permission required.');
+      const wasEditing=!!otfEditingId;
+      if(!wasEditing&&!has('quotation_management','create'))throw new Error('OTF create permission required.');
       const payload=buildOtfPayload();
       let saved;
       if(otfEditingId){
@@ -2043,7 +2044,7 @@
       }
       await loadOtfRegister();
       if($('otfManagementRows'))await loadOtfManagement().catch(()=>{});
-      otfSetStatus((otfEditingId?'Updated successfully: ':'Saved successfully: ')+saved.order_number);
+      otfSetStatus((wasEditing?'Updated successfully: ':'Saved successfully: ')+saved.order_number);
       if($('otfPrintPreview'))$('otfPrintPreview').disabled=false;
       if(printAfter)otfPrintDocument(saved,popup);
       else notify('OTF Order Book saved: '+saved.order_number);
