@@ -1829,7 +1829,9 @@ function quoteApplyPriceList(selectedMatch){
  }
  const accessories={label:'Accessories Kit',value:30000};
  const coating={label:'Coating',value:0};
- const accessoryAt=rows.findIndex(x=>/extended\s*warranty/i.test(x.label));
+ let accessoryAt=-1;
+ rows.forEach((x,i)=>{if(/extended\s*warranty/i.test(x.label))accessoryAt=i;});
+ if(accessoryAt<0){const rsaAt=rows.findIndex(x=>/^RSA/i.test(x.label));accessoryAt=rsaAt>=0?rsaAt-1:rows.length-1;}
  if(!rows.some(x=>/accessor/i.test(x.label)))rows.splice(accessoryAt>=0?accessoryAt+1:rows.length,0,accessories);
  else rows.forEach(x=>{if(/accessor/i.test(x.label))x.value=30000;});
  rows.push(coating);
