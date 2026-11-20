@@ -1,4 +1,4 @@
-const CACHE_NAME = "siddhivinayak-stock-pwa-v25";
+const CACHE_NAME = "siddhivinayak-stock-pwa-v26";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,8 +7,8 @@ const APP_SHELL = [
   "./icons/app-icon-v2.png",
   "./icons/siddhivinayak-premium.svg",
   "./icons/app-icon.png",
-  "./backend/supabase-runtime.js",
-  "./backend/price-list-module.js"
+  "./backend/supabase-runtime.js?v=otf-order-book-20261120d",
+  "./backend/price-list-module.js?v=quotation-row-layout-20261120d"
 ];
 
 self.addEventListener("install", event => {
