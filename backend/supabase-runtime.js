@@ -659,7 +659,7 @@
   // --- Bind the existing screens and controls to persistent Supabase records ---
   const moduleEnum = (label) => MODULES[label] || label;
   const toQuoteView = (row) => ({
-    id:row.id,no:row.quote_number,department:row.department,customer:row.customer_name,phone:row.phone||'',
+    id:row.id,no:row.quote_number,department:row.department,customer:row.customer_name,phone:row.phone||'',creatorCity:row.creator_city||'',
     address:row.address||'',customerGstin:row.customer_gstin||'',salesMobile:row.sales_mobile||'',vehicleNos:String(row.vehicle_count??1),hypo:row.hypo||'',
     model:row.model||'',variant:row.variant||'',colour:row.colour||'',
     vehicle:[row.model,row.variant].filter(Boolean).join(' · '),createdAt:row.created_at||null,
@@ -683,11 +683,29 @@
   const canReviewQuotationRecords = () => !!currentProfile?.is_super_admin || QUOTATION_MANAGER_ROLES.has(String(currentProfile?.designation||''));
   const canEditQuotationRecords = () => has('quotation_management','edit');
   const canDeleteQuotationRecords = () => canReviewQuotationRecords();
+  let quotationCityFilter='All';
+  const canUseQuotationCityFilter=()=>!!currentProfile?.is_super_admin || ['Admin','General Manager'].includes(String(currentProfile?.designation||''));
   window.renderQuoteManagement = () => {
     const body=$('quoteManagementRows');if(!body)return;
     const canEdit=canEditQuotationRecords();
     const canDelete=canDeleteQuotationRecords();
-    body.innerHTML=quoteRecords.map((q,i)=>{
+    const head=document.querySelector('#view-quotation-management .card-head');
+    if(head){
+      let wrap=$('quotationCityFilterWrap');
+      if(canUseQuotationCityFilter()){
+        if(!wrap){
+          wrap=document.createElement('label');wrap.id='quotationCityFilterWrap';
+          wrap.style.cssText='display:flex;align-items:center;gap:8px;margin-left:auto;font-size:13px;font-weight:600;white-space:nowrap';
+          wrap.innerHTML='<span>City</span><select id="quotationCityFilter" class="btn small" aria-label="Filter quotations by city"><option value="All">All Cities</option><option value="Bhavnagar">Bhavnagar</option><option value="Amreli">Amreli</option><option value="Botad">Botad</option></select>';
+          head.appendChild(wrap);
+          $('quotationCityFilter').addEventListener('change',e=>{quotationCityFilter=e.target.value;window.renderQuoteManagement();});
+        }
+        wrap.style.display='flex';
+        $('quotationCityFilter').value=quotationCityFilter;
+      }else if(wrap){wrap.remove();quotationCityFilter='All';}
+    }
+    const visibleQuotes=(quoteRecords||[]).map((q,i)=>({q,i})).filter(({q})=>!canUseQuotationCityFilter()||quotationCityFilter==='All'||String(q.creatorCity||'').trim().toLowerCase()===quotationCityFilter.toLowerCase());
+    body.innerHTML=visibleQuotes.map(({q,i})=>{
       const blocked=q.status==='PENDING'&&quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other));
       const canReview=canReviewQuotationRecords() && has('quotation_management','approve');
       const approval=q.status!=='PENDING'||!canReview?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>';
@@ -697,10 +715,10 @@
       const dateTimeLabel=createdAt&&!Number.isNaN(createdAt.getTime())?createdAt.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Kolkata'}):'—';
       return '<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td class="qm-mobile">'+esc(q.phone||'—')+'</td><td class="qm-vehicle">'+esc(q.vehicle)+'</td><td class="qm-date" title="'+esc(q.createdAt||'')+'">'+esc(dateTimeLabel)+'</td><td class="qm-department">'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+statusClass+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+manage+approval+'</div></td></tr>';
     }).join('');
-    $('qmTotal').textContent=quoteRecords.length;
-    $('qmPending').textContent=quoteRecords.filter(q=>q.status==='PENDING').length;
-    $('qmApproved').textContent=quoteRecords.filter(q=>q.status==='APPROVED').length;
-    $('qmPrints').textContent=quoteRecords.reduce((sum,q)=>sum+Number(q.prints||0),0);
+    $('qmTotal').textContent=visibleQuotes.length;
+    $('qmPending').textContent=visibleQuotes.filter(({q})=>q.status==='PENDING').length;
+    $('qmApproved').textContent=visibleQuotes.filter(({q})=>q.status==='APPROVED').length;
+    $('qmPrints').textContent=visibleQuotes.reduce((sum,{q})=>sum+Number(q.prints||0),0);
   };
   let quotationRealtimeChannel=null, quoteRealtimeDebounce=null;
   function startQuotationRealtime(){
