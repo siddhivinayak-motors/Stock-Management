@@ -36,6 +36,7 @@
       .selected-stock-context .ssc-actions{display:flex;justify-content:flex-end;margin-top:12px}
       .selected-stock-context .ssc-request{border:0;border-radius:9px;padding:10px 14px;background:#c92535;color:#fff;font-size:12px;font-weight:800}
       @media(max-width:480px){.selected-stock-context{padding:13px}.selected-stock-context .ssc-grid{gap:8px}.selected-stock-context .ssc-value{font-size:12px}}
+      .q-stock-suggestions{grid-column:1/-1;position:relative;z-index:40;max-height:330px;overflow:auto;border:1px solid #e1aeb4;border-radius:11px;background:#fff;box-shadow:0 12px 28px rgba(20,30,45,.14);margin:-8px 0 8px}.q-stock-suggestions[hidden]{display:none}.q-stock-count,.q-stock-empty{padding:10px 13px;font-size:11px;color:#6b7280;background:#fff8f8}.q-stock-option{width:100%;border:0;border-top:1px solid #edf0f3;background:#fff;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer;color:#263445}.q-stock-option:hover,.q-stock-option:focus{background:#fff0f1;outline:0}.q-stock-main{display:grid;gap:3px;min-width:0}.q-stock-main b{font-size:13px}.q-stock-main span,.q-stock-meta small{font-size:11px;color:#64748b}.q-stock-meta{display:grid;gap:3px;text-align:right;max-width:45%;overflow-wrap:anywhere}.q-stock-meta b{font-size:10px;color:#344054}
     `;
     document.head.appendChild(style);
   }
@@ -94,6 +95,68 @@
       $('svLoginError').textContent=error?error.message:'Password reset email requested.';
     });
   }
+  const quotationStockCache = new Map();
+  let quotationPickerBound = false;
+  const quoteSearchNorm = value => String(value || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  async function loadQuotationStock(department) {
+    if(quotationStockCache.has(department)) return quotationStockCache.get(department);
+    const pending=(async()=>{
+      if(!has('stock_register','view')) return [];
+      const allowed=allowedDepartmentList();
+      if(!allowed.some(x=>String(x).toLowerCase()===String(department).toLowerCase())) return [];
+      const rows=[];let from=0,chunk=500;
+      while(true){
+        const part=await call(db().from('vehicles').select('id,department,chassis_number,model,variant,colour,status,stage,seating,manufacturing_year').eq('department',department).order('model').range(from,from+chunk-1));
+        rows.push(...part);if(part.length<chunk)break;from+=chunk;
+      }
+      return rows;
+    })();
+    quotationStockCache.set(department,pending);
+    try{return await pending;}catch(error){quotationStockCache.delete(department);throw error;}
+  }
+  function setupQuotationVehiclePicker() {
+    const model=$('qVehicle'),variant=$('qVariant'),colour=$('qColour'),box=$('qStockSuggestions');
+    if(!model||!variant||!colour||!box)return;
+    if($('qSalesPerson')){$('qSalesPerson').value=currentProfile?.full_name||currentUser?.email||'';}
+    if(quotationPickerBound)return;
+    quotationPickerBound=true;
+    const fields=[model,variant,colour];
+    const hide=()=>{box.hidden=true;};
+    const colourQuery=q=>q==='wh'?'white':q==='bl'?'black':q==='si'?'silver':q;
+    const render=async()=>{
+      const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
+      const mq=quoteSearchNorm(model.value),vq=quoteSearchNorm(variant.value),cq=colourQuery(quoteSearchNorm(colour.value));
+      if(!mq&&!vq&&!cq){hide();return;}
+      box.hidden=false;box.innerHTML='<div class="q-stock-empty">Searching stock…</div>';
+      try{
+        const rows=await loadQuotationStock(dept);
+        const matches=rows.filter(v=>{
+          const vm=quoteSearchNorm(v.model),vv=quoteSearchNorm(v.variant),vc=quoteSearchNorm(v.colour);
+          return (!mq||vm.includes(mq))&&(!vq||vv.includes(vq))&&(!cq||vc.includes(cq));
+        }).sort((a,b)=>{
+          const ao=String(a.stage||'').toUpperCase()==='OPEN'?0:1,bo=String(b.stage||'').toUpperCase()==='OPEN'?0:1;
+          return ao-bo||String(a.model||'').localeCompare(String(b.model||''))||String(a.variant||'').localeCompare(String(b.variant||''));
+        });
+        if(!matches.length){box.innerHTML='<div class="q-stock-empty">No matching stock vehicle found. You can continue with manual entry.</div>';return;}
+        const count=matches.length;
+        box.innerHTML='<div class="q-stock-count">'+count+' matching stock vehicle(s) · '+esc(dept)+'</div>'+matches.slice(0,30).map((v,i)=>'<button type="button" class="q-stock-option" data-quote-stock-index="'+i+'"><span class="q-stock-main"><b>'+esc(v.model||'—')+'</b><span>'+esc(v.variant||'Variant not listed')+' · '+esc(v.colour||'Colour not listed')+'</span></span><span class="q-stock-meta"><b>'+esc(v.chassis_number||'')+'</b><small>'+esc(v.stage||v.status||'')+'</small></span></button>').join('')+(count>30?'<div class="q-stock-count">Showing first 30. Add more variant or colour text to narrow the list.</div>':'');
+        box.querySelectorAll('[data-quote-stock-index]').forEach(button=>button.addEventListener('click',()=>{
+          const v=matches[Number(button.dataset.quoteStockIndex)];if(!v)return;
+          model.value=v.model||'';variant.value=v.variant||'';colour.value=v.colour||'';$('qChassis').value=v.chassis_number||'';
+          if($('qCarDesc')&&!$('qCarDesc').value)$('qCarDesc').value=[v.seating,v.manufacturing_year].filter(Boolean).join(' · ');
+          if($('qSalesPerson'))$('qSalesPerson').value=currentProfile?.full_name||currentUser?.email||'';
+          hide();notify('Stock vehicle selected · Chassis '+(v.chassis_number||'not available'));
+        }));
+      }catch(error){box.hidden=false;box.innerHTML='<div class="q-stock-empty">Stock search unavailable: '+esc(error.message)+' · Manual entry is available.</div>';}
+    };
+    fields.forEach(field=>{
+      field.addEventListener('input',()=>{render();});
+      field.addEventListener('focus',()=>{if(field.value.trim())render();});
+      field.setAttribute('aria-autocomplete','list');
+    });
+    document.addEventListener('click',event=>{if(!box.contains(event.target)&&!fields.includes(event.target))hide();});
+    model.addEventListener('keydown',event=>{if(event.key==='Escape')hide();});
+  }
   async function startApp() {
     if(!currentUser){showLogin();return;}
     if($('svAuthGate')) $('svAuthGate').remove();
@@ -101,6 +164,7 @@
     if(label) label.textContent=currentProfile.full_name||currentUser.email;
     const roleLabel=document.querySelector('.user-role');
     if(roleLabel) roleLabel.textContent=currentProfile?.is_super_admin?'SUPER ADMIN':String(currentProfile?.designation||'EMPLOYEE').toUpperCase();
+    setupQuotationVehiclePicker();
     const hasAnyModule=['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports'].some(m=>has(m,'view'));
     // Keep the app shell intact; enforce module and department access on the actual navigation items.
     try{await refreshDashboard();}catch(e){console.error('Dashboard data refresh failed:',e);notify('Dashboard data could not be refreshed: '+(e.message||e));}
