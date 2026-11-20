@@ -97,7 +97,7 @@
   }
   const quotationStockCache = new Map();
   let quotationPickerBound = false;
-  const quoteSearchNorm = value => String(value || '').normalize('NFD').replace(/\\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const quoteSearchNorm = value => String(value || '').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
   async function loadQuotationStock(department) {
     if(quotationStockCache.has(department)) return quotationStockCache.get(department);
     const pending=(async()=>{
