@@ -756,6 +756,7 @@
       discountItems.filter(x=>!usedDiscounts.has(x)).forEach((x,n)=>{discountRows+=discountRow(x.name, x.amount, discountDefs.length+n+1);});
       $('charges').innerHTML=regularRows;
       if($('quoteDiscounts'))$('quoteDiscounts').innerHTML=discountRows;
+      if(typeof renumberCharges==='function')renumberCharges();
       if($('quotationPageTitle'))$('quotationPageTitle').textContent=currentQuoteDepartment+' — Edit Quotation';
       const head=document.querySelector('#view-quotation .card-title');if(head)head.textContent='Edit Quotation';
       const desc=document.querySelector('#view-quotation .card-desc');if(desc)desc.textContent='Edit quotation details, save changes, then print the revised quotation.';
