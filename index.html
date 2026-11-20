@@ -914,7 +914,8 @@ td,.data-table td{font-size:13px;line-height:1.45}
 </header>
 <div class="mobile-scrim" id="scrim"></div>
 <aside class="sidebar" id="sidebar">
- <button class="nav-item" data-page="dashboard"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</button>
+ <button class="nav-item" data-page="dashboard">
+ <button class="nav-item" data-page="otf-management"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h8l5 5v13H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M15 3v6h5M9 13h7M9 17h7"/></svg>OTF Management</button><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</button>
  <div class="nav-section">DEPARTMENTS</div>
  <button class="nav-item group" data-group="personal" aria-expanded="false" type="button"><span class="dept-icon personal"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="12" rx="2"/><path d="M7 7l2-3h6l2 3M7 12h.01M17 12h.01M7 19v2m10-2v2"/></svg></span>Personal<span class="dept-toggle-arrow" aria-hidden="true">›</span></button>
  <div class="subnav" data-sub="personal">
@@ -1088,6 +1089,11 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <div class="card"><div class="card-head"><div><div class="card-title">Quotation Register</div><div class="card-desc">Quotation owner, approval status and number of printed copies.</div></div></div>
   <div class="table-wrap"><table><thead><tr><th>Quotation No.</th><th>Customer</th><th>Mobile No.</th><th>Vehicle</th><th>Date &amp; Time</th><th>Department</th><th>Created By</th><th>Grand Total</th><th>Status</th><th>Print Count</th><th>Action</th></tr></thead><tbody id="quoteManagementRows"></tbody></table></div>
  </div>
+</section>
+<section class="view" id="view-otf-management">
+ <div class="page-head"><div><div class="eyebrow">CUSTOMER BOOKING</div><h1>OTF Management</h1><div class="subtitle">Manage, edit, print and update the status of OTF order books visible to your account.</div></div><button class="btn" type="button" id="otfManagementRefresh">⟳ &nbsp;Refresh</button></div>
+ <div class="toolbar"><div class="search"><input id="otfManagementSearch" placeholder="Search OTF number, customer, mobile or chassis number"></div><select id="otfManagementDepartment" aria-label="Department filter"><option value="">All accessible departments</option><option>Personal</option><option>EV</option><option>Commercial</option><option>LLM</option></select><select id="otfManagementStatus" aria-label="Status filter"><option value="">All statuses</option><option>BOOKED</option><option>IN PROCESS</option><option>DELIVERED</option><option>CANCELLED</option></select></div>
+ <div class="card"><div class="card-head"><div><div class="card-title">OTF Order Book Register</div><div class="card-desc">Only records permitted by your role, city and department are shown.</div></div><strong id="otfManagementCount">0 Records</strong></div><div class="table-wrap"><table><thead><tr><th>OTF No.</th><th>Date</th><th>Customer</th><th>Mobile</th><th>Vehicle</th><th>Chassis Number</th><th>Booking Amount</th><th>Department</th><th>Status</th><th>Action</th></tr></thead><tbody id="otfManagementRows"><tr><td colspan="10" class="empty">Loading OTF records…</td></tr></tbody></table></div></div>
 </section>
 <section class="view" id="view-otf-order-book">
  <div class="page-head"><div><div class="eyebrow">CUSTOMER BOOKING</div><h1 id="otfPageTitle">Personal — OTF Order Book</h1><div class="subtitle">Search customer quotations by mobile number and verify the selected vehicle by chassis number.</div></div><button class="btn" type="button" id="otfRefresh">⟳ &nbsp;Refresh</button></div>
