@@ -1678,8 +1678,10 @@ function printQuoteDocument(q){
  w.document.close();
 }
 function resetQuotationForm(){
- ['qCustomer','qPhone','qAddress','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qChassis','qSalesPerson','qContactPerson','qContactMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+ ['qCustomer','qPhone','qAddress','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qChassis','qContactPerson','qContactMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
  setQuotationDateTime();
+ const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
+ const stockSuggestions=document.getElementById('qStockSuggestions');if(stockSuggestions){stockSuggestions.hidden=true;stockSuggestions.innerHTML='';}
  charges.querySelectorAll('.amount').forEach(e=>e.value='');updateQuoteNumber();calc();
 }
 
@@ -1713,6 +1715,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=login-brand-logo-20261120"></script>
+<script src="./backend/supabase-runtime.js?v=quotation-stock-autocomplete-20261120"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
