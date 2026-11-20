@@ -624,7 +624,7 @@
       email:QUOTE_COMPANY_DEFAULTS.email,branch_address:QUOTE_COMPANY_DEFAULTS.branch_address,
       helpline:QUOTE_COMPANY_DEFAULTS.helplines.join(' / '),pan:QUOTE_COMPANY_DEFAULTS.pan,gstin:QUOTE_COMPANY_DEFAULTS.gstin,
       subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:q.amountWords,
-      terms:QUOTE_COMPANY_DEFAULTS.terms,bank_details:QUOTE_COMPANY_DEFAULTS.bank_details,
+      terms:q.terms||QUOTE_COMPANY_DEFAULTS.terms,bank_details:q.bank||QUOTE_COMPANY_DEFAULTS.bank_details,
       created_by:currentUser.id,updated_by:currentUser.id
     }).select().single());
     if(q.items?.length) await call(db().from('quotation_items').insert(q.items.map((x,i)=>({quotation_id:row.id,line_no:i+1,particulars:x.particulars||x.name||'',amount:Number(x.amount||0),is_discount:!!(x.discount??x.isDiscount)||/discount|\\bless\\b/i.test(String(x.name||x.particulars||''))}))));
@@ -748,7 +748,7 @@
         const id=editingQuotationId;
         if(quoteRecords.some(other=>other.id!==id&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું બીજું quotation પહેલેથી નોંધાયેલું છે. Duplicate quotation તરીકે ફેરફાર સેવ નહીં થાય.');
         const payload={
-          quote_date:$('qDate')?.value||new Date().toISOString().slice(0,10),
+          quote_date:q.date||new Date().toISOString().slice(0,10),
           customer_name:q.customer,phone:q.phone,address:q.address,customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,vehicle_count:Number(q.vehicleNos||1),
           hypo:q.hypo,model,car_description:q.carDescription,variant,colour:q.colour,
           sales_person:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
