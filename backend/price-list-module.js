@@ -106,9 +106,9 @@
   var rows=getRows(),model=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',models=unique(rows.map(function(r){return clean(r.vehicle)}));
   fillSelect($('plStockVehicle'),models,'All vehicles');if(model&&models.indexOf(model)>=0)$('plStockVehicle').value=model;
   var mr=rows.filter(function(r){return !model||modelKey(r.vehicle)===modelKey(model)}),variants=unique(mr.map(function(r){return clean(r.variant)}));
-  fillSelect($('plStockVariant'),variants,'All variants');$('plStockVariant').disabled=!model;if(variant&&variants.indexOf(variant)>=0)$('plStockVariant').value=variant;
+  var variantSelect=$('plStockVariant');fillSelect(variantSelect,variants,'All variants');if(variantSelect){variantSelect.disabled=!model;if(variant&&variants.indexOf(variant)>=0)variantSelect.value=variant;}
  }
- function stockFilterChanged(which){if(which==='vehicle')$('plStockVariant').value='';populateFilters();render()}
+ function stockFilterChanged(which){var variantSelect=$('plStockVariant');if(which==='vehicle'&&variantSelect)variantSelect.value='';populateFilters();render()}
  function resetFilters(){['plStockVehicle','plStockVariant','plSearch'].forEach(function(id){if($(id))$(id).value=''});populateFilters();render()}
  function breakup(item){
   var parts=(item.other_data||item).components||[];if(!parts.length)return '<span class="muted">—</span>';
@@ -121,18 +121,15 @@
   var body=$('plRows');if(body)body.innerHTML=out.length?out.map(function(x){
    var d=x.other_data||x,ex=Number(x.exShowroom!=null?x.exShowroom:x.ex_showroom||d.exShowroom||0),rto=Number(x.rto||d.rto||0),total=Number(d.onRoadTotal||d.totalOnRoad||0);
    if(!total)total=ex+Number(d.tcs||0)+Number(d.insurance||0)+rto+Number(d.other||0);
-   var available=getStock().some(function(r){var st=clean(r.status).toLowerCase(),stage=clean(r.stage).toLowerCase();return modelKey(r.model)===modelKey(x.vehicle)&&variantMatch(r.variant,x.variant)&&!(st.indexOf('delivered')>=0)&&!(stage&&(/hold|allot|deliver|sold/.test(stage)))});
-   var stockDot=available?'<span class="pl-stock-dot" title="Available in stock" aria-label="Available in stock"></span>':'';
-   return '<tr><td>'+stockDot+'<b>'+esc(x.vehicle)+'</b></td><td>'+esc(x.variant)+'</td><td>'+esc(x.colour||'—')+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>';
+   return '<tr><td><b>'+esc(x.vehicle)+'</b></td><td>'+esc(x.variant)+'</td><td>'+esc(x.colour||'—')+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>';
   }).join(''):'<tr><td colspan="9" class="empty">'+(rows.length?'No uploaded price list matches these filters. Try another model or use direct search.':'No price lists have been uploaded yet. Use Upload Price Lists to add the Excel files.')+'</td></tr>';
   if($('plResultsSummary'))$('plResultsSummary').textContent=out.length+' variant price(s)'+(rows.length?' · '+rows.length+' total uploaded':'');
   try{plData=window.plData||{}}catch(e){}
  }
  function status(msg,error){var el=$('plInlineStatus');if(el){el.textContent=msg||'';el.className='pl-inline-status'+(error?' error':'')}}
  async function refresh(){
-  status('Refreshing price lists and stock availability…');var api=window.SVMBackend;if(!api){status('Secure backend is still starting. Try Refresh again in a moment.',true);return}
-  var jobs=[api.loadPriceLists()];if(api.loadPriceListStock)jobs.push(api.loadPriceListStock().catch(function(e){console.warn('Price-list stock availability could not refresh',e);return []}));
-  await Promise.all(jobs);render();status('Price list is up to date.');
+  status('Refreshing price lists…');var api=window.SVMBackend;if(!api){status('Secure backend is still starting. Try Refresh again in a moment.',true);return}
+  await api.loadPriceLists();render();status('Price list is up to date.');
  }
  function showPreview(rows){var body=$('plPreviewRows');body.innerHTML=rows.slice(0,60).map(function(x){return '<tr><td>'+esc(x.sourceFile+' / '+x.sourceSheet)+'</td><td>'+esc(x.vehicle)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.department)+'</td><td>'+money(x.exShowroom)+'</td><td>'+money(x.onRoadTotal)+'</td></tr>'}).join('')+(rows.length>60?'<tr><td colspan="6" class="muted">Showing first 60 of '+rows.length+' variants. All detected variants will be saved.</td></tr>':'')}
  async function preview(){
