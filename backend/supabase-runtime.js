@@ -142,7 +142,7 @@
         box.innerHTML='<div class="q-stock-count">'+count+' matching stock vehicle(s) · '+esc(dept)+'</div>'+matches.slice(0,30).map((v,i)=>'<button type="button" class="q-stock-option" data-quote-stock-index="'+i+'"><span class="q-stock-main"><b>'+esc(v.model||'—')+'</b><span>'+esc(v.variant||'Variant not listed')+' · '+esc(v.colour||'Colour not listed')+'</span></span><span class="q-stock-meta"><b>'+esc(v.chassis_number||'')+'</b><small>'+esc(v.stage||v.status||'')+'</small></span></button>').join('')+(count>30?'<div class="q-stock-count">Showing first 30. Add more variant or colour text to narrow the list.</div>':'');
         box.querySelectorAll('[data-quote-stock-index]').forEach(button=>button.addEventListener('click',()=>{
           const v=matches[Number(button.dataset.quoteStockIndex)];if(!v)return;
-          model.value=v.model||'';variant.value=v.variant||'';colour.value=v.colour||'';$('qChassis').value=v.chassis_number||'';
+          model.value=v.model||'';variant.value=v.variant||'';colour.value=v.colour||'';$('qChassis').value=v.chassis_number||'';variant.dispatchEvent(new Event('change',{bubbles:true}));
           if($('qCarDesc')&&!$('qCarDesc').value)$('qCarDesc').value=[v.seating,v.manufacturing_year].filter(Boolean).join(' · ');
           if($('qSalesPerson'))$('qSalesPerson').value=currentProfile?.full_name||currentUser?.email||'';
           hide();notify('Stock vehicle selected · Chassis '+(v.chassis_number||'not available'));
