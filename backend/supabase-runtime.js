@@ -44,6 +44,48 @@
   const $ = id => document.getElementById(id);
   const notify = msg => { if (typeof window.toast === 'function') window.toast(msg); else console.info(msg); };
   const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  const QUOTE_COMPANY_DEFAULTS = {
+    pan:'AAMCS1007J',gstin:'24AAMCS1007J1ZI',
+    email:'SALES.B@SIDDHIVINAYAKMOTORS.COM',
+    branch_address:'Press Quarter, near BSNL Telephone Exchange, Chitra, Bhavnagar, Gujarat 364004',
+    helplines:['9879100031','9925139389'],
+    terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],
+    bank_details:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'}
+  };
+  const canEditQuoteCompanySettings=()=>!!currentProfile&&(currentProfile.is_super_admin===true||['Manager','General Manager','Admin'].includes(String(currentProfile.designation||'')));
+  async function loadQuoteCompanySettings(){
+    const rows=await call(db().from('quotation_company_settings').select('*').eq('id',true).limit(1));
+    return rows?.[0]||QUOTE_COMPANY_DEFAULTS;
+  }
+  async function applyQuoteCompanyDetails(){
+    if(!currentUser||!currentProfile)return;
+    let cfg;try{cfg=await loadQuoteCompanySettings();}catch(e){console.warn('Company quotation settings unavailable',e);cfg=QUOTE_COMPANY_DEFAULTS;}
+    const set=(id,value)=>{const el=$(id);if(el&&value!==undefined&&value!==null)el.value=value;};
+    set('qPan',cfg.pan||QUOTE_COMPANY_DEFAULTS.pan);set('qGstin',cfg.gstin||QUOTE_COMPANY_DEFAULTS.gstin);
+    set('qEmail',cfg.email||QUOTE_COMPANY_DEFAULTS.email);
+    set('qBranchAddress',cfg.branch_address||QUOTE_COMPANY_DEFAULTS.branch_address);
+    set('qHelpline',(cfg.helplines||QUOTE_COMPANY_DEFAULTS.helplines).join(' / '));
+    const person=currentProfile.full_name||currentUser.email||'';
+    set('qContactPerson',person);
+    set('qContactMobile',currentProfile.phone||'');
+    const canEdit=canEditQuoteCompanySettings();
+    ['qPan','qGstin','qEmail','qBranchAddress','qHelpline'].forEach(id=>{const el=$(id);if(el)el.readOnly=!canEdit;});
+    const actions=$('quoteCompanySettingsActions');if(actions)actions.style.display=canEdit?'block':'none';
+    const save=$('saveQuoteCompanySettings');
+    if(save&&!save.dataset.bound){save.dataset.bound='1';save.addEventListener('click',async()=>{
+      if(!canEditQuoteCompanySettings()){notify('Only Manager, General Manager, Admin and Super Admin can edit company quotation details.');return;}
+      try{
+        const helplines=String($('qHelpline')?.value||'').split(/[\\/,;]+/).map(x=>x.trim()).filter(Boolean);
+        if(helplines.length!==2||helplines.some(x=>!/^\\d{10}$/.test(x)))throw new Error('Enter exactly two valid 10-digit sales helpline numbers.');
+        const payload={pan:$('qPan')?.value.trim()||'',gstin:$('qGstin')?.value.trim()||'',email:$('qEmail')?.value.trim()||'',branch_address:$('qBranchAddress')?.value.trim()||'',helplines,updated_by:currentUser.id,updated_at:new Date().toISOString()};
+        await call(db().from('quotation_company_settings').update(payload).eq('id',true).select('id').single());
+        await audit('quotation_management','edit','Updated shared quotation company details','quotation_company_settings','true');
+        notify('Company quotation details saved for future quotations.');
+        await applyQuoteCompanyDetails();
+      }catch(e){notify(e.message||'Could not save company details.');}
+    });}
+  }
   const db = () => { if (!client) throw new Error('Supabase client is not ready'); return client; };
   async function call(q) { const {data,error}=await q; if(error) throw error; return data; }
   function has(module,action='view') {
@@ -1524,15 +1566,15 @@
     // Re-apply permission-dependent controls only after the authenticated profile is loaded.
     // The initial call above runs before currentProfile exists and must not hide Super Admin actions.
     if(currentUser) installScreenHooks();
-    if(currentUser){await startApp();syncOperationalResetVisibility();await recordSessionLogin();} else {syncOperationalResetVisibility();showLogin();}
+    if(currentUser){await startApp();await applyQuoteCompanyDetails();syncOperationalResetVisibility();await recordSessionLogin();} else {syncOperationalResetVisibility();showLogin();}
     db().auth.onAuthStateChange(async(_event,session)=>{
       if(!session){currentUser=null;currentProfile=null;permissions.clear();sessionLoginRecordedFor=null;syncOperationalResetVisibility();showLogin();return;}
-      try{await refreshIdentity();await startApp();await recordSessionLogin();}catch(e){console.error(e);showLogin();}
+      try{await refreshIdentity();await startApp();await applyQuoteCompanyDetails();await recordSessionLogin();}catch(e){console.error(e);showLogin();}
     });
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadPriceListStock,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadPriceListStock,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit};
     window.dispatchEvent(new Event('svm:ready'));
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>init().catch(e=>{console.error(e);notify('Backend init failed: '+e.message);showLogin();}),{once:true});
