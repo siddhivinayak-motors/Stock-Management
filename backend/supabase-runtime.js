@@ -894,6 +894,84 @@
       notify('Price list published to Supabase.');
     }catch(e){console.error(e);notify(e.message);}
   };
+  let pratikStockPreviewRows = [], pratikStockPreviewFile = null;
+  window.pratikStockPreview = async () => {
+    try {
+      const file=$('pratikStockFile')?.files?.[0];
+      if(!file)throw new Error('Select Pratik Bhadeka Excel file first.');
+      if(!has('common_excel_upload','create'))throw new Error('Common Excel Upload permission required.');
+      const allowed=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
+      const root=!!currentProfile?.is_super_admin;
+      if(!root&&(!allowed.has('personal')||!allowed.has('ev')))throw new Error('Login needs both Personal and EV department access.');
+      if(!window.XLSX)throw new Error('Excel reader did not load. Reload the page.');
+      const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
+      const sn=wb.SheetNames.find(n=>String(n).trim().toUpperCase()==='STOCK');
+      if(!sn)throw new Error('STOCK worksheet not found. No data changed.');
+      const raw=XLSX.utils.sheet_to_json(wb.Sheets[sn],{defval:'',raw:true});
+      if(!raw.length)throw new Error('STOCK worksheet is empty.');
+      const nk=k=>String(k??'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+      const get=(r,...names)=>{const keys=Object.keys(r||{});for(const n of names){const k=keys.find(x=>nk(x)===nk(n));if(k!==undefined)return r[k];}return '';};
+      const t=v=>String(v??'').trim();
+      const dt=v=>{if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);if(typeof v==='number'&&v>0){const z=XLSX.SSF.parse_date_code(v);if(z)return new Date(Date.UTC(z.y,z.m-1,z.d)).toISOString().slice(0,10);}if(v){const d=new Date(v);if(!isNaN(d))return d.toISOString().slice(0,10);}return null;};
+      const num=v=>{if(v===null||v===undefined||t(v)==='')return null;const n=Number(String(v).replace(/,/g,''));return Number.isFinite(n)?n:null;};
+      const dept=m=>{const x=t(m).toUpperCase();return x==='BEV'||x.includes('EV')||x.includes('ELECTRIC')?'EV':'Personal';};
+      const stages=new Set(['OPEN','HOLD','ALLOTED','DAMAGE','RETAIL','DEMO','TRANSFER_OUT','OTHER','BILLING DONE','DEALER','DAMO']);
+      const seen=new Set();
+      pratikStockPreviewRows=raw.map((r,i)=>{
+        const model=t(get(r,'MODEL')),variant=t(get(r,'VARIENTS','VARIANTS','VARIANT'));
+        const original=t(get(r,'CHASSIS NUMBER','CHASSISNUMBER','CHASSIS')).toUpperCase();
+        const chassis=original||(model?'XXXX-'+String(i+1).padStart(3,'0'):'');
+        const department=dept(model),stage=t(get(r,'STAGE')).toUpperCase()||'OPEN';
+        let decision='Ready';
+        if(!model)decision='Review: Missing model';
+        else if(!chassis)decision='Review: Missing chassis';
+        else if(seen.has(chassis))decision='Review: Duplicate chassis';
+        else if(!stages.has(stage))decision='Review: Unknown stage';
+        else if(!root&&!allowed.has(department.toLowerCase()))decision='Review: No department access';
+        seen.add(chassis);
+        const mfg=t(get(r,'MFG YEAR')),ym=mfg.match(/(?:19|20)\d{2}/);
+        return {sr_no:num(get(r,'SR.NO','SR NO')),department,chassis,model,variant,
+          seating:t(get(r,'SEATING')),colour:t(get(r,'COLOR','COLOUR')),mfg_year_label:mfg,
+          manufacturing_year:ym?Number(ym[0]):null,oem_invoice_date:dt(get(r,'OEM INVOICE DATE')),
+          engine_number:t(get(r,'ENGINE NUMBER')),status:t(get(r,'STATUS'))||'Received / In Stock',
+          place:t(get(r,'PLACE')),ageing:num(get(r,'AGEING')),stage,sc_name:t(get(r,'SC NAME')),
+          customer_name:t(get(r,'CUSTOMER NAME')),alloted_date:dt(get(r,'ALLOTED DATE')),
+          alloted_ageing:num(get(r,'ALLOTED AGEING')),source_row:i+2,decision};
+      }).filter(x=>x.model||x.chassis);
+      if(!pratikStockPreviewRows.length)throw new Error('No vehicle rows found in STOCK worksheet.');
+      const bad=pratikStockPreviewRows.filter(x=>x.decision!=='Ready');
+      if(bad.length)throw new Error('Review found '+bad.length+' invalid rows. Correct the Excel file before sync.');
+      const existing=[];
+      for(let from=0;;from+=1000){const part=await call(db().from('vehicles').select('chassis_number,department,stage,status').in('department',['Personal','EV']).range(from,from+999));existing.push(...part);if(part.length<1000)break;}
+      const incoming=new Set(pratikStockPreviewRows.map(x=>x.chassis));
+      const old=new Set(existing.map(x=>String(x.chassis_number||'').toUpperCase()));
+      const added=pratikStockPreviewRows.filter(x=>!old.has(x.chassis)).length;
+      const updated=pratikStockPreviewRows.length-added;
+      const removed=existing.filter(x=>!incoming.has(String(x.chassis_number||'').toUpperCase())).length;
+      const counts={Personal:pratikStockPreviewRows.filter(x=>x.department==='Personal').length,EV:pratikStockPreviewRows.filter(x=>x.department==='EV').length};
+      const st={};pratikStockPreviewRows.forEach(x=>st[x.stage]=(st[x.stage]||0)+1);
+      pratikStockPreviewFile=file.name;
+      $('pratikStockApply').disabled=false;
+      $('pratikStockSummary').style.display='block';
+      $('pratikStockSummary').textContent='Review ready — database unchanged.\nRows: '+pratikStockPreviewRows.length+'\nPersonal: '+counts.Personal+' · EV: '+counts.EV+'\nNew: '+added+' · Updated: '+updated+' · Removed: '+removed+'\nStages: '+Object.entries(st).map(([k,v])=>k+': '+v).join(' · ')+'\nCommercial and LLM: untouched.';
+      $('pratikStockRows').innerHTML=pratikStockPreviewRows.slice(0,500).map(x=>'<tr><td>'+esc(x.sr_no??'—')+'</td><td>'+esc(x.chassis)+'</td><td>'+esc(x.model+' / '+x.variant)+'</td><td>'+esc(x.department)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.stage)+'</td><td>'+esc(x.decision)+'</td></tr>').join('');
+    } catch(e) {
+      console.error(e);pratikStockPreviewRows=[];pratikStockPreviewFile=null;
+      if($('pratikStockApply'))$('pratikStockApply').disabled=true;
+      notify(e.message||'Unable to review STOCK worksheet.');
+    }
+  };
+  window.pratikStockApply = async () => {
+    try {
+      if(!pratikStockPreviewRows.length||!pratikStockPreviewFile)throw new Error('Review STOCK worksheet first.');
+      if(!confirm('FULL SYNC: Replace current Personal and EV stock with '+pratikStockPreviewRows.length+' STOCK rows? Commercial and LLM stay unchanged. Old stock and exit history will be archived.'))return;
+      const result=await call(db().rpc('sync_pratik_personal_ev_stock',{p_rows:pratikStockPreviewRows.map(({decision,...x})=>x),p_file_name:pratikStockPreviewFile}));
+      quotationStockCache.clear();pratikStockPreviewRows=[];pratikStockPreviewFile=null;
+      $('pratikStockApply').disabled=true;
+      $('pratikStockSummary').textContent='Sync completed. Uploaded: '+result.uploaded_rows+' · Personal: '+result.personal_rows+' · EV: '+result.ev_rows+' · Removed: '+result.removed_rows+'. Commercial and LLM unchanged.';
+      await renderStock();await loadImportHistory();notify('Pratik Bhadeka Personal / EV stock synchronized.');
+    } catch(e) {console.error(e);notify(e.message||'Stock sync failed.');}
+  };
   window.stockImportPreview = async () => {
     try{
       const file=$('stockReportFile')?.files?.[0];if(!file)throw new Error('Select the standard stock report Excel file.');
