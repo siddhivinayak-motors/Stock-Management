@@ -519,7 +519,7 @@
     if(!has('quotation_management','view')) throw new Error('No quotation view permission.');
     const out=[];let from=0,chunk=500;
     while(true){
-      const part=await call(db().from('quotations').select('*,quotation_items(*)').eq('department',department).order('created_at',{ascending:false}).range(from,from+chunk-1));
+      const part=await call(db().from('quotations').select('*,quotation_items(*),creator:profiles!quotations_created_by_fkey(full_name)').eq('department',department).order('created_at',{ascending:false}).range(from,from+chunk-1));
       out.push(...part);if(part.length<chunk)break;from+=chunk;
     }
     return out;
@@ -533,7 +533,7 @@
     address:row.address||'',vehicleNos:String(row.vehicle_count??1),hypo:row.hypo||'',
     model:row.model||'',carDescription:row.car_description||'',variant:row.variant||'',colour:row.colour||'',
     vehicle:[row.model,row.variant].filter(Boolean).join(' · '),chassis:row.chassis||'',
-    salesPerson:row.sales_person||'',by:row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'Employee',
+    salesPerson:row.sales_person||'',by:row.creator?.full_name||'—',
     contactPerson:row.contact_person||'',contactMobile:row.contact_mobile||'',email:row.email||'',
     branchAddress:row.branch_address||'',helpline:row.helpline||'',pan:row.pan||'',gstin:row.gstin||'',
     total:Number(row.total||0),subtotal:Number(row.subtotal||0),discount:Number(row.discount||0),
@@ -563,6 +563,19 @@
       const q=getQuotePayload(); if(!q) return;
       const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
       const model=$('qVehicle').value.trim(),variant=$('qVariant').value.trim();
+      const normalizeText=v=>String(v||'').trim().replace(/\\s+/g,' ').toLocaleLowerCase();
+      const normalizePhone=v=>String(v||'').replace(/\\D/g,'');
+      const phoneKey=normalizePhone(q.phone);
+      if(phoneKey.length!==10) throw new Error('Enter a valid 10-digit mobile number.');
+      const existing=await call(db().from('quotations').select('id,quote_number,customer_name,phone,model,variant,total').eq('department',dept));
+      const duplicate=existing.find(row=>
+        normalizeText(row.customer_name)===normalizeText(q.customer) &&
+        normalizePhone(row.phone)===phoneKey &&
+        normalizeText(row.model)===normalizeText(model) &&
+        normalizeText(row.variant)===normalizeText(variant) &&
+        Math.round(Number(row.total||0)*100)===Math.round(Number(q.total||0)*100)
+      );
+      if(duplicate) throw new Error('આ ગ્રાહકના આ મોબાઇલ નંબર અને આ જ ગાડીનું આ જ Grand Total વાળું quotation પહેલેથી નોંધાયેલું છે ('+duplicate.quote_number+'). ભાવ અથવા quotation detailsમાં ફેરફાર કર્યા વગર ફરીથી quotation બનાવી શકાશે નહીં.');
       const allocatedNumber=await call(db().rpc('next_quote_number'));
       q.no=allocatedNumber;
       if($('quoteNumber'))$('quoteNumber').textContent=allocatedNumber;
