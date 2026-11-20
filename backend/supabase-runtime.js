@@ -1503,7 +1503,7 @@
     if(!retailReportRows.length){notify('There are no retail records to export.');return;}
     const cols=[['Retail Date','retail_date'],['Chassis Number','chassis_number'],['Vehicle Model','model'],['Variant','variant'],['Department','department'],['Customer','customer_name'],['Sales Executive','sc_name'],['Status','status']];
     const quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-    const csv='\\uFEFF'+[cols.map(x=>quote(x[0])).join(','),...retailReportRows.map(row=>cols.map(c=>quote(row[c[1]]||'')).join(','))].join('\\r\\n');
+    const csv='\uFEFF'+[cols.map(x=>quote(x[0])).join(','),...retailReportRows.map(row=>cols.map(c=>quote(row[c[1]]||'')).join(','))].join('\r\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Siddhivinayak-Retail-Report-'+retailDateISO(new Date())+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
