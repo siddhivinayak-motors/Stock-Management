@@ -1894,26 +1894,63 @@
     box.innerHTML='<div class="card-desc" style="margin:8px 0">Found '+otfMatches.length+' quotation(s). Select the exact quotation for this booking.</div><div style="display:grid;gap:8px">'+otfMatches.map((q,i)=>'<button type="button" class="btn" data-otf-quote-index="'+i+'" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;flex-wrap:wrap"><span><b>'+esc(q.quote_number)+'</b> · '+esc(q.customer_name)+' · '+esc([q.model,q.variant].filter(Boolean).join(' / '))+'</span><b>'+otfMoney(q.total)+'</b></button>').join('')+'</div>';
     box.querySelectorAll('[data-otf-quote-index]').forEach(btn=>btn.addEventListener('click',()=>selectOtfQuote(Number(btn.dataset.otfQuoteIndex))));
   }
+  function otfEnsureSuggestionUi(){
+    const input=$('otfChassisInput');if(!input)return null;
+    let box=$('otfChassisSuggestions');
+    if(!box){box=document.createElement('div');box.id='otfChassisSuggestions';box.className='q-stock-suggestions';box.hidden=true;input.closest('.form-grid')?.insertAdjacentElement('afterend',box);}
+    return box;
+  }
+  async function loadOtfChassisSuggestions(){
+    const box=otfEnsureSuggestionUi();if(!box||!otfSelectedQuote)return;
+    box.hidden=false;box.innerHTML='<div class="q-stock-count">Finding matching chassis in '+esc(otfDepartment)+' Stock Register…</div>';
+    const [stock,bookings]=await Promise.all([
+      call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year,place').eq('department',otfDepartment).limit(2000)),
+      call(db().from('otf_order_books').select('chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000))
+    ]);
+    const booked=new Set(bookings.map(x=>otfNorm(x.chassis_number)));
+    const blocked=new Set(['RETAIL','DEMO','BILLINGDONE','DEALER','TRANSFEROUT','EXITED']);
+    const candidates=stock.filter(v=>otfNorm(v.model)===otfNorm(otfSelectedQuote.model)&&otfNorm(v.variant)===otfNorm(otfSelectedQuote.variant)&&!booked.has(otfNorm(v.chassis_number))&&!blocked.has(otfNorm(v.stage))&&otfNorm(v.status)!=='DELIVERED');
+    if(!candidates.length){box.innerHTML='<div class="q-stock-empty">No unbooked matching chassis found. If this vehicle is coming from outside stock, enter its chassis number and choose the external vehicle option after verification.</div>';return;}
+    box.innerHTML='<div class="q-stock-count">'+candidates.length+' matching chassis available · '+esc(otfSelectedQuote.model)+' / '+esc(otfSelectedQuote.variant)+'</div>'+candidates.map((v,i)=>'<button type="button" class="q-stock-option" data-otf-stock-index="'+i+'"><span class="q-stock-main"><b>'+esc(v.chassis_number)+'</b><span>'+esc(v.model)+' / '+esc(v.variant)+' · '+esc(v.colour||'Colour not recorded')+'</span></span><span class="q-stock-meta"><b>'+esc(v.status||'')+' · '+esc(v.stage||'')+'</b><small>'+esc(v.place||'')+'</small></span></button>').join('');
+    box.querySelectorAll('[data-otf-stock-index]').forEach(btn=>btn.addEventListener('click',async()=>{const v=candidates[Number(btn.dataset.otfStockIndex)];if(!v)return;$('otfChassisInput').value=v.chassis_number;await verifyOtfChassis();box.hidden=true;}));
+  }
+  function otfShowExternalChoice(message){
+    const box=$('otfVehicleVerified');if(!box)return;box.hidden=false;box.innerHTML='';
+    const msg=document.createElement('div');msg.textContent=message+' This chassis is not in '+otfDepartment+' Stock Register.';
+    const btn=document.createElement('button');btn.type='button';btn.className='btn small primary';btn.style.marginTop='9px';btn.textContent='Use as External Vehicle (Not in Stock Register)';btn.addEventListener('click',()=>markOtfExternalVehicle().catch(e=>notify(e.message)));
+    box.append(msg,document.createElement('br'),btn);
+  }
+  async function markOtfExternalVehicle(){
+    if(!otfSelectedQuote)throw new Error('Select a quotation first.');
+    const chassis=otfValue('otfChassisInput').toUpperCase().replace(/\\s+/g,'');
+    if(chassis.length<5)throw new Error('Enter the complete chassis number.');
+    const rows=await call(db().from('otf_order_books').select('id,chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000));
+    if(rows.some(r=>otfNorm(r.chassis_number)===otfNorm(chassis)&&r.id!==otfEditingId))throw new Error('This chassis already has an active OTF booking. A second OTF cannot be created.');
+    otfVerifiedVehicle={id:null,department:otfDepartment,chassis_number:chassis,engine_number:'',model:otfSelectedQuote.model,variant:otfSelectedQuote.variant,colour:'',status:'External',stage:'Not in Stock Register',manufacturing_year:null,external:true};
+    const box=$('otfVehicleVerified');if(box){box.hidden=false;box.textContent='EXTERNAL VEHICLE · '+chassis+' · '+otfSelectedQuote.model+' / '+(otfSelectedQuote.variant||'')+' · Not present in Stock Register.';}
+    if($('otfPrintPreview'))$('otfPrintPreview').disabled=false;otfSetStatus('External vehicle selected. It will not be marked as stock verified.');
+  }
   function selectOtfQuote(index){
     const q=otfMatches[index];if(!q)return;
     otfSelectedQuote=q;otfVerifiedVehicle=null;
-    if($('otfSelectedQuote')){$('otfSelectedQuote').hidden=false;$('otfSelectedQuote').textContent='Selected quotation: '+q.quote_number+' · '+q.customer_name+' · '+q.model+' / '+(q.variant||'')+' · Grand Total '+otfMoney(q.total)+'. Now enter the chassis number separately.';}
+    if($('otfSelectedQuote')){$('otfSelectedQuote').hidden=false;$('otfSelectedQuote').textContent='Selected quotation: '+q.quote_number+' · '+q.customer_name+' · '+q.model+' / '+(q.variant||'')+' · Grand Total '+otfMoney(q.total)+'. Select a matching chassis suggestion or enter one manually.';}
     const set=(id,value)=>{if($(id))$(id).value=value??'';};
     set('otfCustomerName',q.customer_name);set('otfCustomerPhone',q.phone);set('otfCustomerGstin',q.customer_gstin||'');
-    set('otfEmail',q.email||'');set('otfAddress',q.address||'');
-    set('otfCity','');set('otfDistrict','');
-    set('otfHpa',q.hypo||'');
+    set('otfEmail',q.email||'');set('otfAddress',q.address||'');set('otfCity','');set('otfDistrict','');set('otfHpa',q.hypo||'');
     if($('otfChassisInput'))$('otfChassisInput').value='';
     if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}
     if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;
-    otfSetStatus('Quotation selected. Chassis verification is still required.');
+    otfSetStatus('Quotation selected. Matching chassis suggestions are loading.');
+    loadOtfChassisSuggestions().catch(e=>{const box=otfEnsureSuggestionUi();if(box){box.hidden=false;box.textContent='Could not load chassis suggestions: '+e.message;}});
   }
   async function verifyOtfChassis(){
     if(!otfSelectedQuote)throw new Error('Select a quotation first.');
     const chassis=otfValue('otfChassisInput').toUpperCase().replace(/\\s+/g,'');
     if(chassis.length<5)throw new Error('Enter the complete chassis number.');
     const row=await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').eq('department',otfDepartment).eq('chassis_number',chassis).maybeSingle());
-    if(!row)throw new Error('This chassis number was not found in '+otfDepartment+' Stock Register.');
+    if(!row){otfVerifiedVehicle=null;if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;otfShowExternalChoice('Chassis not found.');return;}
+    const active=await call(db().from('otf_order_books').select('id,chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000));
+    if(active.some(x=>otfNorm(x.chassis_number)===otfNorm(chassis)&&x.id!==otfEditingId))throw new Error('This chassis already has an active OTF booking. A second OTF cannot be created.');
     const mismatch=otfNorm(row.model)!==otfNorm(otfSelectedQuote.model)||
       (otfNorm(row.variant)!==otfNorm(otfSelectedQuote.variant));
     if(mismatch)throw new Error('Vehicle mismatch: this chassis belongs to '+[row.model,row.variant].filter(Boolean).join(' / ')+', but selected quotation is '+[otfSelectedQuote.model,otfSelectedQuote.variant].filter(Boolean).join(' / ')+'. Select the matching quotation or correct chassis.');
@@ -1950,7 +1987,7 @@
     const now=new Date(),date=now.getFullYear()+String(now.getMonth()+1).padStart(2,'0')+String(now.getDate()).padStart(2,'0');
     const orderNo='OTF-'+code+'-'+date+'-'+now.getTime().toString().slice(-6)+'-'+Math.random().toString(36).slice(2,5).toUpperCase();
     return {
-      order_number:orderNo,department:otfDepartment,quotation_id:q.id,vehicle_id:v.id,
+      order_number:orderNo,department:otfDepartment,quotation_id:q.id,vehicle_id:v.id||null,is_external_vehicle:!!v.external,
       customer_name:otfValue('otfCustomerName'),phone:otfDigits(otfValue('otfCustomerPhone')),
       address,city:otfValue('otfCity'),district:otfValue('otfDistrict'),
       customer_gstin:otfValue('otfCustomerGstin'),aadhaar_number:aadhaar||null,pan_number:pan||null,
@@ -1962,7 +1999,7 @@
       chassis_number:v.chassis_number,engine_number:v.engine_number,model:v.model,variant:v.variant,colour:v.colour,
       sales_person:q.sales_person||currentProfile?.full_name||'',
       quotation_snapshot:{quote_number:q.quote_number,quote_date:q.quote_date,branch_address:q.branch_address||'',subtotal:Number(q.subtotal||0),discount:Number(q.discount||0),total:Number(q.total||0),amount_words:q.amount_words||'',items:(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))},
-      vehicle_snapshot:{status:v.status,stage:v.stage,manufacturing_year:v.manufacturing_year},
+      vehicle_snapshot:{status:v.status,stage:v.stage,manufacturing_year:v.manufacturing_year,external:!!v.external},
       exchange_details:{model:otfValue('otfExchangeModel'),registration:otfValue('otfExchangeReg'),manufacturing_year:otfValue('otfExchangeYear'),old_value:otfNumber('otfExchangeValue'),extra_support:otfNumber('otfExchangeSupport'),total_value:otfNumber('otfExchangeTotal')},
       accessories_details:otfCollectRows('.otf-accessory-row',[['item','[data-acc="item"]'],['part_number','[data-acc="part"]'],['amount','[data-acc="amount"]']]),
       payment_details:otfCollectRows('.otf-payment-row',[['type','[data-pay="type"]'],['date','[data-pay="date"]'],['amount','[data-pay="amount"]'],['mode','[data-pay="mode"]']]),
@@ -2014,10 +2051,10 @@
     const r=otfManagementRows.find(x=>x.id===id);if(!r)return;
     window.otfOpenDepartment(r.department).then(()=>{
       otfEditingId=r.id;otfSelectedQuote={id:r.quotation_id,quote_number:r.quotation_snapshot?.quote_number||'',quote_date:r.quotation_snapshot?.quote_date||'',customer_name:r.customer_name,phone:r.phone,customer_gstin:r.customer_gstin,email:r.email,address:r.address,hypo:r.hpa,model:r.model,variant:r.variant,total:r.quotation_snapshot?.total||0,subtotal:r.quotation_snapshot?.subtotal||0,discount:r.quotation_snapshot?.discount||0,amount_words:r.quotation_snapshot?.amount_words||'',quotation_items:r.quotation_snapshot?.items||[],sales_person:r.sales_person};
-      otfVerifiedVehicle={id:r.vehicle_id,chassis_number:r.chassis_number,engine_number:r.engine_number,model:r.model,variant:r.variant,colour:r.colour,status:r.vehicle_snapshot?.status,stage:r.vehicle_snapshot?.stage,manufacturing_year:r.vehicle_snapshot?.manufacturing_year};
+      otfVerifiedVehicle={id:r.vehicle_id||null,chassis_number:r.chassis_number,engine_number:r.engine_number,model:r.model,variant:r.variant,colour:r.colour,status:r.vehicle_snapshot?.status,stage:r.vehicle_snapshot?.stage,manufacturing_year:r.vehicle_snapshot?.manufacturing_year,external:!!r.is_external_vehicle};
       const set=(id,v)=>{if($(id))$(id).value=v??'';};
       set('otfCustomerName',r.customer_name);set('otfCustomerPhone',r.phone);set('otfCustomerGstin',r.customer_gstin);set('otfEmail',r.email);set('otfAddress',r.address);set('otfCity',r.city);set('otfDistrict',r.district);set('otfHpa',r.hpa);set('otfBookingAmount',r.booking_amount);set('otfBookingDate',r.booking_date);set('otfEnquiryNumber',r.enquiry_number);set('otfCustomerId',r.customer_id);set('otfInvoiceNumber',r.invoice_number);set('otfAadhaar',r.aadhaar_number);set('otfPan',r.pan_number);set('otfDob',r.dob);set('otfAnniversary',r.marriage_anniversary);set('otfNominee',r.nominee);set('otfNomineeRelation',r.nominee_relationship);set('otfNomineeAge',r.nominee_age);set('otfChassisInput',r.chassis_number);
-      if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent='VERIFIED · '+r.chassis_number+' · '+r.model+' / '+(r.variant||'');}
+      if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent=(r.is_external_vehicle?'EXTERNAL VEHICLE · Not in Stock Register · ':'VERIFIED · ')+r.chassis_number+' · '+r.model+' / '+(r.variant||'');}
       if($('otfSelectedQuote')){$('otfSelectedQuote').hidden=false;$('otfSelectedQuote').textContent='Editing OTF '+r.order_number+' · '+r.customer_name;}
       const ex=r.exchange_details||{};set('otfExchangeModel',ex.model);set('otfExchangeReg',ex.registration);set('otfExchangeYear',ex.manufacturing_year);set('otfExchangeValue',ex.old_value);set('otfExchangeSupport',ex.extra_support);set('otfExchangeTotal',ex.total_value);
       $('otfPayments').innerHTML='';(r.payment_details||[]).forEach(p=>{addOtfPayment();const row=$('otfPayments').lastElementChild;if(row)for(const [k,v] of Object.entries({type:p.type,date:p.date,amount:p.amount,mode:p.mode}))row.querySelector('[data-pay="'+k+'"]').value=v??'';});
@@ -2062,7 +2099,7 @@
       $('otfSearchQuotes').addEventListener('click',()=>searchOtfQuotes().catch(e=>{notify(e.message);}));
       $('otfPhoneSearch')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchOtfQuotes().catch(x=>notify(x.message));}});
       $('otfChassisInput')?.addEventListener('input',()=>{otfVerifiedVehicle=null;if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;});
-      $('otfVerifyChassis')?.addEventListener('click',()=>verifyOtfChassis().catch(e=>{otfVerifiedVehicle=null;if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent=e.message;}if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;notify(e.message);}));
+      $('otfVerifyChassis')?.addEventListener('click',()=>verifyOtfChassis().catch(e=>{otfVerifiedVehicle=null;if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent=e.message;}if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;if(/already has an active OTF booking/i.test(e.message))otfSetStatus(e.message,true);notify(e.message);}));
       $('otfSaveOrder')?.addEventListener('click',()=>saveOtfOrder(false));
       $('otfSavePrintOrder')?.addEventListener('click',()=>saveOtfOrder(true));
       $('otfPrintPreview')?.addEventListener('click',()=>{if(otfSelectedQuote&&otfVerifiedVehicle){const draft=buildOtfPayload();otfPrintDocument({...draft,order_number:'PREVIEW',created_at:new Date().toISOString()});}});
