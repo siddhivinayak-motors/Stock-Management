@@ -18,6 +18,8 @@
   let client, currentUser, currentProfile, permissions = new Map(), authReady = false, sessionLoginRecordedFor = null;
   let editingQuotationId = null;
   let selectedStockVehicle = null;
+  // Cache invalidation is used by stock and quotation workflows after imports and edits.
+  const quotationStockCache = new Map();
 
   if(!document.getElementById('svmSelectedStockStyles')){
     const style=document.createElement('style');style.id='svmSelectedStockStyles';
