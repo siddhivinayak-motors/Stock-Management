@@ -1011,7 +1011,6 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <div class="charge-row"><span class="charge-index">10</span><div class="q-charge-name">OTHERS</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Others"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>
     <div class="charge-row discount-charge"><span class="charge-index">11</span><div class="q-charge-name">LESS RETAIL OFFER (If any)</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Retail Offer"></div><span class="discount-lock">LESS</span></div>
     <div class="charge-row discount-charge"><span class="charge-index">12</span><div class="q-charge-name">LESS EXCHANGE BONUS (If any)</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Exchange Bonus"></div><span class="discount-lock">LESS</span></div>
-    <div class="charge-row discount-charge"><span class="charge-index">13</span><div class="q-charge-name">LESS EXTRA DISCOUNT (If any)</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Extra Discount"></div><span class="discount-lock">LESS</span></div>
    </div>
    <div class="quote-total-panel">
     <div class="total-line"><span>Subtotal</span><b id="subtotal">₹0.00</b></div>
@@ -1429,7 +1428,7 @@ function printQuoteDocumentPaper(q){
  const sumRows='<tr class="sum"><td colspan="2">TOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
   '<tr><td colspan="2">Less&nbsp; RETAIL OFFER (If any)</td><td class="amt">− '+(retail.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(retail.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
   '<tr><td colspan="2">Less&nbsp; EXCHANGE BONUS (If any)</td><td class="amt">− '+(exchange.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(exchange.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
-  '<tr><td colspan="2">Less&nbsp; EXTRA DISCOUNT (If any)</td><td class="amt">− '+(otherDiscounts.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(otherDiscounts.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
+  otherDiscounts.map(x=>'<tr><td colspan="2">Less&nbsp; '+esc(x.name)+'</td><td class="amt">− ₹ '+moneyPrint(x.amount)+'</td></tr>').join('')+
   '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(q.total)+'</td></tr>';
  const dateRaw=String(q.date||new Date().toISOString().slice(0,10));
  const dateObj=new Date(dateRaw+'T00:00:00');
@@ -1453,7 +1452,7 @@ function printQuoteDocumentPaper(q){
  '<section class="vehicle-head"><div><b>Model</b><span>'+esc(q.model||'')+'</span></div><div><b>Variant</b><span>'+esc(q.variant||'')+'</span></div><div><b>Colour</b><span>'+esc(q.colour||'')+'</span></div></section>'+
  '<section class="content"><div class="price"><table><thead><tr><th class="sl">SL</th><th>DETAILS</th><th class="amt">AMOUNT</th></tr></thead><tbody>'+rows+sumRows+'</tbody></table></div>'+
  '<div class="terms"><h3>TERMS &amp; CONDITIONS</h3><ol>'+terms.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol>'+
- '<div class="bank"><b>Payments to be made in favour of</b><br><b>Siddhivinayak Motors Pvt. Ltd.</b><br>Payable at Bhavnagar<br><br>• Bank Name: '+esc(bank.bank||'State Bank of India')+'<br>• A/C No.: '+esc(bank.account||'33349775105')+'<br>• Branch: '+esc(bank.branch||'Chitra - Bhavnagar')+'<br>• IFSC Code: '+esc(bank.ifsc||'SBIN0060231')+'<br>• MICR Code No.: '+esc(bank.micr||'364002005')+'<br>• GSTIN No.: '+esc(q.gstin||'24AAMCS1007J1ZI')+'</div><div style="margin-top:2mm;padding:1.5mm 2mm;border:1px solid #777;font-size:8px;font-weight:700">NOTE: This auto-generated copy is not valid for bank loan purposes.</div></div></section>'+
+ '<div class="bank"><b>Payments to be made in favour of</b><br><b>Siddhivinayak Motors Pvt. Ltd.</b><br>Payable at Bhavnagar<br><br>• Bank Name: '+esc(bank.bank||'State Bank of India')+'<br>• A/C No.: '+esc(bank.account||'33349775105')+'<br>• Branch: '+esc(bank.branch||'Chitra - Bhavnagar')+'<br>• IFSC Code: '+esc(bank.ifsc||'SBIN0060231')+'<br>• MICR Code No.: '+esc(bank.micr||'364002005')+'<br>• GSTIN No.: '+esc(q.gstin||'24AAMCS1007J1ZI')+'</div></div></section>'+
  '<section class="bottom"><div class="sales"><div><b>Sales Consultant Name</b>'+esc(q.salesPerson||'')+'</div><div><b>Mobile Number</b>'+esc(q.salesMobile||'')+'</div></div><div class="sign"><div class="stamp">AUTHORISED SIGNATORY</div>For, Siddhivinayak Motors Pvt. Ltd.</div></section>'+
  '<div class="footer">E. &amp; O. E. · Subject to availability of vehicle and applicable terms.</div></main><script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350)}<\/script></body></html>';
  w.document.open();w.document.write(html);w.document.close();
@@ -1780,43 +1779,35 @@ function quoteFindPriceMatch(){
 function quoteApplyPriceList(selectedMatch){
  const match=selectedMatch||quoteFindPriceMatch();if(!match)return false;
  const details=Array.isArray(match.components)?match.components:(Array.isArray(match.other_data?.components)?match.other_data.components:[]);
- const amounts={'EX-SHOWROOM':0,'TCS':0,'INSURANCE':0,'RTO':0,'ACCESSORIES':0,'SHIELD':0,'RSA':0,'COATING':0,'BMC TAX':0,'OTHERS':0};
  const isEv=String(match.department||currentQuoteDepartment||'').toUpperCase()==='EV';
- details.forEach(part=>{
-  const label=String(part.label||'').trim(),v=Number(part.value||0);if(!label)return;
-  // EV quotations use the workbook's EX-SHOWROOM PRICE (A+B) row only.
-  // Do not add the individual A (vehicle) and B (charger) components again.
-  if(isEv&&/^A$|^B$/i.test(label))return;
-  if(isEv&&/^A\s*\+\s*B$/i.test(label)){amounts['EX-SHOWROOM']+=v;return;}
-  if(/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(label))return;
-  if(/insurance\s*\(\s*taxi/i.test(label))return;
-  if(/ex[\s-]*showroom|vehicle\s*price/i.test(label))amounts['EX-SHOWROOM']+=v;
-  else if(/\btcs\b/i.test(label))amounts.TCS+=v;
-  else if(/insurance/i.test(label))amounts.INSURANCE+=v;
-  else if(/\brto\b|road\s*tax|registration/i.test(label))amounts.RTO+=v;
-  else if(/accessor/i.test(label))amounts.ACCESSORIES+=v;
-  else if(/shield/i.test(label))amounts.SHIELD+=v;
-  else if(/\brsa\b|road\s*side\s*assistance/i.test(label))amounts.RSA+=v;
-  else if(/coating|ceramic|\bppf\b/i.test(label))amounts.COATING+=v;
-  else if(/bmc|municipal/i.test(label))amounts['BMC TAX']+=v;
-  else amounts.OTHERS+=v;
- });
- if(!details.length){
-  amounts['EX-SHOWROOM']=Number(match.exShowroom??match.ex_showroom??0);
-  amounts.TCS=Number(match.tcs??match.other_data?.tcs??0);
-  amounts.INSURANCE=Number(match.insurance??match.other_data?.insurance??0);
-  amounts.RTO=Number(match.rto??0);
+ let usable;
+ if(isEv){
+  const a=details.find(p=>/^A$/i.test(String(p.label||'').trim()));
+  const b=details.find(p=>/^B$/i.test(String(p.label||'').trim()));
+  const ab=details.find(p=>/^A\s*\+\s*B$/i.test(String(p.label||'').trim()));
+  const combined=ab?Number(ab.value||0):(Number(a?.value||0)+Number(b?.value||0));
+  usable=details.filter(p=>p&&String(p.label||'').trim()&&!/^A$|^B$|^A\s*\+\s*B$/i.test(String(p.label||'').trim())&&!/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(p.label)&&!/insurance\s*\(\s*taxi/i.test(p.label)&&!/accessor|coation|coating|ceramic|\bppf\b/i.test(p.label));
+  usable.unshift({label:'Ex-Showroom (A+B)',value:combined});
+ }else{
+  usable=details.filter(p=>p&&String(p.label||'').trim()&&!/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(p.label)&&!/insurance\s*\(\s*taxi/i.test(p.label)&&!/accessor|coation|coating|ceramic|\bppf\b/i.test(p.label));
  }
- const rows=[...charges.querySelectorAll('.charge-row')];
- rows.forEach(row=>{
-  if(row.classList.contains('discount-charge'))return;
-  const name=String(row.querySelector('.q-charge-name')?.textContent||'').trim().toUpperCase();
-  const key=Object.keys(amounts).find(k=>name===k||name.replace(/\s+/g,' ' )===k);
-  const input=row.querySelector('.amount');
-  if(input&&key)input.value=amounts[key]>0?amounts[key].toFixed(2):'';
+ const rows=usable.length?usable:[
+  {label:'Ex-Showroom Price',value:match.exShowroom??match.ex_showroom??0},
+  {label:'TCS',value:match.tcs??match.other_data?.tcs??0},
+  {label:'Insurance',value:match.insurance??match.other_data?.insurance??0},
+  {label:'RTO Charge',value:match.rto??0}
+ ];
+ const discount=charges.querySelector('.discount-charge');
+ charges.querySelectorAll('.charge-row:not(.discount-charge)').forEach(r=>{if(r.classList.contains('price-list-charge')||r.querySelector('[data-charge]'))r.remove();});
+ rows.forEach(part=>{
+  const row=document.createElement('div');row.className='charge-row price-list-charge';
+  row.innerHTML='<span class="charge-index"></span><div class="q-charge-name"></div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove price-list charge">×</button>';
+  row.querySelector('.q-charge-name').textContent=String(part.label||'Other').trim();
+  row.querySelector('.amount').value=Number(part.value||0)>0?Number(part.value).toFixed(2):'';
+  charges.insertBefore(row,discount);
  });
  renumberCharges();calc();
- const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Price List applied to the standard quotation breakup: '+match.vehicle+' · '+match.variant;
+ const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Price List applied: '+match.vehicle+' · '+match.variant;
  return true;
 }
 function quoteClearPriceListRows(){
@@ -1852,6 +1843,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="././backend/supabase-runtime.js?v=quotation-fields-cleanup-20261120a"></script>
+<script src="././backend/supabase-runtime.js?v=quotation-revert-20261120a"></script>
 <script src="./backend/price-list-module.js?v=price-list-fix-20261120a"></script>
 </body></html>
