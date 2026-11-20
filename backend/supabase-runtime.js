@@ -305,11 +305,54 @@
   }
   async function publishPriceList(rowsByDepartment,sourceFile='',fileObjects=[]) {
     if(!has('price_list_management','create')) throw new Error('No permission to upload price lists.');
+    // Always compare against the latest published version before deciding what is new.
+    await loadPriceLists();
+    const departments=['Personal','EV','Commercial','LLM'];
+    const normKey=value=>String(value==null?'':value).toUpperCase().replace(/\\bBS[\\s_.-]*6(?:\\.?2)?\\b/g,' ').replace(/\\bREFRESH\\b|\\bNEW\\b/g,' ').replace(/[^A-Z0-9]/g,'');
+    const identity=(dept,row)=>[dept,normKey(row.vehicle),normKey(row.variant),normKey(row.colour)].join('|');
+    const signature=row=>{
+      const d=row.other_data||row;
+      const components=(d.components||[]).map(p=>[String(p.label||'').trim().toLowerCase(),Number(p.value||0)]).sort((a,b)=>a[0].localeCompare(b[0]));
+      return JSON.stringify([Number(row.ex_showroom!=null?row.ex_showroom:row.exShowroom||0),Number(row.rto||0),Number(d.tcs||0),Number(d.insurance||0),Number(d.onRoadTotal||d.totalOnRoad||0),components]);
+    };
+    const existingByDepartment=window.plData||{};
+    const mergedByDepartment={},incomingByDepartment={};
+    const report={added:0,updated:0,skipped:0,total:0,departments:{}};
+    for(const department of departments){
+      const oldItems=existingByDepartment[department]||[];
+      const map=new Map(),merged=[];
+      oldItems.forEach(old=>{
+        const key=identity(department,{vehicle:old.vehicle,variant:old.variant,colour:old.colour});
+        if(!map.has(key)){map.set(key,merged.length);merged.push({
+          department,vehicle:old.vehicle,variant:old.variant||'',colour:old.colour||'',
+          exShowroom:Number(old.ex_showroom||0),rto:Number(old.rto||0),
+          ...(old.other_data||{}),other_data:old.other_data||{}
+        });}
+      });
+      const incoming=rowsByDepartment[department]||[];
+      let added=0,updated=0,skipped=0;
+      incoming.forEach(row=>{
+        const key=identity(department,row),idx=map.get(key);
+        if(idx===undefined){map.set(key,merged.length);merged.push({...row,department});added++;return;}
+        const old=merged[idx];
+        const oldComparable={ex_showroom:old.exShowroom!=null?old.exShowroom:old.ex_showroom,rto:old.rto,other_data:old.other_data||old};
+        const newComparable={ex_showroom:row.exShowroom,rto:row.rto,other_data:row};
+        if(signature(oldComparable)===signature(newComparable)){skipped++;return;}
+        merged[idx]={...row,department};updated++;
+      });
+      report.added+=added;report.updated+=updated;report.skipped+=skipped;
+      report.departments[department]={added,updated,skipped,total:merged.length};
+      if(incoming.length){incomingByDepartment[department]=incoming;}
+      if(incoming.length&&(added||updated))mergedByDepartment[department]=merged;
+      report.total+=merged.length;
+    }
+    if(!report.added&&!report.updated)return report;
     const storagePaths=[];
     for(const file of fileObjects){
-      const departments=file.priceListDepartments&&file.priceListDepartments.length?file.priceListDepartments:['Personal'];
+      const depts=file.priceListDepartments&&file.priceListDepartments.length?file.priceListDepartments:['Personal'];
       const safeName=String(file.name||'price-list.xlsx').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(-120);
-      for(const dept of departments){
+      for(const dept of depts){
+        if(!mergedByDepartment[dept])continue;
         const path=dept+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'-'+safeName;
         const {error}=await db().storage.from('price-list-files').upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
         if(error)throw error;
@@ -317,39 +360,42 @@
       }
     }
     const allFileRefs=storagePaths.length?storagePaths.join(' | '):sourceFile;
-    for(const [department,rows] of Object.entries(rowsByDepartment)){
-      if(!['Personal','EV','Commercial','LLM'].includes(department)||!rows.length)continue;
-      const deptFiles=fileObjects.filter(f=>f.department===department).map(f=>f.name);
+    for(const [department,rows] of Object.entries(mergedByDepartment)){
+      const incoming=incomingByDepartment[department]||[];
+      const dReport=report.departments[department]||{added:0,updated:0,skipped:0};
       const version=await call(db().from('price_list_versions').insert({
         version_label:'V'+new Date().toISOString().replace(/[-:.TZ]/g,'').slice(0,14),
-        department,source_file:deptFiles.join(', ')||sourceFile,row_count:rows.length,published_by:currentUser.id
+        department,source_file:sourceFile||allFileRefs,row_count:rows.length,published_by:currentUser.id
       }).select().single());
       const batch=await call(db().from('price_list_import_batches').insert({
-        department,version_label:version.version_label,source_file:(deptFiles.join(', ')||sourceFile)+' | '+allFileRefs,
-        status:'published',total_rows:rows.length,valid_rows:rows.length,duplicate_rows:0,error_rows:0,
+        department,version_label:version.version_label,source_file:(sourceFile||'')+' | '+allFileRefs,
+        status:'published',total_rows:incoming.length,valid_rows:dReport.added+dReport.updated,duplicate_rows:dReport.skipped,error_rows:0,
         uploaded_by:currentUser.id,reviewed_by:currentUser.id,reviewed_at:new Date().toISOString(),
-        published_version_id:version.id,review_note:'Published from Price List upload screen.'
+        published_version_id:version.id,review_note:'Incremental publish. Added '+dReport.added+', updated '+dReport.updated+', skipped '+dReport.skipped+'.'
       }).select().single());
-      for(let i=0;i<rows.length;i+=500){
-        const chunk=rows.slice(i,i+500);
-        const items=chunk.map((r,j)=>({
-          batch_id:batch.id,row_number:i+j+1,vehicle:r.vehicle,variant:r.variant||'',colour:r.colour||'',
-          ex_showroom:Number(r.exShowroom||0),rto:Number(r.rto||0),
-          source_payload:{...r,department}
+      const importRows=incoming.filter(row=>{
+        const key=identity(department,row),old=(existingByDepartment[department]||[]).find(x=>identity(department,{vehicle:x.vehicle,variant:x.variant,colour:x.colour})===key);
+        return !old||signature({ex_showroom:old.ex_showroom,rto:old.rto,other_data:old.other_data||{}})!==signature({ex_showroom:row.exShowroom,rto:row.rto,other_data:row});
+      });
+      for(let i=0;i<importRows.length;i+=500){
+        const items=importRows.slice(i,i+500).map((row,j)=>({
+          batch_id:batch.id,row_number:i+j+1,vehicle:row.vehicle,variant:row.variant||'',colour:row.colour||'',
+          ex_showroom:Number(row.exShowroom||0),rto:Number(row.rto||0),source_payload:{...row,department}
         }));
         await call(db().from('price_list_import_items').insert(items));
       }
       for(let i=0;i<rows.length;i+=500){
-        const payload=rows.slice(i,i+500).map(r=>({
-          version_id:version.id,department,vehicle:r.vehicle,variant:r.variant||'',colour:r.colour||'',
-          ex_showroom:Number(r.exShowroom||0),rto:Number(r.rto||0),
-          other_data:{...r,department,source_files:deptFiles}
+        const payload=rows.slice(i,i+500).map(row=>({
+          version_id:version.id,department,vehicle:row.vehicle,variant:row.variant||'',colour:row.colour||'',
+          ex_showroom:Number(row.exShowroom!=null?row.exShowroom:row.ex_showroom||0),rto:Number(row.rto||0),
+          other_data:{...(row.other_data||row),department}
         }));
         await call(db().from('price_list_items').insert(payload));
       }
     }
     await loadPriceLists();
-    await audit('price_list_management','create','Uploaded and published price list','price_list_version',null,{source_file:sourceFile,storage_paths:storagePaths,departments:Object.keys(rowsByDepartment)});
+    await audit('price_list_management','create','Incrementally uploaded price list','price_list_version',null,{source_file:sourceFile,storage_paths:storagePaths,added:report.added,updated:report.updated,skipped:report.skipped});
+    return report;
   }
 
   async function loadEmployees() {
