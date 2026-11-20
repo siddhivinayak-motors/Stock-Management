@@ -103,24 +103,33 @@
     if($('qSalesPerson'))$('qSalesPerson').value=currentProfile?.full_name||currentUser?.email||'';
     if(quotationPickerBound)return;
     quotationPickerBound=true;
-    const fields=[model,variant,colour];
-    const hide=()=>{box.hidden=true;};
+    const fields=[model,variant,colour],hide=()=>{box.hidden=true;};
     const render=async()=>{
-      const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
+      const activeDept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
       const query=quoteSearchNorm([model.value,variant.value,colour.value].filter(Boolean).join(' '));
       if(!query){hide();return;}
-      box.hidden=false;box.innerHTML='<div class="q-stock-empty">Searching Price List…</div>';
+      box.hidden=false;box.innerHTML='<div class="q-stock-empty">Searching all permitted department Price Lists…</div>';
       try{
         if(!window.SVMBackend||typeof window.SVMBackend.loadPriceLists!=='function')throw new Error('Price List service unavailable');
         await window.SVMBackend.loadPriceLists();
-        const rows=((window.plData&&window.plData[dept])||[]).map(row=>({...row,department:row.department||dept}));
+        const departments=['Personal','EV','Commercial','LLM'];
+        const rows=departments.flatMap(dept=>((window.plData&&window.plData[dept])||[]).map(row=>({...row,department:row.department||dept})));
         const tokens=query.split(/\s+/).filter(Boolean);
-        const matches=rows.filter(row=>{
-          const hay=quoteSearchNorm([row.vehicle,row.variant,row.colour].join(' '));
-          return tokens.every(token=>hay.includes(token));
-        }).sort((a,b)=>String(a.vehicle||'').localeCompare(String(b.vehicle||''))||String(a.variant||'').localeCompare(String(b.variant||''))||String(a.colour||'').localeCompare(String(b.colour||'')));
-        if(!matches.length){box.innerHTML='<div class="q-stock-empty">No matching Model / Variant / Colour found in the '+esc(dept)+' Price List.</div>';return;}
-        box.innerHTML='<div class="q-stock-count">'+matches.length+' Price List match(es) · '+esc(dept)+'</div>'+matches.slice(0,60).map((row,i)=>'<button type="button" class="q-stock-option" data-quote-price-index="'+i+'"><span class="q-stock-main"><b>'+esc(row.vehicle||'—')+'</b><span>'+esc(row.variant||'Variant not listed')+' · '+esc(row.colour||'Colour not listed')+'</span></span><span class="q-stock-meta"><small>'+esc(row.department||'PRICE LIST')+'</small></span></button>').join('')+(matches.length>60?'<div class="q-stock-count">Showing first 60 matches. Type more model or variant text to narrow the list.</div>':'');
+        const matches=rows.map(row=>{
+          const vehicle=quoteSearchNorm(row.vehicle),variantText=quoteSearchNorm(row.variant),colourText=quoteSearchNorm(row.colour);
+          const hay=[vehicle,variantText,colourText].filter(Boolean).join(' ');
+          if(!tokens.every(token=>hay.includes(token)))return null;
+          let score=0;
+          tokens.forEach(token=>{
+            if(vehicle===token)score+=120;else if(vehicle.startsWith(token))score+=70;else if(vehicle.split(' ').some(part=>part.startsWith(token)))score+=48;
+            if(variantText===token)score+=110;else if(variantText.startsWith(token))score+=65;else if(variantText.split(' ').some(part=>part.startsWith(token)))score+=42;
+            if(colourText.startsWith(token))score+=18;
+          });
+          if(row.department===activeDept)score+=3;
+          return {...row,_searchScore:score};
+        }).filter(Boolean).sort((a,b)=>b._searchScore-a._searchScore||String(a.vehicle||'').localeCompare(String(b.vehicle||''))||String(a.variant||'').localeCompare(String(b.variant||''))||String(a.colour||'').localeCompare(String(b.colour||'')));
+        if(!matches.length){box.innerHTML='<div class="q-stock-empty">No matching Model / Variant / Colour found in the accessible department Price Lists.</div>';return;}
+        box.innerHTML='<div class="q-stock-count">'+matches.length+' Price List match(es) · All permitted departments</div>'+matches.slice(0,100).map((row,i)=>'<button type="button" class="q-stock-option" data-quote-price-index="'+i+'"><span class="q-stock-main"><b>'+esc(row.vehicle||'—')+'</b><span>'+esc(row.variant||'Variant not listed')+' · '+esc(row.colour||'Colour not listed')+'</span></span><span class="q-stock-meta"><small>'+esc(row.department||'PRICE LIST')+'</small></span></button>').join('')+(matches.length>100?'<div class="q-stock-count">Showing first 100 matches. Add more model, variant or colour text to narrow the list.</div>':'');
         box.querySelectorAll('[data-quote-price-index]').forEach(button=>button.addEventListener('click',()=>{
           const row=matches[Number(button.dataset.quotePriceIndex)];if(!row)return;
           if(typeof window.setQuotationDepartment==='function')window.setQuotationDepartment(row.department);
@@ -128,19 +137,13 @@
           if($('qCarDesc'))$('qCarDesc').value='';
           if($('qSalesPerson'))$('qSalesPerson').value=currentProfile?.full_name||currentUser?.email||'';
           hide();
-          if(typeof window.quoteApplyPriceList==='function')window.quoteApplyPriceList(row);
-          else if(typeof quoteAutoFillPrice==='function')quoteAutoFillPrice();
-          if(typeof notify==='function')notify('Quotation department changed to '+row.department+' · '+(row.vehicle||'')+' / '+(row.variant||''));
+          if(typeof window.quoteApplyPriceList==='function')window.quoteApplyPriceList(row);else if(typeof quoteAutoFillPrice==='function')quoteAutoFillPrice();
+          if(typeof notify==='function')notify('Quotation switched to '+row.department+' · '+(row.vehicle||'')+' / '+(row.variant||''));
         }));
       }catch(error){box.hidden=false;box.innerHTML='<div class="q-stock-empty">Price List search unavailable: '+esc(error.message)+' · Check your Price List access.</div>';}
     };
-    fields.forEach(field=>{
-      field.addEventListener('input',render);
-      field.addEventListener('focus',()=>{if(field.value.trim())render();});
-      field.setAttribute('aria-autocomplete','list');
-    });
+    fields.forEach(field=>{field.addEventListener('input',render);field.addEventListener('focus',()=>{if(field.value.trim())render();});field.setAttribute('aria-autocomplete','list');field.addEventListener('keydown',event=>{if(event.key==='Escape')hide();});});
     document.addEventListener('click',event=>{if(!box.contains(event.target)&&!fields.includes(event.target))hide();});
-    model.addEventListener('keydown',event=>{if(event.key==='Escape')hide();});
   }
   async function startApp() {
     if(!currentUser){showLogin();return;}
