@@ -22,7 +22,7 @@
   if(!document.getElementById('svmSelectedStockStyles')){
     const style=document.createElement('style');style.id='svmSelectedStockStyles';
     style.textContent=`
-      #stockTable th,#stockTable td{padding:6px 7px!important;font-size:12px;white-space:nowrap;line-height:1.25}\n      #stockTable th{letter-spacing:0;font-size:10px}\n      #stockTable .stock-hold-cell{padding:4px 5px!important;text-align:center}\n      #stockTable .stock-hold-btn{padding:5px 7px!important;font-size:10px;min-width:42px}\n      #stockTable tbody tr[data-stock-id]{cursor:pointer;transition:background .15s ease,box-shadow .15s ease}
+      #stockTable th,#stockTable td{padding:6px 7px!important;font-size:12px;white-space:nowrap;line-height:1.25}\n      #stockTable th{letter-spacing:0;font-size:10px}\n      #stockTable .stock-hold-cell{padding:4px 5px!important;text-align:center}\n      #stockTable .stock-hold-btn{padding:5px 7px!important;font-size:10px;min-width:42px;background:#dc2626!important;color:#fff!important;border:1px solid #b91c1c!important;font-weight:800!important;box-shadow:0 1px 3px rgba(127,29,29,.22)}\n      #stockTable .stock-hold-btn:hover{background:#b91c1c!important;color:#fff!important;border-color:#991b1b!important}\n      #stockTable .stock-hold-btn:focus-visible{outline:2px solid #fca5a5;outline-offset:2px}\n      #stockTable tbody tr[data-stock-id]{cursor:pointer;transition:background .15s ease,box-shadow .15s ease}
       #stockTable tbody tr[data-stock-id]:hover{background:#fff8f8}
       #stockTable tbody tr.selected-stock-row{background:#fff0f1!important;box-shadow:inset 4px 0 0 #c92535,inset 0 0 0 1px #efb6bc}
       #stockTable tbody tr.selected-stock-row td{border-top-color:#efc4c8;border-bottom-color:#efc4c8}
