@@ -562,7 +562,7 @@
     body.innerHTML=quoteRecords.map((q,i)=>{
       const blocked=q.status==='PENDING'&&quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other));
       const canReview=has('quotation_management','approve');
-      const approval=q.status!=='PENDING'||!canReview?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>';
+      const approval=q.status!=='PENDING'||!canReview?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>';
       const manage=(canDelete?'<button class="btn small danger" onclick="deleteSavedQuote('+i+')">Delete</button>':'')+(canEdit?'<button class="btn small" onclick="editSavedQuote('+i+')">Edit</button>':'');
       const statusClass=q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red';
       return '<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.vehicle)+'</td><td>'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+statusClass+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+manage+approval+'</div></td></tr>';
