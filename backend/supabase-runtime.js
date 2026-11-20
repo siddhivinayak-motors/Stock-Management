@@ -283,8 +283,10 @@
     window.svPriceListStockRows=rows; return rows;
   }
   async function loadPriceLists() {
-    if(!has('price_list_management','view')) return;
-    const versions=await call(db().from('price_list_versions').select('*').order('published_at',{ascending:false}));
+    // Quotation users also need read access to the current published price list to prepare a quote.
+    if(!has('price_list_management','view')&&!has('quotation_management','view')) return;
+    const allowed=new Set(allowedDepartmentList());
+    const versions=(await call(db().from('price_list_versions').select('*').order('published_at',{ascending:false}))).filter(v=>allowed.has(v.department));
     const by={Personal:[],EV:[],Commercial:[],LLM:[]};
     const loaded=new Set();
     for(const v of versions){
