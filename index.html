@@ -845,6 +845,12 @@ td,.data-table td{font-size:13px;line-height:1.45}
 }
 
 
+/* Keep Manager review history inside a fixed-height scrollable panel */
+.stock-review-card{min-width:0}
+.stock-review-scroll{height:430px;max-height:55vh;min-height:260px;overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.stock-review-scroll .data-table{min-width:760px}
+.stock-review-scroll .data-table thead th{position:sticky;top:0;z-index:2;background:#f8fafc}
+@media(max-width:700px){.stock-review-scroll{height:380px;max-height:52vh;min-height:240px}}
 /* Split Manager and Robin stock upload panels */
 @media(max-width:900px){.stock-upload-split{grid-template-columns:1fr!important}}
 .stock-upload-pane{min-width:0}.stock-upload-pane .table-wrap{max-width:100%;overflow:auto}
@@ -1095,7 +1101,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
     </div>
     <div id="pratikStockSummary" class="notice" style="display:none;margin-top:14px;white-space:pre-line"></div>
    </div></div>
-   <div class="card" style="margin-top:12px"><div class="card-head"><div class="card-title">Manager — Review Changes</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>SR</th><th>Chassis</th><th>Model / Variant</th><th>Department</th><th>Status</th><th>Stage</th><th>Review</th></tr></thead><tbody id="pratikStockRows"><tr><td colspan="7" class="empty">Upload Manager Excel and select Review STOCK Sheet.</td></tr></tbody></table></div></div>
+   <div class="card stock-review-card" style="margin-top:12px"><div class="card-head"><div class="card-title">Manager — Review Changes</div></div><div class="table-wrap stock-review-scroll"><table class="data-table"><thead><tr><th>SR</th><th>Chassis</th><th>Model / Variant</th><th>Department</th><th>Status</th><th>Stage</th><th>Review</th></tr></thead><tbody id="pratikStockRows"><tr><td colspan="7" class="empty">Upload Manager Excel and select Review STOCK Sheet.</td></tr></tbody></table></div></div>
   </div>
   <div class="stock-upload-pane">
    <div class="card" style="border:1px solid #d7e2f0"><div class="card-body">
@@ -1921,5 +1927,5 @@ quoteDiscounts.addEventListener('change',calc);
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
 <script src="././backend/supabase-runtime.js?v=quotation-stock-cache-fix-20261120a"></script>
-<script src="./backend/price-list-module.js?v=quotation-row-layout-20261120c"></script>
+<script src="./backend/price-list-module.js?v=quotation-row-layout-20261120d"></script>
 </body></html>
