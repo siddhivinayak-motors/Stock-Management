@@ -1293,17 +1293,21 @@ try{quoteRecords=JSON.parse(localStorage.getItem(quoteStoreKey)||'null')||demoQu
 function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
 function nextQuoteNumber(){const d=new Date();const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');const prefix=`SV-${y}${m}${day}-`;const count=quoteRecords.filter(q=>q.no.startsWith(prefix)).length+1;return prefix+String(count).padStart(5,'0')}
 function updateQuoteNumber(){const el=document.getElementById('quoteNumber');if(el)el.textContent=nextQuoteNumber()}
+function isDiscountChargeRow(r){
+ const name=(r?.querySelector('.q-charge-name')?.textContent||r?.querySelector('.q-charge-name')?.value||r?.querySelector('select')?.value||r?.querySelector('.q-charge-editable')?.value||r?.querySelector('.amount')?.dataset?.charge||'').trim();
+ return !!r?.classList?.contains('discount-charge') || /\\bdiscount\\b|\\bless\\b/i.test(name);
+}
 function calc(){
  let subtotal=0,discount=0;
  charges.querySelectorAll('.charge-row').forEach(r=>{
-  const name=(r.querySelector('.q-charge-name')?.textContent||r.querySelector('select')?.value||r.querySelector('.q-charge-editable')?.value||'').trim();
-  const val=Math.max(0,Number(r.querySelector('.amount').value)||0);
-  if(name.toLowerCase()==='discount')discount+=val;else subtotal+=val;
+  const val=Math.max(0,Number(r.querySelector('.amount')?.value)||0);
+  if(isDiscountChargeRow(r))discount+=val;else subtotal+=val;
  });
+ const total=Math.max(0,subtotal-discount);
  document.getElementById('subtotal').textContent=money(subtotal);
  document.getElementById('discount').textContent='− '+money(discount);
- document.getElementById('grand').textContent=money(Math.max(0,subtotal-discount));
- return {subtotal,discount,total:Math.max(0,subtotal-discount)};
+ document.getElementById('grand').textContent=money(total);
+ return {subtotal,discount,total};
 }
 function renumberCharges(){charges.querySelectorAll('.charge-row').forEach((r,i)=>{const n=r.querySelector('.charge-index');if(n)n.textContent=String(i+1).padStart(2,'0')})}
 function saveRecords(){try{localStorage.setItem(quoteStoreKey,JSON.stringify(quoteRecords))}catch(e){}}
@@ -1641,7 +1645,7 @@ function calc(){
  let subtotal=0,discount=0;
  charges.querySelectorAll('.charge-row').forEach(r=>{
   const input=r.querySelector('.amount');const val=Math.max(0,Number(input?.value)||0);
-  if(r.classList.contains('discount-charge'))discount+=val;else subtotal+=val;
+  if(isDiscountChargeRow(r))discount+=val;else subtotal+=val;
  });
  const total=Math.max(0,subtotal-discount);
  document.getElementById('subtotal').textContent=money(subtotal);
@@ -1670,7 +1674,7 @@ function getQuotePayload(){
  const totals=calc(),model=document.getElementById('qVehicle').value.trim(),customer=document.getElementById('qCustomer').value.trim(),phone=document.getElementById('qPhone').value.trim();
  if(!model||!customer||phone.length!==10){toast('Enter Model, Customer / Lessee and valid 10-digit mobile number');return null}
  const items=[];
- charges.querySelectorAll('.charge-row').forEach(r=>{const input=r.querySelector('.amount');items.push({name:r.querySelector('.q-charge-name')?.value?.trim()||r.querySelector('.q-charge-name')?.textContent.trim()||r.querySelector('select')?.value||'Other',amount:Number(input?.value)||0,discount:r.classList.contains('discount-charge')})});
+ charges.querySelectorAll('.charge-row').forEach(r=>{const input=r.querySelector('.amount');const name=r.querySelector('.q-charge-name')?.value?.trim()||r.querySelector('.q-charge-name')?.textContent.trim()||r.querySelector('select')?.value||input?.dataset?.charge||'Other';items.push({name,amount:Number(input?.value)||0,discount:isDiscountChargeRow(r)})});
  const v=id=>document.getElementById(id)?.value.trim()||'';
  return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,carDescription:v('qCarDesc'),variant:v('qVariant'),colour:v('qColour'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'PENDING',prints:0,items};
 }
@@ -1712,7 +1716,7 @@ function printQuoteDocument(q){
  <div class="brandhead"><div>SIDDHIVINAYAK MOTORS PVT. LTD.<small>MAHINDRA AUTHORISED DEALERSHIP · BHAVNAGAR</small></div></div>
  <div class="topmeta"><span>QUOTATION · ${esc(q.department||'')}</span><span>SR. NO.: ${esc(q.no)}</span></div>
  <table class="details"><tr><td>NAME / M/S.</td><td colspan="3">${esc(q.customer)}</td></tr><tr><td>VEHICLE NOS.</td><td>${esc(q.vehicleNos||'1')}</td><td>DATE &amp; TIME</td><td>${esc(dateText)}</td></tr><tr><td>ADDRESS</td><td colspan="3">${esc(q.address)}</td></tr><tr><td>MODEL</td><td>${esc(q.model)}</td><td>VARIANT</td><td>${esc(q.variant)}</td></tr><tr><td>CAR DESCRIPTION</td><td colspan="3">${esc(q.carDescription)}</td></tr><tr><td>HYPO</td><td>${esc(q.hypo)}</td><td>COLOUR</td><td>${esc(q.colour)}</td></tr></table>
- <table class="charges" style="margin-top:8px"><thead><tr><th>SR.NO.</th><th>PARTICULARS</th><th>AMOUNT</th></tr></thead><tbody>${rows}<tr><td>—</td><td>(-) LESS — INCLUDING COMPANY DISCOUNT, DEALER MARGIN AND INSURANCE DISCOUNT</td><td class="amt">${amountINR(less)}</td></tr></tbody></table>
+ <table class="charges" style="margin-top:8px"><thead><tr><th>SR.NO.</th><th>PARTICULARS</th><th>AMOUNT</th></tr></thead><tbody>${rows}<tr class="discount-row"><td>—</td><td>(-) LESS — INCLUDING COMPANY DISCOUNT, DEALER MARGIN AND INSURANCE DISCOUNT</td><td class="amt">− ${amountINR(less)}</td></tr></tbody></table>
  <div class="net"><span>NET PAYABLE</span><span>${amountINR(q.total)}</span></div><div class="words">Amount in Words: ${esc(q.amountWords||numberWordsIndian(q.total))}</div>
  <div class="company"><div>PAN NO.: ${esc(q.pan)}</div><div>COMPANY GSTIN/UIN: ${esc(q.gstin)}</div></div>
  <div class="lower"><div><h4>TERMS &amp; CONDITIONS</h4><ol>${(q.terms||[]).map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div><div class="bank"><h4>RTGS DETAILS</h4>Account Name: ${esc(q.bank?.accountName)}<br>Bank: ${esc(q.bank?.bank)}<br>Account Number: ${esc(q.bank?.account)}<br>IFSC Code: ${esc(q.bank?.ifsc)}<br>Branch: ${esc(q.bank?.branch)}</div></div>
