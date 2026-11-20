@@ -1691,18 +1691,57 @@ function refreshQuotePriceSuggestions(){
  const names=[...new Set(data.map(x=>x.vehicle).filter(Boolean))];
  list.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join('');
 }
+function quotePriceNorm(value){
+ return String(value||'').toUpperCase().replace(/\+/g,' PLUS ').replace(/\bBS[\s_.-]*6(?:\.?2)?\b/g,' ').replace(/\bREFRESH\b|\bNEW\b|\bLAUNCH\b/g,' ').replace(/[^A-Z0-9]+/g,' ').trim().split(/\s+/).filter(Boolean);
+}
+function quoteFindPriceMatch(){
+ const model=document.getElementById('qVehicle').value.trim(),variant=document.getElementById('qVariant').value.trim();
+ if(!model||!variant)return null;
+ const key=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
+ const rows=(plData&&plData[currentQuoteDepartment])||[];
+ const candidates=rows.filter(x=>key(x.vehicle)===key(model));
+ if(!candidates.length)return null;
+ const stockTokens=quotePriceNorm(variant).filter(t=>!['BOLERO','NEO','PLUS','BS','6','2'].includes(t));
+ if(!stockTokens.length)return null;
+ const critical=[['MT','AT'],['2WD','4WD'],['CNG','DSL','DIESEL','PETROL'],['4STR','6STR','7STR','9STR']];
+ const scored=candidates.map(x=>{
+  let tokens=quotePriceNorm(x.variant);
+  const modelTokens=quotePriceNorm(model);
+  tokens=tokens.filter(t=>!modelTokens.includes(t)&&!['BS','6','2'].includes(t));
+  for(const group of critical){const a=stockTokens.find(t=>group.includes(t)),b=tokens.find(t=>group.includes(t));if(a&&b&&a!==b)return {row:x,score:-1};}
+  const common=stockTokens.filter(t=>tokens.includes(t));
+  return {row:x,score:common.length*100+common.length/Math.max(stockTokens.length,tokens.length,1)};
+ }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+ if(!scored.length||scored.length>1&&scored[0].score===scored[1].score)return null;
+ return scored[0].row;
+}
+function quoteApplyPriceList(){
+ const match=quoteFindPriceMatch();if(!match)return false;
+ const details=Array.isArray(match.components)?match.components:(Array.isArray(match.other_data?.components)?match.other_data.components:[]);
+ const usable=details.filter(p=>p&&String(p.label||'').trim()&&!/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(p.label)&&!/insurance\s*\(\s*taxi/i.test(p.label)&&!/accessor|coating|ceramic|\bppf\b/i.test(p.label));
+ const rows=usable.length?usable:[
+  {label:'Ex-Showroom Price',value:match.exShowroom??match.ex_showroom??0},
+  {label:'TCS',value:match.tcs??match.other_data?.tcs??0},
+  {label:'Insurance',value:match.insurance??match.other_data?.insurance??0},
+  {label:'RTO Charge',value:match.rto??0}
+ ];
+ const discount=charges.querySelector('.discount-charge');
+ charges.querySelectorAll('.charge-row:not(.discount-charge)').forEach(r=>r.remove());
+ rows.forEach(part=>{
+  const row=document.createElement('div');row.className='charge-row price-list-charge';
+  row.innerHTML='<span class="charge-index"></span><div class="q-charge-name"></div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01"></div><button class="icon-btn remove-charge" aria-label="Remove charge" title="Remove price-list charge">×</button>';
+  row.querySelector('.q-charge-name').textContent=String(part.label||'Other').trim();
+  row.querySelector('.amount').value=Number(part.value||0).toFixed(2);
+  charges.insertBefore(row,discount);
+ });
+ renumberCharges();calc();
+ const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Price List applied: '+match.vehicle+' · '+match.variant;
+ return true;
+}
 function quoteAutoFillPrice(){
- const model=(document.getElementById('qVehicle').value||'').trim().toLowerCase();
- const variant=(document.getElementById('qVariant').value||'').trim().toLowerCase();
- const data=(plData&&plData[currentQuoteDepartment])||[];
- const match=data.find(x=>x.vehicle.toLowerCase()===model&&(!variant||x.variant.toLowerCase()===variant))||data.find(x=>x.vehicle.toLowerCase()===model);
- if(!match)return;
- if(match.variant&&!variant)document.getElementById('qVariant').value=match.variant;
- const ex=charges.querySelector('[data-charge="Ex. Showroom With Charger"]');
- const rto=charges.querySelector('[data-charge="RTO Charge"]');
- if(ex&&match.exShowroom)ex.value=match.exShowroom;
- if(rto&&match.rto)rto.value=match.rto;
- calc();
+ const model=document.getElementById('qVehicle').value.trim(),variant=document.getElementById('qVariant').value.trim();
+ if(!model||!variant)return;
+ if(!quoteApplyPriceList()){const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Matching Model + Variant not found in Price List. Add charges manually.';}
 }
 document.getElementById('qVehicle').addEventListener('change',quoteAutoFillPrice);
 document.getElementById('qVariant').addEventListener('change',quoteAutoFillPrice);
