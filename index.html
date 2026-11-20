@@ -993,9 +993,6 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <div id="qPriceSuggestions" class="q-stock-suggestions" hidden role="listbox" aria-label="Matching Price List vehicles"></div>
     <label>Variant<input id="qVariant" placeholder="Type variant, e.g. BS6.0" autocomplete="off"></label>
     <label>Colour<input id="qColour" placeholder="Type colour or code, e.g. WH" autocomplete="off"></label>
-    <label>Stock Chassis Number<input id="qChassis" placeholder="Auto-filled when selected from Stock Register" readonly aria-readonly="true" tabindex="-1"></label>
-    <label>Car Description<input id="qCarDesc" placeholder="Vehicle description"></label>
-    
     <label>Sales Consultant Name<input id="qSalesPerson" placeholder="Auto-filled from logged-in employee" readonly aria-readonly="true"></label>
     <label>Sales Consultant Mobile<input id="qSalesMobile" placeholder="Auto-filled from employee profile" readonly aria-readonly="true"></label>
    </div>
@@ -1405,8 +1402,7 @@ function getQuotePayload(){
   no:document.getElementById('quoteNumber').textContent,customer,phone,
   address:v('qAddress'),customerGstin:v('qCustomerGSTIN'),
   vehicle:model+(variant?' · '+variant:''),model,variant,
-  chassis:v('qChassis')||window.selectedStockQuoteVehicle?.chassis_number||'',
-  carDescription:v('qCarDesc'),colour:v('qColour'),
+  colour:v('qColour'),
   vehicleNos:Number(v('qVehicleNos')||1),hypo:v('qHypo'),
   salesPerson:v('qSalesPerson'),salesMobile:v('qSalesMobile'),
   contactPerson:v('qContactPerson')||'PRATIK BADHEKA (SALES MANAGER)',
@@ -1682,7 +1678,7 @@ function getQuotePayload(){
  const items=[];
  charges.querySelectorAll('.charge-row').forEach(r=>{const input=r.querySelector('.amount');const name=r.querySelector('.q-charge-name')?.value?.trim()||r.querySelector('.q-charge-name')?.textContent.trim()||r.querySelector('select')?.value||input?.dataset?.charge||'Other';items.push({name,amount:Number(input?.value)||0,discount:isDiscountChargeRow(r)})});
  const v=id=>document.getElementById(id)?.value.trim()||'';
- return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,carDescription:v('qCarDesc'),variant:v('qVariant'),colour:v('qColour'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'PENDING',prints:0,items};
+ return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,variant:v('qVariant'),colour:v('qColour'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'PENDING',prints:0,items};
 }
 function renderQuoteManagement(){
  const body=document.getElementById('quoteManagementRows');if(!body)return;
@@ -1704,7 +1700,7 @@ function amountINR(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumF
 function printQuoteDocument(q){ return printQuoteDocumentPaper(q); }
 function resetQuotationForm(){
  window.selectedStockQuoteVehicle=null;
- ['qCustomer','qPhone','qAddress','qCustomerGSTIN','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qChassis','qContactPerson','qContactMobile','qSalesMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+ ['qCustomer','qPhone','qAddress','qCustomerGSTIN','qVehicleNos','qHypo','qVehicle','qVariant','qColour','qContactPerson','qContactMobile','qSalesMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
  setQuotationDateTime();
  const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';const salesMobile=document.getElementById('qSalesMobile');if(salesMobile)salesMobile.value=window.SVMBackend?.profile?.phone||'';
  const priceSuggestions=document.getElementById('qPriceSuggestions');if(priceSuggestions){priceSuggestions.hidden=true;priceSuggestions.innerHTML='';}
@@ -1739,8 +1735,8 @@ window.startQuotationFromStock=async function(vehicle){
  document.getElementById('qVehicle').value=vehicle.model||'';
  document.getElementById('qVariant').value=vehicle.variant||'';
  document.getElementById('qColour').value=vehicle.colour||'';
- document.getElementById('qChassis').value=vehicle.chassis_number||'';
  document.getElementById('qSalesPerson').value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
+ document.getElementById('qSalesMobile').value=window.SVMBackend?.profile?.phone||'';
  document.getElementById('quotationPageTitle').textContent=currentQuoteDepartment+' — Quotation';
  updateQuoteNumber();
  try{
