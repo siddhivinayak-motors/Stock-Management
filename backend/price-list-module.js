@@ -119,10 +119,31 @@
   populateFilters();var rows=getRows(),stock=getStock(),model=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',colour=$('plStockColour')?.value||'',q=clean($('plSearch')?.value).toLowerCase(),out=rows;
   if(model)out=out.filter(function(x){return modelKey(x.vehicle)===modelKey(model)});if(variant)out=out.filter(function(x){return variantMatch(variant,x.variant)});if(colour){var stockVariants=unique(stock.filter(function(r){return modelKey(r.model)===modelKey(model)&&norm(r.colour)===norm(colour)&&(!variant||variantMatch(variant,r.variant))}).map(function(r){return r.variant}));if(stockVariants.length)out=out.filter(function(x){return stockVariants.some(function(v){return variantMatch(v,x.variant)})});else out=out.filter(function(x){return x.colour&&norm(x.colour)===norm(colour)})}if(q)out=out.filter(function(x){var text=[x.vehicle,x.variant,x.colour,x.source_file,x.sourceFile,x.sourceSheet].join(' ').toLowerCase();var colourHit=stock.some(function(r){return modelKey(r.model)===modelKey(x.vehicle)&&variantMatch(r.variant,x.variant)&&clean(r.colour).toLowerCase().indexOf(q)>=0});return text.indexOf(q)>=0||colourHit});
   out.sort(function(a,b){return String(a.vehicle).localeCompare(String(b.vehicle))||String(a.variant).localeCompare(String(b.variant))});
-  var body=$('plRows');if(body)body.innerHTML=out.length?out.map(function(x){var d=x.other_data||x,ex=Number(x.exShowroom!=null?x.exShowroom:x.ex_showroom||d.exShowroom||0),rto=Number(x.rto||d.rto||0),total=Number(d.onRoadTotal||d.totalOnRoad||0);if(!total)total=ex+Number(d.tcs||0)+Number(d.insurance||0)+rto+Number(d.other||0);var colours=unique(stock.filter(function(r){return modelKey(r.model)===modelKey(x.vehicle)&&variantMatch(r.variant,x.variant)}).map(function(r){return r.colour}));return '<tr><td>'+esc(x.vehicle)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.colour||colours.join(', ')||'—')+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>'}).join(''):'<tr><td colspan="9" class="empty">'+(rows.length?'No uploaded price list matches these filters. Try another model or use direct search.':'No price lists have been uploaded yet. Use Upload Price Lists to add the Excel files.')+'</td></tr>';
+  var body=$('plRows');if(body)body.innerHTML=out.length?out.map(function(x){
+   var d=x.other_data||x,ex=Number(x.exShowroom!=null?x.exShowroom:x.ex_showroom||d.exShowroom||0),rto=Number(x.rto||d.rto||0),total=Number(d.onRoadTotal||d.totalOnRoad||0);
+   if(!total)total=ex+Number(d.tcs||0)+Number(d.insurance||0)+rto+Number(d.other||0);
+   var matched=stock.filter(function(r){
+    if(modelKey(r.model)!==modelKey(x.vehicle)||!variantMatch(r.variant,x.variant))return false;
+    var st=clean(r.status).toLowerCase(),stage=clean(r.stage).toLowerCase();
+    if(st&&st.indexOf('delivered')>=0)return false;
+    if(stage&&(/hold|allot|deliver|sold/.test(stage)))return false;
+    return true;
+   });
+   var colours=unique(matched.map(function(r){return clean(r.colour)}));
+   var count=matched.length,stockMark=count
+    ?'<span class="pl-stock-indicator is-available"><i></i>In Stock · '+count+'</span>'
+    :'<span class="pl-stock-indicator is-unavailable"><i></i>Not in Stock</span>';
+   var colourText=colours.length?colours.join(', '):(x.colour||'—');
+   return '<tr><td>'+stockMark+'<b>'+esc(x.vehicle)+'</b></td><td>'+esc(x.variant)+'</td><td>'+esc(colourText)+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>';
+  }).join(''):'<tr><td colspan="9" class="empty">'+(rows.length?'No uploaded price list matches these filters. Try another model or use direct search.':'No price lists have been uploaded yet. Use Upload Price Lists to add the Excel files.')+'</td></tr>';
   if($('plResultsSummary'))$('plResultsSummary').textContent=out.length+' variant price(s)'+(rows.length?' · '+rows.length+' total uploaded':'');
   if($('plStockSummary'))$('plStockSummary').textContent=stock.length?unique(stock.map(function(x){return x.model})).length+' stock models available':'Stock filters unavailable — use direct search';
   try{plData=window.plData||{}}catch(e){}
+ }
+ if(!document.getElementById('plStockIndicatorStyles')){
+  var stockStyle=document.createElement('style');stockStyle.id='plStockIndicatorStyles';
+  stockStyle.textContent='.pl-stock-indicator{display:inline-flex;align-items:center;gap:6px;margin:0 0 5px;padding:3px 7px;border-radius:20px;font-size:10px;font-weight:800;white-space:nowrap}.pl-stock-indicator i{width:7px;height:7px;border-radius:50%;display:inline-block}.pl-stock-indicator.is-available{color:#137a43;background:#e8f7ee}.pl-stock-indicator.is-available i{background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,.12)}.pl-stock-indicator.is-unavailable{color:#7b8490;background:#f0f2f4}.pl-stock-indicator.is-unavailable i{background:#9ca3af}';
+  document.head.appendChild(stockStyle);
  }
  function status(msg,error){var el=$('plInlineStatus');if(el){el.textContent=msg||'';el.className='pl-inline-status'+(error?' error':'')}}
  async function refresh(){
