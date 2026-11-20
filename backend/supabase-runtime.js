@@ -452,6 +452,7 @@
     if(!has('stock_register','create')) throw new Error('No stock create permission.');
     const clean={...data,created_by:currentUser.id};
     const row=await call(db().from('vehicles').insert(clean).select().single());
+    quotationStockCache.clear();
     await audit('stock_register','create','Created vehicle','vehicle',row.id,{chassis_number:row.chassis_number});
     return row;
   }
@@ -459,12 +460,13 @@
     if(!canManageStock()&&!viaImport) throw new Error('Executive and junior roles cannot edit stock.');
     if(viaImport&&!has('common_excel_upload','create')) throw new Error('Common Excel Upload permission required.');
     const row=await call(db().from('vehicles').update({...data,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',id).select().single());
+    quotationStockCache.clear();
     await audit(viaImport?'common_excel_upload':'stock_register',viaImport?'create':'edit',viaImport?'Reconciled vehicle by exact chassis':'Updated vehicle','vehicle',id);
     return row;
   }
   async function deleteVehicle(id) {
     if(!canManageStock()||!has('stock_register','delete')) throw new Error('Only roles above Executive with delete permission can delete stock.');
-    await call(db().from('vehicles').delete().eq('id',id));await audit('stock_register','delete','Deleted vehicle','vehicle',id);
+    await call(db().from('vehicles').delete().eq('id',id));quotationStockCache.clear();await audit('stock_register','delete','Deleted vehicle','vehicle',id);
   }
   async function saveQuotation(q) {
     if(!has('quotation_management','create')) throw new Error('No quotation create permission.');
@@ -664,7 +666,7 @@
         await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Report',department:dept,imported_rows:deptImported,skipped_rows:deptRows.length-deptImported,error_rows:0,created_by:currentUser.id}));
       }
       await audit('common_excel_upload','create','Uploaded standard stock report','stock_import_batch',null,{imported,skipped,file:file?.name||'',departments:['Personal','EV','Commercial','LLM'].filter(d=>records.some(x=>x.department===d))});
-      stockPreviewRows=[];await renderStock();await loadImportHistory();
+      quotationStockCache.clear();stockPreviewRows=[];await renderStock();await loadImportHistory();
       $('stockImportSummary').textContent='Upload complete · Imported '+imported+' · Skipped '+skipped+'.';
       notify(imported+' vehicles imported; '+skipped+' duplicates or review rows skipped.');
     }catch(e){console.error(e);notify(e.message);}
