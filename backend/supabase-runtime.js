@@ -1442,25 +1442,73 @@
     }
   });
   window.resetAllExceptEmployees=window.openOperationalResetDialog;
+  let retailReportRows=[];
+  function retailDateISO(date){return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');}
+  function retailAddDays(iso,days){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+days);return retailDateISO(d);}
+  function retailSelectedRange(){
+    const mode=$('retailReportType')?.value||'monthly';
+    const today=retailDateISO(new Date());
+    let start='',end='';
+    if(mode==='daily'){start=$('retailDailyDate')?.value||today;end=start;}
+    else if(mode==='weekly'){start=$('retailWeekStart')?.value||today;const d=new Date(start+'T12:00:00');const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));start=retailDateISO(d);end=retailAddDays(start,6);if($('retailWeekStart'))$('retailWeekStart').value=start;}
+    else if(mode==='monthly'){const month=$('retailMonth')?.value||today.slice(0,7);const [y,m]=month.split('-').map(Number);if(!y||!m||m<1||m>12)throw new Error('Select a valid report month.');start=month+'-01';end=month+'-'+String(new Date(y,m,0).getDate()).padStart(2,'0');}
+    else {start=$('retailFrom')?.value||'';end=$('retailTo')?.value||'';if(!start||!end)throw new Error('Select both From Date and To Date.');if(start>end)throw new Error('From Date cannot be after To Date.');}
+    return {mode,start,end};
+  }
+  function updateRetailFilterVisibility(){
+    const mode=$('retailReportType')?.value||'monthly';
+    const show=(id,on)=>{const el=$(id);if(el)el.hidden=!on;};
+    show('retailDailyWrap',mode==='daily');show('retailWeeklyWrap',mode==='weekly');show('retailMonthlyWrap',mode==='monthly');show('retailFromWrap',mode==='custom');show('retailToWrap',mode==='custom');
+  }
+  function renderRetailRows(rows){
+    const body=$('retailRows');if(!body)return;
+    body.innerHTML=rows.length?rows.map(v=>'<tr><td>'+esc(v.retail_date||'—')+'</td><td>'+esc(v.chassis_number||'—')+'</td><td>'+esc(v.model||'—')+'</td><td>'+esc(v.variant||'—')+'</td><td>'+esc(v.department||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td><span class="pill green">Retail / Delivered</span></td></tr>').join(''):'<tr><td colspan="8" class="empty">No retail records found for the selected filters.</td></tr>';
+  }
   async function loadRetailReport(){
-    const body=$('retailRows'),cards=$('view-reports')?.querySelectorAll('.retail-kpi strong');
+    const body=$('retailRows'),section=$('view-reports');
     if(!body)return;
-    if(!has('retail_reports','view')){body.innerHTML='<tr><td colspan="7" class="empty">Retail Reports permission required.</td></tr>';cards?.forEach(x=>x.textContent='—');return;}
+    const cards=section?.querySelectorAll('[data-retail-kpi]');
+    if(!has('retail_reports','view')){body.innerHTML='<tr><td colspan="8" class="empty">Retail Reports permission required.</td></tr>';cards?.forEach(x=>x.textContent='—');return;}
     try{
-      const month=$('retailMonth')?.value||new Date().toISOString().slice(0,7),parts=month.split('-').map(Number),year=parts[0],monthNo=parts[1];
-      if(!year||!monthNo||monthNo<1||monthNo>12)throw new Error('Select a valid report month.');
-      const start=month+'-01',last=new Date(year,monthNo,0).getDate(),end=month+'-'+String(last).padStart(2,'0'),departments=allowedDepartmentList();
-      const rows=departments.length?await call(db().from('vehicles').select('*').eq('stage','RETAIL').gte('retail_date',start).lte('retail_date',end).in('department',departments).order('retail_date',{ascending:false}).order('created_at',{ascending:false})):[];
+      const {start,end,mode}=retailSelectedRange();
+      const allowed=allowedDepartmentList();
+      const chosenDept=$('retailDepartment')?.value||'';
+      const departments=chosenDept?(allowed.includes(chosenDept)?[chosenDept]:[]):allowed;
+      const customer=String($('retailCustomer')?.value||'').trim();
+      const executive=String($('retailExecutive')?.value||'').trim();
+      let rows=[],offset=0,chunk=1000;
+      while(departments.length){
+        let q=db().from('vehicles').select('id,retail_date,chassis_number,model,variant,department,customer_name,sc_name,status,stage').eq('stage','RETAIL').gte('retail_date',start).lte('retail_date',end).in('department',departments).order('retail_date',{ascending:false}).order('created_at',{ascending:false}).range(offset,offset+chunk-1);
+        if(customer)q=q.ilike('customer_name','%'+customer.replace(/[%_]/g,'\\$&')+'%');
+        if(executive)q=q.ilike('sc_name','%'+executive.replace(/[%_]/g,'\\$&')+'%');
+        const part=await call(q);rows.push(...part);if(part.length<chunk)break;offset+=chunk;
+      }
+      retailReportRows=rows;
       const count=d=>rows.filter(v=>v.department===d).length;
-      if(cards?.[0])cards[0].textContent=String(rows.length).padStart(2,'0');
-      if(cards?.[1])cards[1].textContent=String(count('Personal')).padStart(2,'0');
-      if(cards?.[2])cards[2].textContent=String(count('Commercial')).padStart(2,'0');
-      if(cards?.[3])cards[3].textContent=String(count('EV')+count('LLM')).padStart(2,'0');
-      body.innerHTML=rows.length?rows.map(v=>'<tr><td>'+esc(v.retail_date||'—')+'</td><td>'+esc(v.chassis_number||'—')+'</td><td>'+esc([v.model,v.variant].filter(Boolean).join(' / ')||'—')+'</td><td>'+esc(v.department||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td><span class="pill green">Retail / Delivered</span></td></tr>').join(''):'<tr><td colspan="7" class="empty">No retail records for this period.</td></tr>';
-      const desc=body.closest('.card')?.querySelector('.card-desc');if(desc)desc.textContent=rows.length+' retail vehicles · '+start+' to '+end+' · Live Supabase data';
-    }catch(e){console.error('Retail report load failed:',e);body.innerHTML='<tr><td colspan="7" class="empty">'+esc(e.message||'Unable to load retail records.')+'</td></tr>';notify(e.message||'Unable to load Retail Reports.');}
+      const set=(key,value)=>{const el=section?.querySelector('[data-retail-kpi="'+key+'"]');if(el)el.textContent=String(value).padStart(2,'0');};
+      set('total',rows.length);set('personal',count('Personal'));set('commercial',count('Commercial'));set('evllm',count('EV')+count('LLM'));
+      renderRetailRows(rows);
+      const fmt=x=>{const d=new Date(x+'T12:00:00');return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});};
+      const period=$('retailPeriod');if(period)period.textContent=fmt(start)+' – '+fmt(end);
+      const desc=$('retailRegisterDescription');if(desc)desc.textContent=rows.length+' retail vehicles · '+start+' to '+end+' · Live Supabase data';
+      const status=$('retailReportStatus');if(status)status.textContent=rows.length+' matching retail record'+(rows.length===1?'':'s');
+    }catch(e){
+      console.error('Retail report load failed:',e);
+      body.innerHTML='<tr><td colspan="8" class="empty">'+esc(e.message||'Unable to load retail records.')+'</td></tr>';
+      const status=$('retailReportStatus');if(status)status.textContent=e.message||'Unable to load report';
+      notify(e.message||'Unable to load Retail Reports.');
+    }
+  }
+  function exportRetailCsv(){
+    if(!retailReportRows.length){notify('There are no retail records to export.');return;}
+    const cols=[['Retail Date','retail_date'],['Chassis Number','chassis_number'],['Vehicle Model','model'],['Variant','variant'],['Department','department'],['Customer','customer_name'],['Sales Executive','sc_name'],['Status','status']];
+    const quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+    const csv='\\uFEFF'+[cols.map(x=>quote(x[0])).join(','),...retailReportRows.map(row=>cols.map(c=>quote(row[c[1]]||'')).join(','))].join('\\r\\n');
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Siddhivinayak-Retail-Report-'+retailDateISO(new Date())+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
   window.applyRetailMonth=()=>loadRetailReport();
+
 
   async function changeOwnPassword(currentPassword,newPassword){
     if(!currentUser?.email) throw new Error('You must be signed in to change your password.');
@@ -1534,8 +1582,19 @@
     const addButton=$('addVehicle');if(addButton){addButton.style.display=canManageStock()?'':'none';addButton.disabled=!canManageStock();}
     const newVehicleDept=$('stockDepartmentForNewVehicle');
     if(newVehicleDept){newVehicleDept.innerHTML=permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');newVehicleDept.value=permittedDepartments[0]||'';}
-    $('retailRefresh')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();loadRetailReport();},true);
-    $('applyRetailMonth')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();loadRetailReport();},true);
+    if($('retailReportType')&&!$('retailReportType').dataset.bound){
+      $('retailReportType').dataset.bound='1';
+      $('retailReportType').addEventListener('change',()=>{updateRetailFilterVisibility();});
+      $('applyRetailMonth')?.addEventListener('click',e=>{e.preventDefault();loadRetailReport();});
+      $('retailRefresh')?.addEventListener('click',e=>{e.preventDefault();loadRetailReport();});
+      $('retailClearFilters')?.addEventListener('click',()=>{const today=retailDateISO(new Date());$('retailReportType').value='monthly';$('retailDailyDate').value=today;$('retailWeekStart').value=today;$('retailMonth').value=today.slice(0,7);$('retailFrom').value=today;$('retailTo').value=today;$('retailDepartment').value='';$('retailCustomer').value='';$('retailExecutive').value='';updateRetailFilterVisibility();loadRetailReport();});
+      $('retailExportCsv')?.addEventListener('click',exportRetailCsv);
+      $('retailPrint')?.addEventListener('click',()=>{window.print();});
+      ['retailCustomer','retailExecutive'].forEach(id=>$(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')loadRetailReport();}));
+      const today=retailDateISO(new Date());$('retailDailyDate').value=today;$('retailWeekStart').value=today;$('retailMonth').value=today.slice(0,7);$('retailFrom').value=today;$('retailTo').value=today;
+      const dept=$('retailDepartment');if(dept){const allowed=allowedDepartmentList();dept.innerHTML='<option value="">All Accessible Departments</option>'+allowed.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');}
+      updateRetailFilterVisibility();
+    }
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
     $('holdDeptFilter')?.addEventListener('change',()=>window.holdRender());
     // Let the original UI's own click handlers perform navigation.
