@@ -1696,31 +1696,34 @@ function refreshQuotePriceSuggestions(){
  list.innerHTML=names.map(n=>`<option value="${esc(n)}"></option>`).join('');
 }
 function quotePriceNorm(value){
- return String(value||'').toUpperCase().replace(/\+/g,' PLUS ').replace(/\bBS[\s_.-]*6(?:\.?2)?\b/g,' ').replace(/\bREFRESH\b|\bNEW\b|\bLAUNCH\b/g,' ').replace(/[^A-Z0-9]+/g,' ').trim().split(/\s+/).filter(Boolean);
+ return String(value||'').toUpperCase().replace(/\+/g,' PLUS ').replace(/\bBS[\s_.-]*6(?:\.?2)?\b/g,' ').replace(/\bREFRESH\b|\bNEW\b|\bLAUNCH\b/g,' ').replace(/\bOPTIONAL\b/g,' OPT ').replace(/[^A-Z0-9]+/g,' ').trim().split(/\s+/).filter(Boolean).map(t=>t==='OPT'?'O':t);
 }
 function quoteFindPriceMatch(){
  const model=document.getElementById('qVehicle').value.trim(),variant=document.getElementById('qVariant').value.trim();
  if(!model||!variant)return null;
- const key=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
- const rows=(plData&&plData[currentQuoteDepartment])||[];
- const candidates=rows.filter(x=>key(x.vehicle)===key(model));
+ const modelKey=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9]+/g,'');
+ const rows=(window.plData&&window.plData[currentQuoteDepartment])||[];
+ const candidates=rows.filter(x=>modelKey(x.vehicle)===modelKey(model));
  if(!candidates.length)return null;
- const stockTokens=quotePriceNorm(variant).filter(t=>!['BOLERO','NEO','PLUS','BS','6','2'].includes(t));
+ const modelTokens=quotePriceNorm(model);
+ const stockTokens=quotePriceNorm(variant).filter(t=>!modelTokens.includes(t)&&!['BS','6','2'].includes(t));
  if(!stockTokens.length)return null;
- const critical=[['MT','AT'],['2WD','4WD'],['CNG','DSL','DIESEL','PETROL'],['4STR','6STR','7STR','9STR']];
- const scored=candidates.map(x=>{
-  let tokens=quotePriceNorm(x.variant);
-  const modelTokens=quotePriceNorm(model);
-  tokens=tokens.filter(t=>!modelTokens.includes(t)&&!['BS','6','2'].includes(t));
-  for(const group of critical){const a=stockTokens.find(t=>group.includes(t)),b=tokens.find(t=>group.includes(t));if(a&&b&&a!==b)return {row:x,score:-1};}
-  const common=stockTokens.filter(t=>tokens.includes(t));
-  return {row:x,score:common.length*100+common.length/Math.max(stockTokens.length,tokens.length,1)};
+ const critical=[['MT','AT'],['2WD','4WD'],['CNG','DSL','DIESEL','PETROL','GASOLINE'],['4STR','6STR','7STR','9STR']];
+ const scored=candidates.map(row=>{
+  const priceTokens=quotePriceNorm(row.variant).filter(t=>!modelTokens.includes(t)&&!['BS','6','2'].includes(t));
+  for(const group of critical){
+   const a=stockTokens.find(t=>group.includes(t)),b=priceTokens.find(t=>group.includes(t));
+   if(a&&b&&a!==b)return {row,score:-1};
+  }
+  const missing=stockTokens.filter(t=>!priceTokens.includes(t));
+  if(missing.length)return {row,score:-1};
+  return {row,score:1000+stockTokens.length*10-priceTokens.length};
  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
  if(!scored.length||scored.length>1&&scored[0].score===scored[1].score)return null;
  return scored[0].row;
 }
-function quoteApplyPriceList(){
- const match=quoteFindPriceMatch();if(!match)return false;
+function quoteApplyPriceList(selectedMatch){
+ const match=selectedMatch||quoteFindPriceMatch();if(!match)return false;
  const details=Array.isArray(match.components)?match.components:(Array.isArray(match.other_data?.components)?match.other_data.components:[]);
  const usable=details.filter(p=>p&&String(p.label||'').trim()&&!/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(p.label)&&!/insurance\s*\(\s*taxi/i.test(p.label)&&!/accessor|coation|coating|ceramic|\bppf\b/i.test(p.label));
  const rows=usable.length?usable:[
@@ -1746,11 +1749,22 @@ function quoteClearPriceListRows(){
  charges.querySelectorAll('.charge-row.price-list-charge').forEach(r=>r.remove());
  renumberCharges();calc();
 }
-function quoteAutoFillPrice(){
+let quotePriceLookupSequence=0;
+async function quoteAutoFillPrice(){
  const model=document.getElementById('qVehicle').value.trim(),variant=document.getElementById('qVariant').value.trim();
- const status=document.getElementById('qPriceListStatus');
+ const status=document.getElementById('qPriceListStatus'),sequence=++quotePriceLookupSequence;
  if(!model||!variant){quoteClearPriceListRows();if(status)status.textContent='Select a matching Model + Variant to load Price List.';return;}
- if(!quoteApplyPriceList()){quoteClearPriceListRows();if(status)status.textContent='Matching Model + Variant not found in Price List. Add charges manually.';}
+ if(status)status.textContent='Checking exact Model + Variant in Price List…';
+ try{
+  if(window.SVMBackend&&typeof window.SVMBackend.loadPriceLists==='function')await window.SVMBackend.loadPriceLists();
+  if(sequence!==quotePriceLookupSequence)return;
+  const match=quoteFindPriceMatch();
+  if(!match||!quoteApplyPriceList(match)){quoteClearPriceListRows();if(status)status.textContent='No exact Model + Variant match found in this department Price List. Manual charges are available.';}
+ }catch(error){
+  quoteClearPriceListRows();
+  if(status)status.textContent='Price List could not load: '+(error.message||error)+'. Manual entry is available.';
+  console.error('Quotation Price List lookup failed:',error);
+ }
 }
 document.getElementById('qVehicle').addEventListener('change',quoteAutoFillPrice);
 document.getElementById('qVariant').addEventListener('change',quoteAutoFillPrice);
@@ -1763,6 +1777,6 @@ document.getElementById('charges').addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=quotation-stock-autocomplete-20261120"></script>
+<script src="./backend/supabase-runtime.js?v=quotation-pricelist-autofill-20261120b"></script>
 <script src="./backend/price-list-module.js?v=employee-access-live-20261119"></script>
 </body></html>
