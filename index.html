@@ -1476,7 +1476,7 @@ function getQuotePayload(){
  [...charges.querySelectorAll('.charge-row'),...quoteDiscounts.querySelectorAll('.charge-row')].forEach(r=>{
   const name=(r.querySelector('.q-charge-name')?.textContent||r.querySelector('.q-charge-name')?.value||r.querySelector('select')?.value||r.querySelector('.q-charge-editable')?.value||r.querySelector('.amount')?.dataset.charge||'Charge').trim();
   const amount=Number(r.querySelector('.amount')?.value)||0;
-  items.push({name,amount,discount:r.classList.contains('discount-charge')||isDiscountChargeRow(r)});
+  items.push({name,amount,discount:r.classList.contains('discount-charge')||isDiscountChargeRow(r),custom:r.dataset.customCharge==='true'});
  });
  const amountWords=numberWordsIndian(totals.total);
  const terms=[
@@ -1564,9 +1564,9 @@ charges.querySelectorAll('.amount').forEach(input=>{input.type='text';input.inpu
 // Amount inputs show 0.00 as a faint example, never as a pre-filled value.
 charges.querySelectorAll('.amount').forEach(input=>{input.placeholder='0.00';if(input.value==='0'||input.value==='0.00')input.value='';});
 charges.addEventListener('focusin',e=>{const input=e.target.closest('.amount');if(!input)return;input.placeholder='0.00';if(input.value.trim()!==''&&Number(input.value)===0)input.value='';input.select();});quoteDiscounts.addEventListener('focusin',e=>{const input=e.target.closest('.amount');if(!input)return;input.placeholder='0.00';if(input.value.trim()!==''&&Number(input.value)===0)input.value='';input.select();});
-charges.addEventListener('click',e=>{if(e.target.closest('.remove-charge')){const row=e.target.closest('.charge-row');if(row&&!row.classList.contains('discount-charge'))row.remove();renumberCharges();calc()}});
+charges.addEventListener('click',e=>{if(e.target.closest('.remove-charge')){const row=e.target.closest('.charge-row');if(row&&!row.classList.contains('discount-charge')&&row.dataset.customCharge==='true')row.remove();renumberCharges();calc()}});
 document.getElementById('addCharge').addEventListener('click',()=>{
- const row=document.createElement('div');row.className='charge-row';
+ const row=document.createElement('div');row.className='charge-row';row.dataset.customCharge='true';
  row.innerHTML='<span class="charge-index"></span><input class="q-charge-name q-charge-editable" type="text" aria-label="Charge or accessory name" placeholder="Enter charge / accessory name" value="Accessories"><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value=""></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button>';
  const coatingRow=[...charges.querySelectorAll('.charge-row')].find(r=>/coating|ceramic|\\bppf\\b/i.test(r.querySelector('.q-charge-name')?.textContent||''));const discountRow=charges.querySelector('.discount-charge');charges.insertBefore(row,coatingRow||discountRow);renumberCharges();
 });
@@ -1924,9 +1924,7 @@ function quoteApplyPriceList(selectedMatch){
   const currency=document.createElement('span');currency.textContent='₹';
   const input=document.createElement('input');input.className='amount';input.type='text';input.inputMode='decimal';input.placeholder='0.00';input.value=Number(part.value||0).toFixed(2);input.dataset.charge=String(part.label||'Other');
   wrap.append(currency,input);row.append(number,name,wrap);
-  if(!/accessor|coating|ceramic|\\bppf\\b/i.test(String(part.label||''))){
-   const remove=document.createElement('button');remove.className='icon-btn remove-charge';remove.type='button';remove.setAttribute('aria-label','Remove charge');remove.textContent='×';row.appendChild(remove);
-  }
+  // Price List rows are baseline rows and cannot be deleted.
   return row;
  };
  rows.forEach((part,i)=>charges.appendChild(makeRow(part,i+1)));
