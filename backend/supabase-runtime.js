@@ -617,7 +617,7 @@
     }
     const row=await call(db().from('quotations').insert({
       quote_number:q.no,department:q.department,quote_date:q.date,customer_name:q.customer,phone:q.phone,address:q.address,customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,
-      vehicle_count:Number(q.vehicleNos||1),hypo:q.hypo,model:q.model,car_description:q.carDescription,variant:q.variant,colour:q.colour,chassis:q.chassis,
+      vehicle_count:Number(q.vehicleNos||1),hypo:q.hypo,model:q.model,variant:q.variant,colour:q.colour,
       sales_person:q.salesPerson,contact_person:contactPerson,contact_mobile:contactMobile,
       email:QUOTE_COMPANY_DEFAULTS.email,branch_address:QUOTE_COMPANY_DEFAULTS.branch_address,
       helpline:QUOTE_COMPANY_DEFAULTS.helplines.join(' / '),pan:QUOTE_COMPANY_DEFAULTS.pan,gstin:QUOTE_COMPANY_DEFAULTS.gstin,
@@ -645,8 +645,8 @@
   const toQuoteView = (row) => ({
     id:row.id,no:row.quote_number,department:row.department,customer:row.customer_name,phone:row.phone||'',
     address:row.address||'',customerGstin:row.customer_gstin||'',salesMobile:row.sales_mobile||'',vehicleNos:String(row.vehicle_count??1),hypo:row.hypo||'',
-    model:row.model||'',carDescription:row.car_description||'',variant:row.variant||'',colour:row.colour||'',
-    vehicle:[row.model,row.variant].filter(Boolean).join(' · '),chassis:row.chassis||'',createdAt:row.created_at||null,
+    model:row.model||'',variant:row.variant||'',colour:row.colour||'',
+    vehicle:[row.model,row.variant].filter(Boolean).join(' · '),createdAt:row.created_at||null,
     salesPerson:row.sales_person||'',by:row.created_by_name||(row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'—'),
     contactPerson:row.contact_person||'',contactMobile:row.contact_mobile||'',email:row.email||'',
     branchAddress:row.branch_address||'',helpline:row.helpline||'',pan:row.pan||'',gstin:row.gstin||'',
@@ -729,7 +729,7 @@
       set('qCustomer',q.customer);set('qPhone',q.phone);set('qDate',q.date);
       set('qAddress',q.address);set('qCustomerGSTIN',q.customerGstin);set('qSalesMobile',q.salesMobile);set('qVehicleNos',q.vehicleNos||1);set('qHypo',q.hypo);
       set('qVehicle',q.model);set('qVariant',q.variant);set('qColour',q.colour);
-      set('qCarDesc',q.carDescription);set('qSalesPerson',q.salesPerson);
+      set('qSalesPerson',q.salesPerson);
       set('qContactPerson',q.contactPerson);set('qContactMobile',q.contactMobile);
       set('qEmail',q.email);set('qBranchAddress',q.branchAddress);set('qHelpline',q.helpline);
       set('qPan',q.pan);set('qGstin',q.gstin);
@@ -773,7 +773,7 @@
         const payload={
           quote_date:q.date||new Date().toISOString().slice(0,10),
           customer_name:q.customer,phone:q.phone,address:q.address,customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,vehicle_count:Number(q.vehicleNos||1),
-          hypo:q.hypo,model,car_description:q.carDescription,variant,colour:q.colour,
+          hypo:q.hypo,model,variant,colour:q.colour,
           sales_person:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
           email:q.email,branch_address:q.branchAddress,helpline:q.helpline,pan:q.pan,gstin:q.gstin,
           subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:q.amountWords||'',
@@ -820,8 +820,8 @@
         quote_number:allocatedNumber,department:dept,quote_date:q.date||new Date().toISOString().slice(0,10),
         customer_name:q.customer,phone:q.phone,address:$('qAddress')?.value||'',customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,
         vehicle_count:Number($('qVehicleNos')?.value||1),hypo:$('qHypo')?.value||'',
-        model,car_description:$('qCarDesc')?.value||'',variant,colour:$('qColour')?.value||'',
-        chassis:q.chassis,sales_person:$('qSalesPerson')?.value||'',
+        model,variant,colour:$('qColour')?.value||'',
+        sales_person:$('qSalesPerson')?.value||'',
         contact_person:$('qContactPerson')?.value||'',contact_mobile:$('qContactMobile')?.value||'',
         email:$('qEmail')?.value||'',branch_address:$('qBranchAddress')?.value||'',
         helpline:$('qHelpline')?.value||'',pan:$('qPan')?.value||'',gstin:$('qGstin')?.value||'',
