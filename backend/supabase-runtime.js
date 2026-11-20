@@ -1791,6 +1791,23 @@
       if(buttons[1])buttons[1].addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();void audit('audit_history','export','Printed audit history');window.print();},true);
     }
     const permittedDepartments=allowedDepartmentList();
+    // Explicitly refresh live stock after department navigation. The original shell
+    // changes the view first; defer the data request until its department is selected.
+    document.querySelectorAll('[data-page^="stock-"]:not([data-page^="stock-hold-"])').forEach(button=>{
+      if(button.dataset.liveStockBound==='1')return;
+      button.dataset.liveStockBound='1';
+      button.addEventListener('click',()=>setTimeout(()=>renderStock(),80),true);
+    });
+    const stockQuick=document.querySelector('.quick[data-go="stock"]');
+    if(stockQuick&&!stockQuick.dataset.liveStockBound){
+      stockQuick.dataset.liveStockBound='1';
+      stockQuick.addEventListener('click',()=>setTimeout(()=>renderStock(),100),true);
+    }
+    const stockRefresh=$('view-stock')?.querySelector('.stock-refresh-button');
+    if(stockRefresh&&!stockRefresh.dataset.liveStockBound){
+      stockRefresh.dataset.liveStockBound='1';
+      stockRefresh.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();renderStock().then(()=>notify('Live Stock Register refreshed.'));},true);
+    }
     const stockFilter=$('stockDepartmentFilter');
     if(stockFilter){const current=stockFilter.value;stockFilter.innerHTML='<option>All Accessible Departments</option>'+permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');if(permittedDepartments.includes(current))stockFilter.value=current;stockFilter.onchange=()=>renderStock();}
     const addButton=$('addVehicle');if(addButton){addButton.style.display=canManageStock()?'':'none';addButton.disabled=!canManageStock();}
