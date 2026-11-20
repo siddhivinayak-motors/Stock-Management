@@ -1349,9 +1349,10 @@ const sidebarDeptStateKey=userId=>'svm_sidebar_department_state_v1:'+String(user
 function applySidebarDepartmentState(){
  document.querySelectorAll('.nav-item.group[data-group]').forEach(button=>{
   const key=button.dataset.group,sub=document.querySelector('[data-sub="'+key+'"]');
-  button.classList.remove('expanded');
-  button.setAttribute('aria-expanded','false');
-  if(sub)sub.classList.remove('open');
+  const visible=!!sub&&sub.style.display!=='none';
+  button.classList.toggle('expanded',visible);
+  button.setAttribute('aria-expanded',visible?'true':'false');
+  if(sub)sub.classList.toggle('open',visible);
  });
 }
 function saveSidebarDepartmentState(){
@@ -1968,6 +1969,6 @@ quoteDiscounts.addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="././backend/supabase-runtime.js?v=otf-order-book-20261120d"></script>
+<script src="././backend/supabase-runtime.js?v=stock-register-visible-20261120e"></script>
 <script src="./backend/price-list-module.js?v=quotation-row-layout-20261120d"></script>
 </body></html>
