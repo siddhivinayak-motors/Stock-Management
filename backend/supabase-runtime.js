@@ -329,7 +329,6 @@
     if(!departments.length){window.plData=by;window.plHistory=[];if(typeof window.plRender==='function')window.plRender();return;}
     // Restrict at the Supabase query itself, not only after downloading rows.
     const versions=await call(db().from('price_list_versions').select('*').in('department',departments).order('published_at',{ascending:false}));
-    const by={Personal:[],EV:[],Commercial:[],LLM:[]};
     const loaded=new Set();
     for(const v of versions){
       if(loaded.has(v.department))continue;
