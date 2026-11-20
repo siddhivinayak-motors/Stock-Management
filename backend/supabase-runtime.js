@@ -108,9 +108,15 @@
   function canSubmitStockHoldRole(){return STOCK_HOLD_ROLES.has(String(currentProfile?.designation||''));}
   function canManageHolds(){return roleLevel()>=70;}
   function allowedDepartmentList(){
-    if(currentProfile?.is_super_admin || ['Admin','General Manager'].includes(currentProfile?.designation)) return ['Personal','EV','Commercial','LLM'];
-    if(currentProfile?.designation==='Manager') return currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean);
-    return currentProfile?.department_access?.length?currentProfile.department_access:[currentProfile?.department].filter(Boolean);
+    // Department access is the source of truth for every role. Only Super Admin
+    // receives all four departments automatically; Admin/GM/Manager are scoped
+    // to the departments explicitly assigned in Employee Management.
+    if(currentProfile?.is_super_admin) return ['Personal','EV','Commercial','LLM'];
+    const valid=['Personal','EV','Commercial','LLM'];
+    const assigned=Array.isArray(currentProfile?.department_access)&&currentProfile.department_access.length
+      ?currentProfile.department_access
+      :[currentProfile?.department].filter(Boolean);
+    return valid.filter(d=>assigned.some(x=>String(x).trim().toLowerCase()===d.toLowerCase()));
   }
   async function refreshIdentity() {
     const {data:{user},error}=await db().auth.getUser();
@@ -318,8 +324,11 @@
   async function loadPriceLists() {
     // Quotation users also need read access to the current published price list to prepare a quote.
     if(!has('price_list_management','view')&&!has('quotation_management','view')) return;
-    const allowed=new Set(allowedDepartmentList());
-    const versions=(await call(db().from('price_list_versions').select('*').order('published_at',{ascending:false}))).filter(v=>allowed.has(v.department));
+    const departments=allowedDepartmentList();
+    const by={Personal:[],EV:[],Commercial:[],LLM:[]};
+    if(!departments.length){window.plData=by;window.plHistory=[];if(typeof window.plRender==='function')window.plRender();return;}
+    // Restrict at the Supabase query itself, not only after downloading rows.
+    const versions=await call(db().from('price_list_versions').select('*').in('department',departments).order('published_at',{ascending:false}));
     const by={Personal:[],EV:[],Commercial:[],LLM:[]};
     const loaded=new Set();
     for(const v of versions){
