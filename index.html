@@ -1801,16 +1801,18 @@ function quoteApplyPriceList(selectedMatch){
  const rows=[];
  const hasLabel=(re)=>rows.some(x=>re.test(x.label));
  if(isEv){
-  const a=details.find(p=>/^A$/i.test(String(p.label||'').trim()));
-  const b=details.find(p=>/^B$/i.test(String(p.label||'').trim()));
-  const ab=details.find(p=>/^A\s*\+\s*B$/i.test(String(p.label||'').trim()));
-  rows.push({label:'Ex-Showroom (A+B)',value:ab?Number(ab.value||0):(Number(a?.value||0)+Number(b?.value||0))});
+  const a=details.find(p=>/vehicle\s*price\s*\(\s*A\s*\)/i.test(String(p.label||'')));
+  const b=details.find(p=>/charger\s*price\s*\(\s*B\s*\)/i.test(String(p.label||'')));
+  const ab=details.find(p=>/ex[-\s]*showroom.*A\s*\+\s*B/i.test(String(p.label||'')))||details.find(p=>/^A\s*\+\s*B$/i.test(String(p.label||'').trim()));
+  const combined=ab?Number(ab.value||0):(Number(a?.value||0)+Number(b?.value||0));
+  rows.push({label:'EX-SHOWROOM PRICE (A+B)',value:combined});
  }
  details.forEach(part=>{
   if(!part||!String(part.label||'').trim())return;
   const label=String(part.label).trim();
   if(/total\s*on[\s-]*road|on[\s-]*road\s*total/i.test(label))return;
   if(/^A$|^B$|^A\s*\+\s*B$/i.test(label))return;
+  if(isEv&&(/vehicle\s*price\s*\(\s*A\s*\)|charger\s*price\s*\(\s*B\s*\)|ex[-\s]*showroom.*A\s*\+\s*B/i.test(label)))return;
   if(/insurance\s*\(\s*taxi/i.test(label))return;
   if(/accessor/i.test(label))return;
   if(/coation|coating|ceramic|\bppf\b/i.test(label))return;
