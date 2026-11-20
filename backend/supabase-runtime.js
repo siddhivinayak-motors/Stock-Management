@@ -1874,6 +1874,7 @@
     if(!has('quotation_management','view'))throw new Error('Quotation view permission required.');
     const phone=otfDigits(otfValue('otfPhoneSearch'));
     if(phone.length!==10)throw new Error('Enter a valid 10-digit mobile number.');
+    otfResetSelection();if($('otfChassisInput'))$('otfChassisInput').value='';
     const phoneVariants=[phone,'+91'+phone,'91'+phone,'0'+phone];
     const rows=await call(db().from('quotations').select('*,quotation_items(*)').eq('department',otfDepartment).in('phone',phoneVariants).order('created_at',{ascending:false}).limit(100));
     otfMatches=rows.filter(q=>otfDigits(q.phone)===phone);
@@ -1991,13 +1992,14 @@
       if(printAfter)otfPrintDocument(saved,popup);
       else notify('OTF Order Book saved: '+saved.order_number);
       return saved;
-    }catch(e){if(popup)popup.close();console.error(e);otfSetStatus(e.message||'Could not save OTF Order Book.',true);notify(e.message||'OTF save failed.');return null;}
+    }catch(e){if(popup)popup.close();console.error(e);const message=e.code==='23505'?'This chassis already has an active OTF booking, or the order number already exists. Check the OTF Register.':(e.message||'Could not save OTF Order Book.');otfSetStatus(message,true);notify(message);return null;}
   }
   function bindOtfUi(){
     if($('otfSearchQuotes')&&!$('otfSearchQuotes').dataset.bound){
       $('otfSearchQuotes').dataset.bound='1';
       $('otfSearchQuotes').addEventListener('click',()=>searchOtfQuotes().catch(e=>{notify(e.message);}));
       $('otfPhoneSearch')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchOtfQuotes().catch(x=>notify(x.message));}});
+      $('otfChassisInput')?.addEventListener('input',()=>{otfVerifiedVehicle=null;if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;});
       $('otfVerifyChassis')?.addEventListener('click',()=>verifyOtfChassis().catch(e=>{otfVerifiedVehicle=null;if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent=e.message;}if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;notify(e.message);}));
       $('otfSaveOrder')?.addEventListener('click',()=>saveOtfOrder(false));
       $('otfSavePrintOrder')?.addEventListener('click',()=>saveOtfOrder(true));
