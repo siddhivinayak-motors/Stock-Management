@@ -219,6 +219,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          city?: string | null
           department?: string | null
           designation?: string | null
           email?: string
