@@ -1,0 +1,1 @@
+alter table public.quotation_items add column if not exists is_custom boolean not null default false;
