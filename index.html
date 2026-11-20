@@ -1394,7 +1394,10 @@ function calc(){
  let subtotal=0,discount=0;
  charges.querySelectorAll('.charge-row').forEach(r=>{
   const val=Math.max(0,Number(r.querySelector('.amount')?.value)||0);
-  if(isDiscountChargeRow(r))discount+=val;else subtotal+=val;
+  subtotal+=val;
+ });
+ quoteDiscounts.querySelectorAll('.charge-row').forEach(r=>{
+  discount+=Math.max(0,Number(r.querySelector('.amount')?.value)||0);
  });
  const total=Math.max(0,subtotal-discount);
  document.getElementById('subtotal').textContent=money(subtotal);
@@ -1507,12 +1510,12 @@ function saveQuote(printAfter){
 }
 document.getElementById('saveQuote').addEventListener('click',()=>saveQuote(false));
 document.getElementById('savePrintQuote').addEventListener('click',()=>saveQuote(true));
-charges.addEventListener('input',calc);charges.addEventListener('change',calc);
+charges.addEventListener('input',calc);charges.addEventListener('change',calc);quoteDiscounts.addEventListener('input',calc);quoteDiscounts.addEventListener('change',calc);
 // Zero remains a faint example only; amount inputs use text/decimal entry without spinner controls.
 charges.querySelectorAll('.amount').forEach(input=>{input.type='text';input.inputMode='decimal';input.placeholder='0.00';if(input.value.trim()!==''&&Number(input.value)===0)input.value='';});
 // Amount inputs show 0.00 as a faint example, never as a pre-filled value.
 charges.querySelectorAll('.amount').forEach(input=>{input.placeholder='0.00';if(input.value==='0'||input.value==='0.00')input.value='';});
-charges.addEventListener('focusin',e=>{const input=e.target.closest('.amount');if(!input)return;input.placeholder='0.00';if(input.value.trim()!==''&&Number(input.value)===0)input.value='';input.select();});
+charges.addEventListener('focusin',e=>{const input=e.target.closest('.amount');if(!input)return;input.placeholder='0.00';if(input.value.trim()!==''&&Number(input.value)===0)input.value='';input.select();});quoteDiscounts.addEventListener('focusin',e=>{const input=e.target.closest('.amount');if(!input)return;input.placeholder='0.00';if(input.value.trim()!==''&&Number(input.value)===0)input.value='';input.select();});
 charges.addEventListener('click',e=>{if(e.target.closest('.remove-charge')){const row=e.target.closest('.charge-row');if(row&&!row.classList.contains('discount-charge'))row.remove();renumberCharges();calc()}});
 document.getElementById('addCharge').addEventListener('click',()=>{
  const row=document.createElement('div');row.className='charge-row';
