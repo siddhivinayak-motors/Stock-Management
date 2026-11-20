@@ -1302,7 +1302,6 @@ function getQuotePayload(){
   colour:document.getElementById('qColour')?.value.trim()||'',
   vehicleNos:Number(document.getElementById('qVehicleNos')?.value||1),
   hypo:document.getElementById('qHypo')?.value.trim()||'',
-  chassis:document.getElementById('qChassis').value.trim(),
   salesPerson:document.getElementById('qSalesPerson')?.value.trim()||'',
   contactPerson:document.getElementById('qContactPerson')?.value.trim()||'PRATIK BADHEKA (SALES MANAGER)',
   contactMobile:document.getElementById('qContactMobile')?.value.trim()||'9879100031',
@@ -1683,7 +1682,7 @@ function resetQuotationForm(){
  ['qCustomer','qPhone','qAddress','qVehicleNos','qHypo','qVehicle','qCarDesc','qVariant','qColour','qContactPerson','qContactMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
  setQuotationDateTime();
  const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
- const stockSuggestions=document.getElementById('qStockSuggestions');if(stockSuggestions){stockSuggestions.hidden=true;stockSuggestions.innerHTML='';}
+ const priceSuggestions=document.getElementById('qPriceSuggestions');if(priceSuggestions){priceSuggestions.hidden=true;priceSuggestions.innerHTML='';}
  charges.innerHTML=defaultQuoteChargeMarkup;charges.querySelectorAll('.amount').forEach(e=>e.value='');
  const priceStatus=document.getElementById('qPriceListStatus');if(priceStatus)priceStatus.textContent='Select a vehicle and variant to check the Price List.';
  updateQuoteNumber();calc();
