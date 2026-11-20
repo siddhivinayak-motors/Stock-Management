@@ -740,7 +740,7 @@
       const isDiscountItem=x=>!!x.discount||/discount|\\bless\\b/i.test(String(x.name||''));
       const regularItems=allItems.filter(x=>!isDiscountItem(x));
       const discountItems=allItems.filter(isDiscountItem);
-      const regularRows=regularItems.map((x,n)=>'<div class="charge-row"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" value="'+Number(x.amount||0).toFixed(2)+'" data-charge="'+escAttr(x.name)+'"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>').join('');
+      const regularRows=regularItems.map((x,n)=>{const removable=!/accessor|coating|ceramic|ppf/i.test(String(x.name||''));return '<div class="charge-row"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" value="'+Number(x.amount||0).toFixed(2)+'" data-charge="'+escAttr(x.name)+'"></div>'+(removable?'<button class="icon-btn remove-charge" aria-label="Remove charge">×</button>':'')+'</div>';}).join('');
       const discountDefs=[
         {name:'LESS RETAIL OFFER',match:/retail/i},
         {name:'LESS EXCHANGE OFFER',match:/exchange/i},
