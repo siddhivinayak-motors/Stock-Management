@@ -610,7 +610,7 @@
     amountWords:row.amount_words||'',terms:Array.isArray(row.terms)?row.terms:[],
     bank:row.bank_details&&typeof row.bank_details==='object'?row.bank_details:{},
     status:String(row.status||'Pending').toUpperCase(),prints:Number(row.print_count||0),
-    date:row.quote_date,items:(row.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount}))
+    date:row.quote_date,items:(row.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount||/discount|\\bless\\b/i.test(String(x.particulars||''))}))
   });
   const sameQuoteKey=(a,b)=>
     String(a.department||'').trim().toLowerCase()===String(b.department||'').trim().toLowerCase() &&
@@ -667,7 +667,7 @@
       if($('quoteNumber'))$('quoteNumber').textContent=q.no;
       document.querySelectorAll('#view-quotation details').forEach(d=>d.open=true);
       const escAttr=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-      const rows=(q.items||[]).map((x,n)=>'<div class="charge-row"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap"><span>₹</span><input class="amount" type="number" min="0" step="0.01" value="'+Number(x.amount||0)+'" data-charge="'+escAttr(x.name)+'"></div><button class="icon-btn remove-charge" aria-label="Remove charge">×</button></div>').join('');
+      const rows=(q.items||[]).map((x,n)=>{const isDiscount=!!x.discount||/discount|\\bless\\b/i.test(String(x.name||''));return '<div class="charge-row'+(isDiscount?' discount-charge':'')+'"><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap'+(isDiscount?' discount-input':'')+'"><span>'+(isDiscount?'− ₹':'₹')+'</span><input class="amount" type="number" min="0" step="0.01" value="'+Number(x.amount||0)+'" data-charge="'+escAttr(x.name)+'"></div>'+(isDiscount?'<span class="discount-lock">LESS</span>':'<button class="icon-btn remove-charge" aria-label="Remove charge">×</button>')+'</div>';}).join('');
       $('charges').innerHTML=rows;
       if($('quotationPageTitle'))$('quotationPageTitle').textContent=currentQuoteDepartment+' — Edit Quotation';
       const head=document.querySelector('#view-quotation .card-title');if(head)head.textContent='Edit Quotation';
