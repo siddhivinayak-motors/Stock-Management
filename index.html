@@ -570,33 +570,28 @@ h1{font-size:26px;line-height:1.25}
 .nav-item{font-size:14px;line-height:1.35;text-align:left;justify-content:flex-start}
 .nav-item.group{font-size:14px;min-height:46px;gap:12px}
 .subnav{
-  display:block!important;
-  margin:2px 0 14px 0;
-  padding:0 0 0 8px;
-  border-left:1px solid #e7ebf0;
-}
-.subnav .nav-item{
-  width:100%;
-  min-height:43px;
-  padding:10px 10px;
-  margin:2px 0;
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  gap:12px;
-  text-align:left;
-  white-space:normal;
-  overflow-wrap:normal;
-  font-size:13.5px;
-  font-weight:650;
-  line-height:1.35;
-}
-.subnav .nav-item .nav-icon{
-  width:18px;
-  height:18px;
-  flex:0 0 18px;
-}
-.field label,.form-grid label{font-size:13px}
+   display:block!important;max-height:0;opacity:0;visibility:hidden;overflow:hidden;
+   margin:0;padding:0 0 0 10px;border-left:2px solid #e8edf3;transform:translateY(-4px);
+   transition:max-height .28s ease,opacity .2s ease,transform .2s ease,margin .2s ease,padding .2s ease;
+   pointer-events:none;
+ }
+ .subnav.open{
+   max-height:280px;opacity:1;visibility:visible;overflow:visible;margin:3px 0 14px;
+   padding:2px 0 3px 10px;transform:translateY(0);pointer-events:auto;
+ }
+ .nav-item.group{
+   border:1px solid #edf0f4;background:linear-gradient(135deg,#fff 0%,#f8fafc 100%);
+   box-shadow:0 2px 7px rgba(22,35,52,.035);border-radius:12px;padding-left:12px;
+   transition:background .2s ease,border-color .2s ease,box-shadow .2s ease;
+ }
+ .nav-item.group:hover{background:#f7f9fc;border-color:#dfe5ed;box-shadow:0 4px 12px rgba(22,35,52,.07);transform:none}
+ .nav-item.group.expanded{border-color:#e4e9f0;box-shadow:0 3px 10px rgba(22,35,52,.055)}
+ .dept-toggle-arrow{font-size:22px;color:#7c8795}
+ .nav-item.group.expanded .dept-toggle-arrow{color:#d51f2a}
+ .subnav .nav-item{border-radius:9px;padding-left:11px;transition:background .16s ease,color .16s ease}
+ .subnav .nav-item:hover{background:#f1f5f9;transform:none}
+ .subnav .nav-item.active{background:#fff0f1;box-shadow:inset 2px 0 0 #d51f2a}
+ .field label,.form-grid label{font-size:13px}
 .field input,.field select,.field textarea,
 select,input,textarea{font-size:14px}
 table,.table-wrap td{font-size:13px}
@@ -1195,16 +1190,10 @@ document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',(
 }));
 const sidebarDeptStateKey=userId=>'svm_sidebar_department_state_v1:'+String(userId||'');
 function applySidebarDepartmentState(){
- const userId=window.SVMBackend?.user?.id;
- if(!userId)return;
- let saved=null;
- try{saved=JSON.parse(localStorage.getItem(sidebarDeptStateKey(userId))||'null')}catch(e){}
  document.querySelectorAll('.nav-item.group[data-group]').forEach(button=>{
   const key=button.dataset.group,sub=document.querySelector('[data-sub="'+key+'"]');
-  const expanded=saved&&typeof saved[key]==='boolean'?saved[key]:true;
-  button.classList.toggle('expanded',expanded);
-  button.setAttribute('aria-expanded',String(expanded));
-  if(sub)sub.classList.toggle('open',expanded);
+  button.classList.add('expanded');button.setAttribute('aria-expanded','true');
+  if(sub)sub.classList.add('open');
  });
 }
 function saveSidebarDepartmentState(){
