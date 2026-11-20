@@ -648,7 +648,7 @@
     id:row.id,no:row.quote_number,department:row.department,customer:row.customer_name,phone:row.phone||'',
     address:row.address||'',customerGstin:row.customer_gstin||'',salesMobile:row.sales_mobile||'',vehicleNos:String(row.vehicle_count??1),hypo:row.hypo||'',
     model:row.model||'',carDescription:row.car_description||'',variant:row.variant||'',colour:row.colour||'',
-    vehicle:[row.model,row.variant].filter(Boolean).join(' · '),chassis:row.chassis||'',
+    vehicle:[row.model,row.variant].filter(Boolean).join(' · '),chassis:row.chassis||'',createdAt:row.created_at||null,
     salesPerson:row.sales_person||'',by:row.created_by_name||(row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'—'),
     contactPerson:row.contact_person||'',contactMobile:row.contact_mobile||'',email:row.email||'',
     branchAddress:row.branch_address||'',helpline:row.helpline||'',pan:row.pan||'',gstin:row.gstin||'',
@@ -679,7 +679,9 @@
       const approval=q.status!=='PENDING'||!canReview?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>';
       const manage=(canDelete?'<button class="btn small danger" onclick="deleteSavedQuote('+i+')">Delete</button>':'')+(canEdit?'<button class="btn small" onclick="editSavedQuote('+i+')">Edit</button>':'');
       const statusClass=q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red';
-      return '<tr><td class="strong">'+esc(q.no)+'</td><td>'+esc(q.customer)+'</td><td>'+esc(q.vehicle)+'</td><td>'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+statusClass+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+manage+approval+'</div></td></tr>';
+      const createdAt=q.createdAt?new Date(q.createdAt):null;
+      const dateTimeLabel=createdAt&&!Number.isNaN(createdAt.getTime())?createdAt.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Kolkata'}):'—';
+      return '<tr><td class="strong">'+esc(q.no)+'</td><td class="qm-date" title="'+esc(q.createdAt||'')+'">'+esc(dateTimeLabel)+'</td><td>'+esc(q.customer)+'</td><td class="qm-vehicle">'+esc(q.vehicle)+'</td><td class="qm-department">'+esc(q.department||'')+'</td><td>'+esc(q.by)+'</td><td>'+money(q.total)+'</td><td><span class="pill '+statusClass+'">'+esc(q.status)+'</span></td><td><b>'+Number(q.prints||0)+'</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+manage+approval+'</div></td></tr>';
     }).join('');
     $('qmTotal').textContent=quoteRecords.length;
     $('qmPending').textContent=quoteRecords.filter(q=>q.status==='PENDING').length;
@@ -788,7 +790,7 @@
         Math.round(Number(row.total||0)*100)===Math.round(Number(q.total||0)*100)
       );
       if(duplicate) throw new Error('આ ગ્રાહકના આ મોબાઇલ નંબર અને આ જ ગાડીનું આ જ Grand Total વાળું quotation પહેલેથી નોંધાયેલું છે ('+duplicate.quote_number+'). ભાવ અથવા quotation detailsમાં ફેરફાર કર્યા વગર ફરીથી quotation બનાવી શકાશે નહીં.');
-      const allocatedNumber=await call(db().rpc('next_quote_number'));
+      const allocatedNumber=await call(db().rpc('next_quote_number',{p_department:dept}));
       q.no=allocatedNumber;
       if($('quoteNumber'))$('quoteNumber').textContent=allocatedNumber;
       const payload={
