@@ -916,11 +916,11 @@
       const num=v=>{if(v===null||v===undefined||t(v)==='')return null;const n=Number(String(v).replace(/,/g,''));return Number.isFinite(n)?n:null;};
       const dept=m=>{const x=t(m).toUpperCase();return x==='BEV'||x.includes('EV')||x.includes('ELECTRIC')?'EV':'Personal';};
       const stages=new Set(['OPEN','HOLD','ALLOTED','DAMAGE','RETAIL','DEMO','TRANSFER_OUT','OTHER','BILLING DONE','DEALER','DAMO']);
-      const seen=new Set();
+      const seen=new Set();let placeholderNo=0;
       pratikStockPreviewRows=raw.map((r,i)=>{
         const model=t(get(r,'MODEL')),variant=t(get(r,'VARIENTS','VARIANTS','VARIANT'));
         const original=t(get(r,'CHASSIS NUMBER','CHASSISNUMBER','CHASSIS')).toUpperCase();
-        const chassis=original||(model?'XXXX-'+String(i+1).padStart(3,'0'):'');
+        const chassis=original||(model?'XXXX-'+String(++placeholderNo).padStart(3,'0'):'');
         const department=dept(model),stage=t(get(r,'STAGE')).toUpperCase()||'OPEN';
         let decision='Ready';
         if(!model)decision='Review: Missing model';
