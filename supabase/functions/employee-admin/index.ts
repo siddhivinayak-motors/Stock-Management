@@ -13,7 +13,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const ROLE_MODULES: Record<string,string[]> = {
   "Admin": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","audit_history","retail_reports"],
   "General Manager": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","audit_history","retail_reports"],
-  "Manager": ["dashboard","stock_register","stock_hold_management","quotation_management","otf_management","employee_management","common_excel_upload","retail_reports"],
+  "Manager": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","retail_reports"],
   "Accountant": ["stock_register","retail_reports","common_excel_upload","quotation_management","otf_management"],
   "HR": ["stock_register","stock_hold_management","retail_reports","common_excel_upload","quotation_management","otf_management"],
   "DMS": ["stock_register","retail_reports","common_excel_upload","quotation_management","otf_management"],
@@ -150,8 +150,8 @@ Deno.serve(async (req: Request) => {
     if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
     const selectedWorkspaceModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
     if (selectedWorkspaceModules.some(m => !ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
-    // Department access automatically includes stock register, stock hold and quotation functions.
-    const selectedModules = [...new Set([...selectedWorkspaceModules,...(departments.length?["stock_register","stock_hold_management","quotation_management","otf_management",...(canGrantModule("dashboard")?["dashboard"]:[])]:[])])];
+    // Department membership and menu permissions are independent; only checked menu items are granted.
+    const selectedModules = [...new Set(selectedWorkspaceModules)];
     const forbiddenModules = selectedModules.filter(m => !canGrantModule(m));
     if (forbiddenModules.length) return json({error:"You cannot grant permissions you do not have: "+forbiddenModules.join(", ")},403);
     const selectedShortcuts = Array.isArray(body.dashboard_shortcuts) ? [...new Set(body.dashboard_shortcuts.map(String))] : [];
@@ -173,7 +173,7 @@ Deno.serve(async (req: Request) => {
     }
     const userId = created.user.id;
     const { error: insertError } = await adminClient.from("profiles").upsert({
-      user_id: userId, full_name: fullName, email, employee_code: null, phone: phone||null, city: city||null,
+      user_id: userId, full_name: fullName, email, employee_code: null, phone: phone||null, city: city||null, city_access: city?[city]:[],
       designation: role, department: finalDepartments[0], department_access: finalDepartments,
       status: "active", is_super_admin: false, dashboard_shortcuts: selectedShortcuts,
     }, { onConflict: "user_id" });
@@ -199,7 +199,7 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin,designation,department,department_access,city").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,designation,department,department_access,city,city_access").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "A Super Admin profile cannot be edited here" }, 403);
     if (!canManageTargetDepartments(target)) return json({error:"You can manage employees only in your assigned department."},403);
@@ -221,6 +221,14 @@ Deno.serve(async (req: Request) => {
     if (typeof patch.city === "string" && patch.city && !["Bhavnagar","Amreli","Botad","Rajula"].includes(patch.city)) return json({error:"Select a valid city"},400);
     if(callerRole==="Manager"&&Object.prototype.hasOwnProperty.call(patch,"city")&&String(patch.city||"").trim()!==String(profile.city||"").trim())return json({error:"A Manager can assign employees only within their own city."},403);
     if (typeof patch.department === "string" && patch.department && !["Personal","EV","Commercial","LLM"].includes(patch.department)) return json({ error: "Invalid department" }, 400);
+    if (body.city_access !== undefined) {
+      const access = Array.isArray(body.city_access) ? [...new Set(body.city_access.map(String))] : [];
+      const allowedCities = new Set(["Bhavnagar","Amreli","Botad","Rajula"]);
+      if (!access.length || access.some((c:string)=>!allowedCities.has(c))) return json({error:"Select at least one valid City Access."},400);
+      if (callerRole==="Manager" && access.some((c:string)=>c!==String(profile.city||"").trim())) return json({error:"A Manager can assign City Access only within their own city."},403);
+      patch.city_access = access;
+      if (!patch.city && !target.city) patch.city = access[0];
+    }
     if (body.department_access !== undefined) {
       const access = Array.isArray(body.department_access) ? body.department_access.map(String) : [];
       const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
@@ -270,7 +278,7 @@ Deno.serve(async (req: Request) => {
   if (action === "save_employee_permissions") {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({error:"Select another employee"},400);
-    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation,department,department_access,city").eq("user_id",userId).maybeSingle();
+    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation,department,department_access,city,city_access").eq("user_id",userId).maybeSingle();
     if(targetError||!target||target.deleted_at) return json({error:"Active employee not found"},404);
     if(target.is_super_admin) return json({error:"Super Admin permissions cannot be changed"},403);
     const requestedDepartments=Array.isArray(body.departments)?[...new Set(body.departments.map(String))]:[];
@@ -286,7 +294,7 @@ Deno.serve(async (req: Request) => {
     const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
     if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
     const requestedModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
-    const selected = [...new Set([...requestedModules,...(requestedDepartments.length?["stock_register","stock_hold_management","quotation_management","otf_management"]:[]),...(requestedDepartments.length&&canGrantModule("dashboard")?["dashboard"]:[])])];
+    const selected = [...new Set(requestedModules)];
     if(selected.some(m=>!ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
     const forbidden=selected.filter((m:string)=>!canGrantModule(m));
     if(forbidden.length) return json({error:"You cannot grant permissions you do not have: "+forbidden.join(", ")},403);
