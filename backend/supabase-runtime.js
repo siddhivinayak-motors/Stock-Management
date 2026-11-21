@@ -40,7 +40,6 @@
       .selected-stock-context .ssc-request{border:0;border-radius:9px;padding:10px 14px;background:#c92535;color:#fff;font-size:12px;font-weight:800}
       @media(max-width:480px){.selected-stock-context{padding:13px}.selected-stock-context .ssc-grid{gap:8px}.selected-stock-context .ssc-value{font-size:12px}}
       .q-stock-suggestions{grid-column:1/-1;position:relative;z-index:40;max-height:330px;overflow:auto;border:1px solid #e1aeb4;border-radius:11px;background:#fff;box-shadow:0 12px 28px rgba(20,30,45,.14);margin:-8px 0 8px}.q-stock-suggestions[hidden]{display:none}.q-stock-count,.q-stock-empty{padding:10px 13px;font-size:11px;color:#6b7280;background:#fff8f8}.q-stock-option{width:100%;border:0;border-top:1px solid #edf0f3;background:#fff;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer;color:#263445}.q-stock-option:hover,.q-stock-option:focus{background:#fff0f1;outline:0}.q-stock-main{display:grid;gap:3px;min-width:0}.q-stock-main b{font-size:13px}.q-stock-main span,.q-stock-meta small{font-size:11px;color:#64748b}.q-stock-meta{display:grid;gap:3px;text-align:right;max-width:45%;overflow-wrap:anywhere}.q-stock-meta b{font-size:10px;color:#344054}
-    `;
 
       /* Stock Register: balanced full-width desktop grid with a useful compact tablet view. */
       #stockTable{width:100%!important;max-width:100%!important;min-width:0!important;table-layout:fixed!important;border-collapse:collapse}
@@ -84,6 +83,7 @@
         #stockTable th,#stockTable td{font-size:10px!important;padding:7px 4px!important}
         #stockTable .stock-hold-btn{min-width:0;padding:4px 5px!important}
       }
+    `;
     document.head.appendChild(style);
   }
   const $ = id => document.getElementById(id);
