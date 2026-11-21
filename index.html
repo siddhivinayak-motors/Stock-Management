@@ -942,62 +942,40 @@ td,.data-table td{font-size:13px;line-height:1.45}
 @media print{body *{visibility:hidden!important}#view-reports,#view-reports *{visibility:visible!important}#view-reports{position:absolute;left:0;top:0;width:100%;padding:0!important}#view-reports .page-head button,#view-reports .retail-filter-card,#view-reports .retail-export-actions{display:none!important}#view-reports .retail-kpi-grid{grid-template-columns:repeat(4,1fr)}#view-reports .retail-register-card{box-shadow:none;border:0}#view-reports .retail-table-wrap{overflow:visible}#view-reports table{font-size:10px}}
 </style>
 
-<style id="quotation-management-action-layout-v2">
-/* Quotation Management: reserve real width for actions; keep print count compact. */
+<style id="quotation-management-action-layout-v3">
+/* Balanced desktop register: compact print count, generous aligned action area. */
 #view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:visible}
-#view-quotation-management .table-wrap>table{
-  width:100%;min-width:0!important;max-width:100%;table-layout:fixed;border-collapse:collapse
-}
+#view-quotation-management .table-wrap>table{width:100%;min-width:0!important;max-width:100%;table-layout:fixed;border-collapse:collapse}
 #view-quotation-management .table-wrap>table th,
-#view-quotation-management .table-wrap>table td{
-  box-sizing:border-box;padding:10px 8px;vertical-align:middle
-}
-#view-quotation-management .table-wrap>table th:nth-child(1),
-#view-quotation-management .table-wrap>table td:nth-child(1){width:10.5%}
-#view-quotation-management .table-wrap>table th:nth-child(2),
-#view-quotation-management .table-wrap>table td:nth-child(2){width:8.5%}
-#view-quotation-management .table-wrap>table th:nth-child(3),
-#view-quotation-management .table-wrap>table td:nth-child(3){width:8%}
-#view-quotation-management .table-wrap>table th:nth-child(4),
-#view-quotation-management .table-wrap>table td:nth-child(4){width:16%}
-#view-quotation-management .table-wrap>table th:nth-child(5),
-#view-quotation-management .table-wrap>table td:nth-child(5){width:9%}
-#view-quotation-management .table-wrap>table th:nth-child(6),
-#view-quotation-management .table-wrap>table td:nth-child(6){width:7%}
-#view-quotation-management .table-wrap>table th:nth-child(7),
-#view-quotation-management .table-wrap>table td:nth-child(7){width:10%}
-#view-quotation-management .table-wrap>table th:nth-child(8),
-#view-quotation-management .table-wrap>table td:nth-child(8){width:10%}
-#view-quotation-management .table-wrap>table th:nth-child(9),
-#view-quotation-management .table-wrap>table td:nth-child(9){width:7%}
-#view-quotation-management .table-wrap>table th:nth-child(10),
-#view-quotation-management .table-wrap>table td:nth-child(10){width:3.5%;text-align:center;padding-left:3px;padding-right:3px}
-#view-quotation-management .table-wrap>table th:nth-child(11),
-#view-quotation-management .table-wrap>table td:nth-child(11){width:10.5%;padding-left:5px;padding-right:5px}
+#view-quotation-management .table-wrap>table td{box-sizing:border-box;padding:10px 8px;vertical-align:middle}
+#view-quotation-management .table-wrap>table th:nth-child(1),#view-quotation-management .table-wrap>table td:nth-child(1){width:10%}
+#view-quotation-management .table-wrap>table th:nth-child(2),#view-quotation-management .table-wrap>table td:nth-child(2){width:7%}
+#view-quotation-management .table-wrap>table th:nth-child(3),#view-quotation-management .table-wrap>table td:nth-child(3){width:7%}
+#view-quotation-management .table-wrap>table th:nth-child(4),#view-quotation-management .table-wrap>table td:nth-child(4){width:15%}
+#view-quotation-management .table-wrap>table th:nth-child(5),#view-quotation-management .table-wrap>table td:nth-child(5){width:8%}
+#view-quotation-management .table-wrap>table th:nth-child(6),#view-quotation-management .table-wrap>table td:nth-child(6){width:6%}
+#view-quotation-management .table-wrap>table th:nth-child(7),#view-quotation-management .table-wrap>table td:nth-child(7){width:9%}
+#view-quotation-management .table-wrap>table th:nth-child(8),#view-quotation-management .table-wrap>table td:nth-child(8){width:9%}
+#view-quotation-management .table-wrap>table th:nth-child(9),#view-quotation-management .table-wrap>table td:nth-child(9){width:7.5%}
+#view-quotation-management .table-wrap>table th:nth-child(10),#view-quotation-management .table-wrap>table td:nth-child(10){width:3.5%;text-align:center;padding-left:2px;padding-right:2px}
+#view-quotation-management .table-wrap>table th:nth-child(11),#view-quotation-management .table-wrap>table td:nth-child(11){width:18%;padding-left:8px;padding-right:8px}
 #view-quotation-management .table-wrap>table td:nth-child(10){font-variant-numeric:tabular-nums;font-weight:750}
 #view-quotation-management .table-wrap>table td:nth-child(11){overflow:visible}
-#view-quotation-management .qm-action{
-  display:flex;flex-flow:row nowrap;align-items:center;justify-content:flex-start;
-  gap:4px;min-width:0;white-space:nowrap
-}
-#view-quotation-management .qm-action .btn{
-  flex:0 1 auto;min-width:0;padding:6px 7px;font-size:10px;line-height:1.2;
-  white-space:nowrap;border-radius:8px
-}
+#view-quotation-management .qm-action{display:flex;flex-flow:row nowrap;align-items:center;justify-content:flex-start;gap:6px;min-width:0;white-space:nowrap}
+#view-quotation-management .qm-action .btn{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;min-width:0;padding:6px 9px;font-size:10px;line-height:1.2;white-space:nowrap;border-radius:8px}
 @media(min-width:1201px){
- #view-quotation-management .table-wrap>table th,
- #view-quotation-management .table-wrap>table td{padding-top:10px;padding-bottom:10px}
+ #view-quotation-management .table-wrap>table th,#view-quotation-management .table-wrap>table td{padding-top:10px;padding-bottom:10px}
 }
 @media(min-width:681px) and (max-width:1200px){
  #view-quotation-management .table-wrap{overflow-x:auto}
- #view-quotation-management .table-wrap>table{min-width:1120px!important}
- #view-quotation-management .table-wrap>table th,
- #view-quotation-management .table-wrap>table td{padding:8px 6px}
- #view-quotation-management .qm-action .btn{font-size:9px;padding:5px 6px}
+ #view-quotation-management .table-wrap>table{min-width:1180px!important}
+ #view-quotation-management .table-wrap>table th,#view-quotation-management .table-wrap>table td{padding:8px 6px}
+ #view-quotation-management .qm-action{gap:5px}
+ #view-quotation-management .qm-action .btn{font-size:9px;padding:5px 7px}
 }
 @media(max-width:680px){
  #view-quotation-management .table-wrap{overflow-x:auto}
- #view-quotation-management .table-wrap>table{min-width:1120px!important}
+ #view-quotation-management .table-wrap>table{min-width:1180px!important}
 }
 </style>
 </head>
