@@ -177,10 +177,10 @@
   function canSubmitStockHoldRole(){return STOCK_HOLD_ROLES.has(String(currentProfile?.designation||''));}
   function canManageHolds(){return roleLevel()>=70;}
   function allowedDepartmentList(){
-    // Department access is the source of truth for every role. Only Super Admin
-    // receives all four departments automatically; Admin/GM/Manager are scoped
-    // to the departments explicitly assigned in Employee Management.
-    if(currentProfile?.is_super_admin) return ['Personal','EV','Commercial','LLM'];
+    // Super Admin, Admin and General Manager have organization-wide department access.
+    // Managers and all other employees remain limited to explicitly assigned departments.
+    const role=String(currentProfile?.designation||'').trim().toLowerCase();
+    if(currentProfile?.is_super_admin||role==='super admin'||role==='admin'||role==='general manager') return ['Personal','EV','Commercial','LLM'];
     const valid=['Personal','EV','Commercial','LLM'];
     const assigned=Array.isArray(currentProfile?.department_access)&&currentProfile.department_access.length
       ?currentProfile.department_access
@@ -718,9 +718,16 @@
   }
   async function loadQuotations(department='Personal') {
     if(!has('quotation_management','view')) throw new Error('No quotation view permission.');
+    if(!allowedDepartmentList().some(d=>String(d).toLowerCase()===String(department).toLowerCase())) throw new Error('You do not have access to this department.');
+    const role=String(currentProfile?.designation||'').trim().toLowerCase();
+    const organizationWide=currentProfile?.is_super_admin===true||['super admin','admin','general manager','manager'].includes(role);
     const out=[];let from=0,chunk=500;
     while(true){
-      const part=await call(db().from('quotations').select('*,quotation_items(*)').eq('department',department).order('created_at',{ascending:false}).range(from,from+chunk-1));
+      let query=db().from('quotations').select('*,quotation_items(*)').eq('department',department);
+      // Individual employees see only their own quotations. Manager visibility is
+      // scoped by city + assigned department in Supabase RLS; Admin/GM see all.
+      if(!organizationWide) query=query.eq('created_by',currentUser.id);
+      const part=await call(query.order('created_at',{ascending:false}).range(from,from+chunk-1));
       out.push(...part);if(part.length<chunk)break;from+=chunk;
     }
     return out;
@@ -1429,10 +1436,16 @@
     wrap.innerHTML='<form id="svEmployeeForm" style="width:min(760px,100%);max-height:94vh;overflow:auto;background:#fff;padding:18px;border-radius:14px;color:#253140"><div style="font-size:20px;font-weight:850;margin-bottom:14px">Create Employee Login</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px"><label>Full Name<input required name="full_name" class="field" autocomplete="off"></label><label>Email<input required type="email" name="email" class="field" autocomplete="off"></label><label>Mobile Number<input type="tel" inputmode="numeric" autocomplete="tel" maxlength="16" name="phone" class="field" placeholder="10-digit mobile number (copy/paste supported)"></label><label>City<select required name="city" class="field"><option value="">Select City</option><option>Bhavnagar</option><option>Amreli</option><option>Botad</option><option>Rajula</option></select></label><label>Password<input required type="password" name="password" class="field" minlength="6" autocomplete="new-password"></label><label>Designation / Role<select required name="designation" id="svNewRole" class="field"><option value="">Select role</option>'+roles.map(x=>'<option value="'+x+'">'+x+'</option>').join('')+'</select></label></div><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Department Access</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">'+deptRows+'</div></section><div id="svCreateModulePermissions">'+moduleRows+'</div>'+dashboardRows+'<div style="font-size:12px;color:#718096;margin-top:8px">Selected departments automatically include all four department functions. Workspace modules and Dashboard Quick Access are assigned separately. Change Password is always available.</div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Create User</button></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
+    const newEmployeeCity=$('svEmployeeForm').elements.namedItem('city');
+    if(String(currentProfile?.designation||'')==='Manager'&&newEmployeeCity){
+      newEmployeeCity.value=currentProfile.city||'';
+      newEmployeeCity.disabled=true;
+    }
     $('svEmployeeForm').onsubmit=async e=>{
       e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;button.textContent='Creating…';
       try{
         const fd=new FormData(e.target),fields=Object.fromEntries(fd.entries());
+        if(String(currentProfile?.designation||'')==='Manager')fields.city=currentProfile.city||'';
         fields.department_access=fd.getAll('department_access');
         fields.modules=fd.getAll('module_access');
         fields.dashboard_shortcuts=fd.getAll('dashboard_shortcuts');
@@ -1508,11 +1521,13 @@
     rows=rows.filter(p=>!p.deleted_at);
     const designationFilter=section.querySelector('#svEmployeeDesignationFilter')?.value||'';
     const cityFilter=section.querySelector('#svEmployeeCityFilter')?.value||'';
-    if(currentProfile?.designation==='Manager'){
+    if(String(currentProfile?.designation||'').trim()==='Manager'){
       const managerDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
+      const managerCity=String(currentProfile?.city||'').trim().toLowerCase();
       rows=rows.filter(p=>{
-        const employeeDepartments=(Array.isArray(p.department_access)&&p.department_access.length?p.department_access:[p.department].filter(Boolean)).map(x=>String(x).toLowerCase());
-        return employeeDepartments.some(d=>managerDepartments.has(d));
+        const employeeDepartments=new Set((Array.isArray(p.department_access)&&p.department_access.length?p.department_access:[p.department].filter(Boolean)).map(x=>String(x).trim().toLowerCase()));
+        const sameCity=!!managerCity&&String(p.city||'').trim().toLowerCase()===managerCity;
+        return sameCity&&[...employeeDepartments].some(d=>managerDepartments.has(d));
       });
     }
     const roleOrder={'Super Admin':0,'Admin':1,'General Manager':2,'Manager':3,'Accountant':4,'HR':5,'DMS':6,'Executive':7,'Reception':8,'Receptionist':8,'Driver':9};
