@@ -1366,6 +1366,25 @@ td,.data-table td{font-size:13px;line-height:1.45}
   }
 }
 </style>
+<style id="price-list-breakup-and-column-layout-v2">
+@media (min-width:681px) {
+  #view-price-list .pl-table {width:100%!important;min-width:980px!important;table-layout:fixed!important}
+  #view-price-list .pl-table th,#view-price-list .pl-table td {padding:10px 9px!important;vertical-align:middle!important}
+  #view-price-list .pl-table th:nth-child(1),#view-price-list .pl-table td:nth-child(1){width:12%!important}
+  #view-price-list .pl-table th:nth-child(2),#view-price-list .pl-table td:nth-child(2){width:18%!important}
+  #view-price-list .pl-table th:nth-child(3),#view-price-list .pl-table td:nth-child(3){width:7%!important}
+  #view-price-list .pl-table th:nth-child(4),#view-price-list .pl-table td:nth-child(4){width:12%!important}
+  #view-price-list .pl-table th:nth-child(5),#view-price-list .pl-table td:nth-child(5){width:8%!important}
+  #view-price-list .pl-table th:nth-child(6),#view-price-list .pl-table td:nth-child(6){width:10%!important}
+  #view-price-list .pl-table th:nth-child(7),#view-price-list .pl-table td:nth-child(7){width:12%!important}
+  #view-price-list .pl-table th:nth-child(8),#view-price-list .pl-table td:nth-child(8){width:12%!important}
+  #view-price-list .pl-table th:nth-child(9),#view-price-list .pl-table td:nth-child(9){width:9%!important;text-align:center!important}
+  #view-price-list .pl-breakup-content {border-radius:12px!important;padding:12px 14px!important;box-shadow:0 16px 42px rgba(20,32,48,.22)!important}
+  #view-price-list .pl-breakup-row {display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:16px!important;padding:8px 2px!important;font-size:12px!important;line-height:1.35!important}
+  #view-price-list .pl-breakup-row span {white-space:normal!important;overflow-wrap:anywhere!important}
+  #view-price-list .pl-breakup-row b {white-space:nowrap!important;font-variant-numeric:tabular-nums!important}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -2458,5 +2477,5 @@ quoteDiscounts.addEventListener('change',calc);
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
 <script src="./backend/supabase-runtime.js?v=role-scope-20261121a"></script>
-<script src="./backend/price-list-module.js?v=department-filter-20261121a"></script>
+<script src="./backend/price-list-module.js?v=price-breakup-popup-20261121b"></script>
 </body></html>
