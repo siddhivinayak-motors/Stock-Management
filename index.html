@@ -297,37 +297,6 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
  .quote-number-strip strong{font-size:13px}
 }
 
-/* Quotation Management: compact, balanced mobile quotation cards */
-#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
-#view-quotation-management .table-wrap table{width:max-content;min-width:1120px;table-layout:auto}
-#view-quotation-management .table-wrap th,#view-quotation-management .table-wrap td{white-space:nowrap;vertical-align:middle}
-#view-quotation-management .qm-action{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
-@media(max-width:680px){
- #view-quotation-management .card-head{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px}
- #view-quotation-management #quotationCityFilterWrap{width:100%;justify-content:flex-end;margin-left:0!important}
- #view-quotation-management .table-wrap{overflow:visible;width:100%;max-width:100%}
- #view-quotation-management .table-wrap table{display:block;width:100%;min-width:0;table-layout:fixed;border-collapse:separate;border-spacing:0}
- #view-quotation-management .table-wrap thead{display:none}
- #view-quotation-management .table-wrap tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:12px}
- #view-quotation-management .table-wrap tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:2px;min-width:0;width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;box-shadow:0 2px 9px rgba(20,35,55,.05)}
- #view-quotation-management .table-wrap tbody td{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;min-width:0;width:100%;max-width:100%;box-sizing:border-box;padding:9px 0;border:0;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.4;font-size:13px;color:#344054}
- #view-quotation-management .table-wrap tbody td::before{content:attr(data-label);display:block;max-width:100%;margin:0 0 4px;color:#84909c;font-size:10px;font-weight:800;letter-spacing:.35px;line-height:1.25;text-transform:uppercase;white-space:normal}
- #view-quotation-management .table-wrap tbody td:nth-child(1),
- #view-quotation-management .table-wrap tbody td:nth-child(4),
- #view-quotation-management .table-wrap tbody td:nth-child(12){grid-column:1/-1}
- #view-quotation-management .table-wrap tbody td:nth-child(1){padding:2px 0 11px;margin-bottom:3px;border-bottom:1px solid #edf0f3;font-size:15px;font-weight:800;color:#26313d}
- #view-quotation-management .table-wrap tbody td:nth-child(4){padding-top:10px;border-top:1px solid #edf0f3}
- #view-quotation-management .table-wrap tbody td:nth-child(12){padding-top:11px;margin-top:5px;border-top:1px solid #edf0f3}
- #view-quotation-management .table-wrap tbody td:nth-child(10) .pill{max-width:100%;white-space:normal}
- #view-quotation-management .qm-action{display:flex;align-items:center;flex-wrap:wrap;gap:8px;width:100%}
- #view-quotation-management .qm-action .btn{min-height:38px;padding:8px 13px;font-size:12px;white-space:nowrap}
- #view-quotation-management .table-wrap tbody tr td[colspan]{grid-column:1/-1}
-}
-@media(max-width:380px){
- #view-quotation-management .table-wrap tbody tr{column-gap:10px;padding:10px}
- #view-quotation-management .table-wrap tbody td{font-size:12px}
- #view-quotation-management .table-wrap tbody td::before{font-size:9px}
-}
 @media print{
  body{background:#fff!important}
  .topbar,.sidebar,.scrim,.page-head,.footer-note,.quote-actions,.quote-charge-heading .btn{display:none!important}
@@ -974,123 +943,11 @@ td,.data-table td{font-size:13px;line-height:1.45}
 @media print{body *{visibility:hidden!important}#view-reports,#view-reports *{visibility:visible!important}#view-reports{position:absolute;left:0;top:0;width:100%;padding:0!important}#view-reports .page-head button,#view-reports .retail-filter-card,#view-reports .retail-export-actions{display:none!important}#view-reports .retail-kpi-grid{grid-template-columns:repeat(4,1fr)}#view-reports .retail-register-card{box-shadow:none;border:0}#view-reports .retail-table-wrap{overflow:visible}#view-reports table{font-size:10px}}
 </style>
 
-<style id="quotation-management-action-layout-v3">
-/* Balanced desktop register: compact print count, generous aligned action area. */
-#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:visible}
-#view-quotation-management .table-wrap>table{width:100%;min-width:0!important;max-width:100%;table-layout:fixed;border-collapse:collapse}
-#view-quotation-management .table-wrap>table th,
-#view-quotation-management .table-wrap>table td{box-sizing:border-box;padding:10px 8px;vertical-align:middle}
-#view-quotation-management .table-wrap>table th:nth-child(1),#view-quotation-management .table-wrap>table td:nth-child(1){width:10%}
-#view-quotation-management .table-wrap>table th:nth-child(2),#view-quotation-management .table-wrap>table td:nth-child(2){width:7%}
-#view-quotation-management .table-wrap>table th:nth-child(3),#view-quotation-management .table-wrap>table td:nth-child(3){width:7%}
-#view-quotation-management .table-wrap>table th:nth-child(4),#view-quotation-management .table-wrap>table td:nth-child(4){width:15%}
-#view-quotation-management .table-wrap>table th:nth-child(5),#view-quotation-management .table-wrap>table td:nth-child(5){width:8%}
-#view-quotation-management .table-wrap>table th:nth-child(6),#view-quotation-management .table-wrap>table td:nth-child(6){width:6%}
-#view-quotation-management .table-wrap>table th:nth-child(7),#view-quotation-management .table-wrap>table td:nth-child(7){width:9%}
-#view-quotation-management .table-wrap>table th:nth-child(8),#view-quotation-management .table-wrap>table td:nth-child(8){width:9%}
-#view-quotation-management .table-wrap>table th:nth-child(9),#view-quotation-management .table-wrap>table td:nth-child(9){width:7.5%}
-#view-quotation-management .table-wrap>table th:nth-child(10),#view-quotation-management .table-wrap>table td:nth-child(10){width:3.5%;text-align:center;padding-left:2px;padding-right:2px}
-#view-quotation-management .table-wrap>table th:nth-child(11),#view-quotation-management .table-wrap>table td:nth-child(11){width:18%;padding-left:8px;padding-right:8px}
-#view-quotation-management .table-wrap>table td:nth-child(10){font-variant-numeric:tabular-nums;font-weight:750}
-#view-quotation-management .table-wrap>table td:nth-child(11){overflow:visible}
-#view-quotation-management .qm-action{display:flex;flex-flow:row nowrap;align-items:center;justify-content:flex-start;gap:6px;min-width:0;white-space:nowrap}
-#view-quotation-management .qm-action .btn{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;min-width:0;padding:6px 9px;font-size:10px;line-height:1.2;white-space:nowrap;border-radius:8px}
-@media(min-width:1201px){
- #view-quotation-management .table-wrap>table th,#view-quotation-management .table-wrap>table td{padding-top:10px;padding-bottom:10px}
-}
-@media(min-width:681px) and (max-width:1200px){
- #view-quotation-management .table-wrap{overflow-x:auto}
- #view-quotation-management .table-wrap>table{min-width:1180px!important}
- #view-quotation-management .table-wrap>table th,#view-quotation-management .table-wrap>table td{padding:8px 6px}
- #view-quotation-management .qm-action{gap:5px}
- #view-quotation-management .qm-action .btn{font-size:9px;padding:5px 7px}
-}
-@media(max-width:680px){
- #view-quotation-management .table-wrap{overflow-x:auto}
- #view-quotation-management .table-wrap>table{min-width:1180px!important}
-}
-</style>
 
-<style id="quotation-management-action-buttons-final">
-/* Final polish: distinct, evenly spaced action controls in the last column. */
-#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto}
-#view-quotation-management .table-wrap table{width:100%;min-width:1180px;table-layout:fixed}
-#view-quotation-management .table-wrap th:nth-last-child(2),
-#view-quotation-management .table-wrap td:nth-last-child(2){width:5%;text-align:center;padding-left:4px;padding-right:4px}
-#view-quotation-management .table-wrap th:last-child,
-#view-quotation-management .table-wrap td:last-child{width:21%;min-width:245px;padding:7px 10px}
-#view-quotation-management .table-wrap td:last-child{overflow:visible}
-#view-quotation-management .qm-action{
- display:flex!important;flex-flow:row nowrap!important;align-items:center!important;
- justify-content:flex-start!important;gap:7px!important;width:100%;min-width:0;
- white-space:nowrap;padding:1px 0
-}
-#view-quotation-management .qm-action .btn{
- display:inline-flex!important;align-items:center;justify-content:center;
- flex:0 0 auto!important;min-width:48px;height:30px;padding:0 10px!important;
- border-radius:8px!important;font-size:10px!important;font-weight:750!important;
- line-height:1!important;white-space:nowrap!important;letter-spacing:0!important;
- box-shadow:0 1px 3px rgba(24,39,58,.08);border:1px solid #dfe5ec
-}
-#view-quotation-management .qm-action .btn.primary{background:#e51e2a;color:#fff;border-color:#e51e2a}
-#view-quotation-management .qm-action .btn:not(.primary){background:#fff;color:#344052}
-#view-quotation-management .qm-action .btn.danger,
-#view-quotation-management .qm-action .btn.delete{background:#fff1f2;color:#c51d2a;border-color:#ffd0d4}
-#view-quotation-management .qm-action .btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(24,39,58,.13)}
-@media(max-width:1200px){
- #view-quotation-management .table-wrap table{min-width:1180px}
- #view-quotation-management .table-wrap td:last-child{min-width:245px}
-}
-</style>
 
-<style id="quotation-management-register-layout-v4">
-/* Final 12-column register grid: readable status, compact print count, balanced actions. */
-#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:visible}
-#view-quotation-management .table-wrap>table{
- width:100%;min-width:1480px;max-width:none;table-layout:fixed;border-collapse:collapse
-}
-#view-quotation-management .table-wrap>table th,
-#view-quotation-management .table-wrap>table td{
- box-sizing:border-box;padding:9px 7px;vertical-align:middle
-}
-#view-quotation-management .table-wrap>table th:nth-child(1),#view-quotation-management .table-wrap>table td:nth-child(1){width:9%}
-#view-quotation-management .table-wrap>table th:nth-child(2),#view-quotation-management .table-wrap>table td:nth-child(2){width:7%}
-#view-quotation-management .table-wrap>table th:nth-child(3),#view-quotation-management .table-wrap>table td:nth-child(3){width:6.5%}
-#view-quotation-management .table-wrap>table th:nth-child(4),#view-quotation-management .table-wrap>table td:nth-child(4){width:13%}
-#view-quotation-management .table-wrap>table th:nth-child(5),#view-quotation-management .table-wrap>table td:nth-child(5){width:8%}
-#view-quotation-management .table-wrap>table th:nth-child(6),#view-quotation-management .table-wrap>table td:nth-child(6){width:5.5%}
-#view-quotation-management .table-wrap>table th:nth-child(7),#view-quotation-management .table-wrap>table td:nth-child(7){width:8.5%}
-#view-quotation-management .table-wrap>table th:nth-child(8),#view-quotation-management .table-wrap>table td:nth-child(8){width:7%}
-#view-quotation-management .table-wrap>table th:nth-child(9),#view-quotation-management .table-wrap>table td:nth-child(9){width:8%}
-#view-quotation-management .table-wrap>table th:nth-child(10),#view-quotation-management .table-wrap>table td:nth-child(10){width:8%;text-align:center;white-space:nowrap}
-#view-quotation-management .table-wrap>table th:nth-child(11),#view-quotation-management .table-wrap>table td:nth-child(11){width:4%;text-align:center;padding-left:3px;padding-right:3px}
-#view-quotation-management .table-wrap>table th:nth-child(12),#view-quotation-management .table-wrap>table td:nth-child(12){width:15.5%;padding-left:7px;padding-right:7px}
-#view-quotation-management .table-wrap>table td:nth-child(10) .pill{
- display:inline-flex;align-items:center;justify-content:center;width:auto;min-width:0;max-width:none;
- padding:5px 9px;white-space:nowrap;overflow:visible;text-overflow:clip;line-height:1.2;
- font-size:10px;letter-spacing:.15px
-}
-#view-quotation-management .table-wrap>table td:nth-child(11){font-variant-numeric:tabular-nums;font-weight:750}
-#view-quotation-management .table-wrap>table td:nth-child(12){overflow:visible}
-#view-quotation-management .qm-action{
- display:flex!important;flex-flow:row nowrap!important;align-items:center!important;justify-content:flex-start!important;
- gap:5px!important;width:100%;min-width:0;white-space:nowrap;padding:1px 0
-}
-#view-quotation-management .qm-action .btn{
- display:inline-flex!important;flex:0 0 auto!important;align-items:center;justify-content:center;
- min-width:43px;height:29px;padding:0 7px!important;font-size:10px!important;line-height:1!important;
- white-space:nowrap!important;letter-spacing:0!important;border-radius:7px!important
-}
-@media(min-width:1481px){
- #view-quotation-management .table-wrap>table{min-width:0;width:100%}
-}
-@media(max-width:1480px){
- #view-quotation-management .table-wrap>table{min-width:1480px}
-}
-@media(max-width:680px){
- #view-quotation-management .table-wrap>table{min-width:1480px}
-}
-</style>
+
+
+
 
 
 <style id="stock-edit-button-horizontal-v1">
@@ -1197,6 +1054,50 @@ td,.data-table td{font-size:13px;line-height:1.45}
 }
 </style>
 
+<style id="quotation-management-register-layout-v5">
+/* One consistent 12-column register. Mobile uses horizontal scrolling, never stacked cards. */
+#view-quotation-management .table-wrap{
+ width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;
+ overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;
+}
+#view-quotation-management .table-wrap>table{
+ display:table!important;width:max-content!important;min-width:1585px!important;
+ max-width:none!important;table-layout:fixed!important;border-collapse:collapse;
+}
+#view-quotation-management .table-wrap>table thead{display:table-header-group!important}
+#view-quotation-management .table-wrap>table tbody{display:table-row-group!important}
+#view-quotation-management .table-wrap>table tr{display:table-row!important}
+#view-quotation-management .table-wrap>table th,
+#view-quotation-management .table-wrap>table td{
+ display:table-cell!important;box-sizing:border-box;padding:10px 8px!important;
+ vertical-align:middle;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;
+ border-bottom:1px solid #e8edf2;font-size:11px;line-height:1.35;
+}
+#view-quotation-management .table-wrap>table th{font-size:10px;font-weight:800;letter-spacing:.35px}
+#view-quotation-management .table-wrap>table th:nth-child(1),#view-quotation-management .table-wrap>table td:nth-child(1){width:155px;min-width:155px}
+#view-quotation-management .table-wrap>table th:nth-child(2),#view-quotation-management .table-wrap>table td:nth-child(2){width:135px;min-width:135px}
+#view-quotation-management .table-wrap>table th:nth-child(3),#view-quotation-management .table-wrap>table td:nth-child(3){width:115px;min-width:115px;font-variant-numeric:tabular-nums}
+#view-quotation-management .table-wrap>table th:nth-child(4),#view-quotation-management .table-wrap>table td:nth-child(4){width:200px;min-width:200px}
+#view-quotation-management .table-wrap>table th:nth-child(5),#view-quotation-management .table-wrap>table td:nth-child(5){width:135px;min-width:135px}
+#view-quotation-management .table-wrap>table th:nth-child(6),#view-quotation-management .table-wrap>table td:nth-child(6){width:95px;min-width:95px}
+#view-quotation-management .table-wrap>table th:nth-child(7),#view-quotation-management .table-wrap>table td:nth-child(7){width:130px;min-width:130px}
+#view-quotation-management .table-wrap>table th:nth-child(8),#view-quotation-management .table-wrap>table td:nth-child(8){width:100px;min-width:100px;text-align:right;font-variant-numeric:tabular-nums}
+#view-quotation-management .table-wrap>table th:nth-child(9),#view-quotation-management .table-wrap>table td:nth-child(9){width:110px;min-width:110px;text-align:right;font-variant-numeric:tabular-nums}
+#view-quotation-management .table-wrap>table th:nth-child(10),#view-quotation-management .table-wrap>table td:nth-child(10){width:95px;min-width:95px;text-align:center}
+#view-quotation-management .table-wrap>table th:nth-child(11),#view-quotation-management .table-wrap>table td:nth-child(11){width:75px;min-width:75px;text-align:center;font-variant-numeric:tabular-nums}
+#view-quotation-management .table-wrap>table th:nth-child(12),#view-quotation-management .table-wrap>table td:nth-child(12){width:240px;min-width:240px;overflow:visible}
+#view-quotation-management .qm-action{display:flex!important;flex-flow:row nowrap;align-items:center;gap:6px;min-width:0;white-space:nowrap}
+#view-quotation-management .qm-action .btn{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;min-width:0;padding:6px 8px;font-size:10px;line-height:1.2;white-space:nowrap}
+#view-quotation-management .table-wrap>table td:nth-child(10) .pill{white-space:nowrap}
+@media(max-width:680px){
+ #view-quotation-management .table-wrap{overflow-x:auto!important;overflow-y:hidden!important}
+ #view-quotation-management .table-wrap>table{min-width:1585px!important;width:max-content!important}
+ #view-quotation-management .table-wrap>table th,
+ #view-quotation-management .table-wrap>table td{padding:9px 7px!important;font-size:11px}
+ #view-quotation-management .qm-action{gap:5px}
+ #view-quotation-management .qm-action .btn{padding:6px 7px;font-size:10px}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -1853,54 +1754,7 @@ function printQuoteDocumentPaper(q){
  if(!w){toast('Allow pop-ups to print quotation');return}
  const rows=itemRows||'<tr><td colspan="3">No charge details</td></tr>';
  const html='<!doctype html><html><head><meta charset="utf-8"><title>Quotation '+esc(q.no)+'</title><style>'+
- '@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#20252c;font-family:Arial,Helvetica,sans-serif}body{font-size:10px;line-height:1.25}.page{width:194mm;max-width:100%;margin:0 auto}.top{display:grid;grid-template-columns:30mm 1fr 1.45fr;align-items:center;gap:3mm;border:1px solid #333;padding:2.5mm 3mm}.mahindra{font-size:15px;font-weight:900;letter-spacing:-.5px;color:#20252c}.dealer{font-size:13px;font-weight:800;line-height:1.15}.dealer small{display:block;font-size:8px;font-weight:500;margin-top:2px}.quote-tag{text-align:center;font-size:12px;font-weight:900;border:1px solid #333;padding:1.5mm 2mm}.meta{display:flex;justify-content:space-between;padding:2mm 3mm;border:1px solid #333;border-top:0;font-weight:700}.intro{padding:2mm 3mm;border:1px solid #333;border-top:0}.customer{border:1px solid #333;border-top:0}.cust-row{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(28mm,.62fr) minmax(0,1.2fr);min-height:8mm}.cust-row .wide{grid-column:1/-1}.cust-row>div{padding:1.7mm 2.5mm;border-bottom:1px solid #555}.cust-row>div+div{border-left:1px solid #555}.label{font-size:8px;color:#555}.value{font-size:10px;font-weight:700;min-height:4mm;overflow-wrap:anywhere}.vehicle-head{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #333;border-top:0;text-align:center}.vehicle-head>div{padding:1.8mm;border-right:1px solid #333}.vehicle-head>div:last-child{border:0}.vehicle-head b{display:block;font-size:10px}.vehicle-head span{display:block;font-size:10px;font-weight:700;min-height:5mm;margin-top:1mm}.content{display:grid;grid-template-columns:1.04fr 1fr;border:1px solid #333;border-top:0}.price{border-right:1px solid #333}.price table{width:100%;border-collapse:collapse;table-layout:fixed}.price th,.price td{border-bottom:1px solid #555;padding:1.45mm 1.8mm;font-size:9px}.price th{font-size:9px;font-weight:800}.price .sl{width:9mm;text-align:center}.price .amt{width:27mm;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.price tr.sum{font-weight:800;background:#f2f2f2}.price tr.discount-line{color:#087b42;background:#f2fbf5}.price tr.discount-total{font-weight:800;color:#087b42;background:#edf8f0}.price tr.grand{font-weight:900;background:#e9e9e9;font-size:11px}.price tr.grand td{font-size:10px;border-top:1.5px solid #333}.price tr.net-after-approval{font-weight:800;background:#fff8e8;color:#8a5a00}.pending-note{font-size:7px;color:#a36a00;font-weight:700}.terms{padding:2mm 2.5mm}.terms h3{font-size:9px;margin:0 0 1.5mm;text-align:center}.terms ol{margin:0;padding-left:4mm}.terms li{font-size:8px;line-height:1.35;margin:0 0 2.5mm}.bank{margin-top:2mm;font-size:8px;line-height:1.4}.bank b{font-size:8px}.bottom{display:grid;grid-template-columns:1fr 1fr;border:1px solid #333;border-top:0;min-height:16mm}.sales{padding:2mm 2.5mm}.sales div{padding:1mm 0;border-bottom:1px solid #aaa;font-size:9px}.sales b{display:inline-block;min-width:32mm}.sign{text-align:right;padding:2mm 4mm;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;font-size:9px;font-weight:700}.stamp{width:28mm;height:15mm;border:1px dashed #999;border-radius:50%;margin-bottom:1mm;display:flex;align-items:center;justify-content:center;color:#888;font-size:7px;font-weight:400}.footer{text-align:center;font-size:7px;margin-top:2mm;color:#555}@media screen{body{padding:16px;background:#e8edf2}.page{background:#fff;padding:4mm;box-shadow:0 3px 18px #0002}}'+
- `
-/* V27 — Stock Register action visibility, Hold placement and responsive fit */
-#view-stock #stockTable{width:max-content;min-width:1650px;table-layout:auto}
-#view-stock .table-wrap{display:block;width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
-#view-stock #stockTable th,#view-stock #stockTable td{white-space:nowrap;vertical-align:middle}
-#view-stock #stockTable th:first-child,#view-stock #stockTable td:first-child{min-width:68px;width:68px;text-align:center}
-#view-stock #stockTable th:nth-child(2),#view-stock #stockTable td:nth-child(2){min-width:82px;width:82px;text-align:center}
-#view-stock #stockTable th:last-child,#view-stock #stockTable td:last-child{min-width:150px;width:150px;white-space:nowrap}
-#view-stock #stockTable td:last-child .btn{margin:2px 3px}
-#view-stock .stock-hold-btn{background:#c92535!important;border:1px solid #b51e2c!important;color:#fff!important;font-weight:800;min-width:58px}
-#view-stock .stock-hold-btn:hover{background:#ad1d2b!important}
-#svVehicleEditForm #svVehicleHoldInside{background:#c92535!important;color:#fff!important;border-color:#b51e2c!important}
-@media(max-width:900px){#view-stock #stockTable{min-width:1650px}#view-stock #stockTable th:last-child,#view-stock #stockTable td:last-child{min-width:150px}}
-`+
-'
-/* Quotation Register: restore the original row-based register layout on every screen */
-#view-quotation-management .table-wrap{
- width:100%;max-width:100%;overflow-x:auto!important;overflow-y:hidden!important;
- overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
-}
-#view-quotation-management .table-wrap>table{
- display:table!important;width:max-content!important;min-width:1480px!important;
- max-width:none!important;table-layout:auto!important;border-collapse:collapse;
-}
-#view-quotation-management .table-wrap>table thead{display:table-header-group!important}
-#view-quotation-management .table-wrap>table tbody{display:table-row-group!important;padding:0!important}
-#view-quotation-management .table-wrap>table tbody tr{display:table-row!important;width:auto!important;
- padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important}
-#view-quotation-management .table-wrap>table th,
-#view-quotation-management .table-wrap>table td{
- display:table-cell!important;position:static;white-space:nowrap!important;
- width:auto;min-width:0;max-width:none;overflow:visible;text-overflow:clip;
- padding:10px 9px!important;vertical-align:middle;border-bottom:1px solid #e7ebf0;
-}
-#view-quotation-management .table-wrap>table td::before{content:none!important;display:none!important}
-#view-quotation-management .table-wrap>table td:nth-child(4){min-width:220px}
-#view-quotation-management .table-wrap>table td:last-child{min-width:210px;overflow:visible}
-#view-quotation-management .qm-action{display:flex;align-items:center;flex-wrap:nowrap;gap:7px}
-#view-quotation-management .qm-action .btn{white-space:nowrap}
-@media(max-width:680px){
- #view-quotation-management .table-wrap{overflow-x:auto!important;overflow-y:hidden!important}
- #view-quotation-management .table-wrap>table{min-width:1480px!important;width:max-content!important}
- #view-quotation-management .table-wrap>table th,
- #view-quotation-management .table-wrap>table td{padding:10px 9px!important;font-size:12px}
-}
-
-</style></head><body><main class="page">'+
+ '@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff;color:#20252c;font-family:Arial,Helvetica,sans-serif}body{font-size:10px;line-height:1.25}.page{width:194mm;max-width:100%;margin:0 auto}.top{display:grid;grid-template-columns:30mm 1fr 1.45fr;align-items:center;gap:3mm;border:1px solid #333;padding:2.5mm 3mm}.mahindra{font-size:15px;font-weight:900;letter-spacing:-.5px;color:#20252c}.dealer{font-size:13px;font-weight:800;line-height:1.15}.dealer small{display:block;font-size:8px;font-weight:500;margin-top:2px}.quote-tag{text-align:center;font-size:12px;font-weight:900;border:1px solid #333;padding:1.5mm 2mm}.meta{display:flex;justify-content:space-between;padding:2mm 3mm;border:1px solid #333;border-top:0;font-weight:700}.intro{padding:2mm 3mm;border:1px solid #333;border-top:0}.customer{border:1px solid #333;border-top:0}.cust-row{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(28mm,.62fr) minmax(0,1.2fr);min-height:8mm}.cust-row .wide{grid-column:1/-1}.cust-row>div{padding:1.7mm 2.5mm;border-bottom:1px solid #555}.cust-row>div+div{border-left:1px solid #555}.label{font-size:8px;color:#555}.value{font-size:10px;font-weight:700;min-height:4mm;overflow-wrap:anywhere}.vehicle-head{display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #333;border-top:0;text-align:center}.vehicle-head>div{padding:1.8mm;border-right:1px solid #333}.vehicle-head>div:last-child{border:0}.vehicle-head b{display:block;font-size:10px}.vehicle-head span{display:block;font-size:10px;font-weight:700;min-height:5mm;margin-top:1mm}.content{display:grid;grid-template-columns:1.04fr 1fr;border:1px solid #333;border-top:0}.price{border-right:1px solid #333}.price table{width:100%;border-collapse:collapse;table-layout:fixed}.price th,.price td{border-bottom:1px solid #555;padding:1.45mm 1.8mm;font-size:9px}.price th{font-size:9px;font-weight:800}.price .sl{width:9mm;text-align:center}.price .amt{width:27mm;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.price tr.sum{font-weight:800;background:#f2f2f2}.price tr.discount-line{color:#087b42;background:#f2fbf5}.price tr.discount-total{font-weight:800;color:#087b42;background:#edf8f0}.price tr.grand{font-weight:900;background:#e9e9e9;font-size:11px}.price tr.grand td{font-size:10px;border-top:1.5px solid #333}.price tr.net-after-approval{font-weight:800;background:#fff8e8;color:#8a5a00}.pending-note{font-size:7px;color:#a36a00;font-weight:700}.terms{padding:2mm 2.5mm}.terms h3{font-size:9px;margin:0 0 1.5mm;text-align:center}.terms ol{margin:0;padding-left:4mm}.terms li{font-size:8px;line-height:1.35;margin:0 0 2.5mm}.bank{margin-top:2mm;font-size:8px;line-height:1.4}.bank b{font-size:8px}.bottom{display:grid;grid-template-columns:1fr 1fr;border:1px solid #333;border-top:0;min-height:16mm}.sales{padding:2mm 2.5mm}.sales div{padding:1mm 0;border-bottom:1px solid #aaa;font-size:9px}.sales b{display:inline-block;min-width:32mm}.sign{text-align:right;padding:2mm 4mm;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;font-size:9px;font-weight:700}.stamp{width:28mm;height:15mm;border:1px dashed #999;border-radius:50%;margin-bottom:1mm;display:flex;align-items:center;justify-content:center;color:#888;font-size:7px;font-weight:400}.footer{text-align:center;font-size:7px;margin-top:2mm;color:#555}@media screen{body{padding:16px;background:#e8edf2}.page{background:#fff;padding:4mm;box-shadow:0 3px 18px #0002}}'+'</style></head><body><main class="page">'+
  '<header class="top"><div class="mahindra">MAHINDRA</div><div class="quote-tag">QUOTATION</div><div class="dealer">SIDDHIVINAYAK MOTORS PVT. LTD.<small>Authorised Dealer : Mahindra &amp; Mahindra Limited<br>'+esc(q.branchAddress||'Chitra, Bhavnagar, Gujarat')+'<br>GSTIN No.: '+esc(q.gstin||'24AAMCS1007J1ZI')+'</small></div></header>'+
  '<div class="meta"><span>Date &amp; Time: '+esc(dateText+(timeText?' · '+timeText:''))+'</span><span>Quotation No.: '+esc(q.no)+'</span></div>'+
  '<div class="intro">Dear Sir,<br>We are pleased to offer best quote for Mahindra passenger vehicle as per details below.</div>'+
