@@ -1647,13 +1647,11 @@ function printQuoteDocumentPaper(q){
  const itemRows=regular.map((x,i)=>'<tr><td class="sl">'+(i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">'+amount(x.amount)+'</td></tr>').join('');
  const discountRows=discounts.map((x,i)=>'<tr class="discount-line"><td class="sl">'+(regular.length+i+1)+'</td><td>'+esc(x.name)+(discountApproved?'':' <span class="pending-note">(Pending approval)</span>')+'</td><td class="amt">− ₹ '+moneyPrint(Math.abs(Number(x.amount)||0))+'</td></tr>').join('');
  const totalDiscount=discounts.reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
- const approvedTotal=Math.max(0,Number(q.subtotal||0)-totalDiscount);
- const payableTotal=discountApproved?approvedTotal:Number(q.subtotal||0);
+ const netTotal=Math.max(0,Number(q.subtotal||0)-totalDiscount);
  const sumRows='<tr class="sum"><td colspan="2">SUBTOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
   discountRows+
-  '<tr class="discount-total"><td colspan="2">TOTAL DISCOUNT'+(discountApproved?'':' (PROPOSED)')+'</td><td class="amt">− ₹ '+moneyPrint(totalDiscount)+'</td></tr>'+
-  '<tr class="grand"><td colspan="2">'+(discountApproved?'GRAND TOTAL':'PAYABLE BEFORE DISCOUNT APPROVAL')+'</td><td class="amt">₹ '+moneyPrint(payableTotal)+'</td></tr>'+
-  (discountApproved?'':'<tr class="net-after-approval"><td colspan="2">NET TOTAL IF DISCOUNT APPROVED</td><td class="amt">₹ '+moneyPrint(approvedTotal)+'</td></tr>');
+  '<tr class="discount-total"><td colspan="2">TOTAL DISCOUNT</td><td class="amt">− ₹ '+moneyPrint(totalDiscount)+'</td></tr>'+
+  '<tr class="grand"><td colspan="2">'+(discountApproved?'GRAND TOTAL':'PROPOSED GRAND TOTAL (PENDING APPROVAL)')+'</td><td class="amt">₹ '+moneyPrint(netTotal)+'</td></tr>';
  const dateRaw=String(q.date||new Date().toISOString().slice(0,10));
  const dateObj=new Date(dateRaw+'T00:00:00');
  const dateText=Number.isNaN(dateObj.getTime())?dateRaw:dateObj.toLocaleDateString('en-IN');
