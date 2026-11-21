@@ -1,8 +1,8 @@
 name: Deploy Stock Management to GitHub Pages
 
 on:
-  push:
-    branches: [main]
+  # GitHub Pages branch-source deployment is the single automatic publisher.
+  # Keep this artifact-based workflow manual-only to prevent competing deploy runs.
   workflow_dispatch:
 
 permissions:
