@@ -1655,7 +1655,8 @@ function printQuoteDocumentPaper(q){
  const sumRows='<tr class="sum"><td colspan="2">SUBTOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
   discountRows+
   '<tr class="discount-total"><td colspan="2">TOTAL DISCOUNT</td><td class="amt">− ₹ '+moneyPrint(totalDiscount)+'</td></tr>'+
-  '<tr class="grand"><td colspan="2">'+(discountApproved?'GRAND TOTAL':'PROPOSED GRAND TOTAL (PENDING APPROVAL)')+'</td><td class="amt">₹ '+moneyPrint(netTotal)+'</td></tr>';
+  '<tr class="grand"><td colspan="2">'+(discountApproved?'GRAND TOTAL':'PROPOSED GRAND TOTAL (PENDING APPROVAL)')+'</td><td class="amt">₹ '+moneyPrint(netTotal)+'</td></tr>'+
+  '<tr class="amount-words"><td colspan="3"><b>Amount in Words:</b> '+esc(numberWordsIndian(netTotal))+'</td></tr>';
  const dateRaw=String(q.date||new Date().toISOString().slice(0,10));
  const dateObj=new Date(dateRaw+'T00:00:00');
  const dateText=Number.isNaN(dateObj.getTime())?dateRaw:dateObj.toLocaleDateString('en-IN');
