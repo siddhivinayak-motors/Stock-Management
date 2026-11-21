@@ -2040,19 +2040,20 @@ function printQuoteDocumentPaper(q){
  const moneyPrint=v=>Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
  const amount=v=>Number(v||0)===0?'—':'₹ '+moneyPrint(v);
  const all=q.items||[];
- // Print mirrors the quotation form: only Retail Offer and Exchange Offer are discount rows.
- // Pending/Denied quotes print at gross subtotal; approved discounts print item-wise.
- const discountApproved=String(q.status||'').toUpperCase()==='APPROVED' && !!q.approvedBy && !!q.approvedAt;
- const isDiscountLine=x=>!!x.discount||/less\s+(?:retail|exchange|extra)\s+(?:offer|discount)|extra\s+discount/i.test(String(x.name||''));
+ // Discounts are part of the saved quotation, regardless of approval status.
+ const isDiscountLine=x=>!!x.discount||/less\\s+(?:retail|exchange|extra)\\s+(?:offer|discount)|extra\\s+discount/i.test(String(x.name||''));
  const regular=all.filter(x=>!isDiscountLine(x));
  const discounts=all.filter(x=>isDiscountLine(x)&&/retail|exchange/i.test(String(x.name||'')));
  const grossSubtotal=regular.reduce((sum,x)=>sum+Math.max(0,Number(x.amount)||0),0)||Math.max(0,Number(q.subtotal||0));
  const itemRows=regular.map((x,i)=>'<tr><td class="sl">'+(i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">'+amount(x.amount)+'</td></tr>').join('');
  const itemDiscountTotal=discounts.reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
- const netTotal=discountApproved?Math.max(0,grossSubtotal-itemDiscountTotal):grossSubtotal;
- const discountRows=discountApproved
+ const savedDiscount=Math.max(0,Number(q.discount||0));
+ const effectiveDiscount=itemDiscountTotal>0?itemDiscountTotal:savedDiscount;
+ const netTotal=Math.max(0,grossSubtotal-effectiveDiscount);
+ // Older quotations may contain only the aggregate discount field; never invent a Retail/Exchange split.
+ const discountRows=discounts.length
   ? discounts.map((x,i)=>'<tr class="discount-line"><td class="sl">'+(regular.length+i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">− ₹ '+moneyPrint(Math.abs(Number(x.amount)||0))+'</td></tr>').join('')
-  : '';
+  : effectiveDiscount>0?'<tr class="discount-line"><td class="sl">'+(regular.length+1)+'</td><td>TOTAL DISCOUNT</td><td class="amt">− ₹ '+moneyPrint(effectiveDiscount)+'</td></tr>':'';
  const sumRows='<tr class="sum"><td colspan="2">SUBTOTAL</td><td class="amt">₹ '+moneyPrint(grossSubtotal)+'</td></tr>'+
   discountRows+
   '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(netTotal)+'</td></tr>'+
@@ -2307,6 +2308,11 @@ function getQuotePayload(){
  if(!model||!customer||phone.length!==10){toast('Enter Model, Customer / Lessee and valid 10-digit mobile number');return null}
  const items=[];
  charges.querySelectorAll('.charge-row').forEach(r=>{const input=r.querySelector('.amount');const name=r.querySelector('.q-charge-name')?.value?.trim()||r.querySelector('.q-charge-name')?.textContent.trim()||r.querySelector('select')?.value||input?.dataset?.charge||'Other';items.push({name,amount:Number(input?.value)||0,discount:isDiscountChargeRow(r)})});
+ const discountRows=[...document.querySelectorAll('#quoteDiscounts .discount-charge')];
+ [['LESS RETAIL OFFER',0],['LESS EXCHANGE OFFER',1]].forEach(([name,index])=>{
+  const amount=Math.max(0,Number(discountRows[index]?.querySelector('.amount')?.value)||0);
+  items.push({name,amount,discount:true,custom:false});
+ });
  const v=id=>document.getElementById(id)?.value.trim()||'';
  const branchDetails=window.svmGetQuoteBranchDetails?.(window.SVMBackend?.profile?.city)||{};
  return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,variant:v('qVariant'),colour:v('qColour'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:branchDetails.terms||['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:branchDetails.bank_details||{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar',micr:'364002005'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'PENDING',prints:0,items};
