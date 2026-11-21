@@ -1595,10 +1595,16 @@ function getQuotePayload(){
  const phone=document.getElementById('qPhone').value.trim();
  if(!model||!customer||phone.length!==10){toast('Enter vehicle model, customer name and valid 10-digit mobile');return null}
  const items=[];
- [...charges.querySelectorAll('.charge-row'),...quoteDiscounts.querySelectorAll('.charge-row')].forEach(r=>{
+ // Save normal charges first, then exactly the two fixed discount rows.
+ charges.querySelectorAll('.charge-row').forEach(r=>{
   const name=(r.querySelector('.q-charge-name')?.textContent||r.querySelector('.q-charge-name')?.value||r.querySelector('select')?.value||r.querySelector('.q-charge-editable')?.value||r.querySelector('.amount')?.dataset.charge||'Charge').trim();
-  const amount=Number(r.querySelector('.amount')?.value)||0;
-  items.push({name,amount,discount:r.classList.contains('discount-charge')||isDiscountChargeRow(r),custom:r.dataset.customCharge==='true'});
+  const amount=Math.max(0,Number(r.querySelector('.amount')?.value)||0);
+  items.push({name,amount,discount:false,custom:r.dataset.customCharge==='true'});
+ });
+ const discountRows=[...quoteDiscounts.querySelectorAll('.discount-charge')];
+ [['LESS RETAIL OFFER',0],['LESS EXCHANGE OFFER',1]].forEach(([name,i])=>{
+  const amount=Math.max(0,Number(discountRows[i]?.querySelector('.amount')?.value)||0);
+  items.push({name,amount,discount:true,custom:false});
  });
  const amountWords=numberWordsIndian(totals.total);
  const terms=[
