@@ -1098,6 +1098,65 @@ td,.data-table td{font-size:13px;line-height:1.45}
  #view-quotation-management .qm-action .btn{padding:6px 7px;font-size:10px}
 }
 </style>
+
+<style id="stock-register-final-layout-v1">
+/* Stock Register only: preserve the complete 18-column register and scroll it as one table. */
+#view-stock .card:has(#stockTable){min-width:0!important;max-width:100%!important;overflow:hidden}
+#view-stock .card:has(#stockTable)>.table-wrap{
+ display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;
+ overflow-x:auto!important;overflow-y:auto!important;max-height:calc(100vh - 330px);
+ overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;
+ scrollbar-width:thin;scrollbar-gutter:stable;
+}
+#view-stock #stockTable{
+ width:max-content!important;min-width:1900px!important;max-width:none!important;
+ table-layout:auto!important;border-collapse:separate!important;border-spacing:0!important;
+}
+#view-stock #stockTable th,#view-stock #stockTable td{
+ display:table-cell!important;box-sizing:border-box!important;white-space:nowrap!important;
+ overflow:visible!important;text-overflow:clip!important;overflow-wrap:normal!important;
+ word-break:normal!important;vertical-align:middle!important;padding:10px 11px!important;
+ line-height:1.35!important;
+}
+#view-stock #stockTable thead th{
+ position:sticky;top:0;z-index:3;background:#f5f7fa;color:#344054;
+ font-size:10px!important;font-weight:800;letter-spacing:.25px;
+}
+#view-stock #stockTable tbody td{font-size:12px!important}
+#view-stock #stockTable th:first-child,#view-stock #stockTable td:first-child{
+ position:sticky;left:0;z-index:2;background:#fff;min-width:116px!important;width:116px!important;
+ text-align:center!important;box-shadow:2px 0 5px rgba(16,24,40,.08)
+}
+#view-stock #stockTable thead th:first-child{z-index:5;background:#f5f7fa}
+#view-stock #stockTable th:nth-child(2),#view-stock #stockTable td:nth-child(2){min-width:66px}
+#view-stock #stockTable th:nth-child(3),#view-stock #stockTable td:nth-child(3){min-width:145px}
+#view-stock #stockTable th:nth-child(4),#view-stock #stockTable td:nth-child(4){min-width:165px}
+#view-stock #stockTable th:nth-child(5),#view-stock #stockTable td:nth-child(5){min-width:82px}
+#view-stock #stockTable th:nth-child(6),#view-stock #stockTable td:nth-child(6){min-width:105px}
+#view-stock #stockTable th:nth-child(7),#view-stock #stockTable td:nth-child(7){min-width:90px}
+#view-stock #stockTable th:nth-child(8),#view-stock #stockTable td:nth-child(8){min-width:135px}
+#view-stock #stockTable th:nth-child(9),#view-stock #stockTable td:nth-child(9){min-width:185px}
+#view-stock #stockTable th:nth-child(10),#view-stock #stockTable td:nth-child(10){min-width:165px}
+#view-stock #stockTable th:nth-child(11),#view-stock #stockTable td:nth-child(11){min-width:130px}
+#view-stock #stockTable th:nth-child(12),#view-stock #stockTable td:nth-child(12){min-width:105px}
+#view-stock #stockTable th:nth-child(13),#view-stock #stockTable td:nth-child(13){min-width:82px}
+#view-stock #stockTable th:nth-child(14),#view-stock #stockTable td:nth-child(14){min-width:105px}
+#view-stock #stockTable th:nth-child(15),#view-stock #stockTable td:nth-child(15){min-width:145px}
+#view-stock #stockTable th:nth-child(16),#view-stock #stockTable td:nth-child(16){min-width:155px}
+#view-stock #stockTable th:nth-child(17),#view-stock #stockTable td:nth-child(17){min-width:130px}
+#view-stock #stockTable th:nth-child(18),#view-stock #stockTable td:nth-child(18){min-width:125px}
+#view-stock #stockTable td.stock-hold-cell{white-space:normal!important;min-width:116px!important}
+#view-stock #stockTable td.stock-hold-cell .btn{min-width:82px!important;width:92px!important;min-height:36px!important;height:36px!important;margin:3px auto!important}
+#view-stock #stockTable tbody tr:nth-child(even) td{background:#fbfcfe}
+#view-stock #stockTable tbody tr:nth-child(even) td:first-child{background:#fbfcfe}
+#view-stock #stockTable tbody tr:hover td{background:#fff7f7}
+#view-stock #stockTable tbody tr:hover td:first-child{background:#fff7f7}
+@media(max-width:680px){
+ #view-stock .card:has(#stockTable)>.table-wrap{max-height:calc(100vh - 300px)}
+ #view-stock #stockTable{min-width:1900px!important}
+ #view-stock #stockTable th,#view-stock #stockTable td{padding:9px 10px!important}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -2189,6 +2248,6 @@ quoteDiscounts.addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=department-scoped-otf-dashboard-20261121b"></script>
+<script src="./backend/supabase-runtime.js?v=stock-register-final-layout-v1"></script>
 <script src="./backend/price-list-module.js?v=department-filter-20261121a"></script>
 </body></html>
