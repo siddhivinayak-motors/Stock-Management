@@ -892,6 +892,26 @@
   // Print from the form only when it exactly matches the last successful save.
   // Capture before async writes so edits made while saving remain unsaved.
   let savedQuotationFormFingerprint = null;
+  const captureQuotationForm = () => ({
+    department:typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'',
+    fields:[...document.querySelectorAll('#view-quotation input, #view-quotation textarea, #view-quotation select')].map((el,index)=>({key:el.id||el.name||('field-'+index),value:el.value,checked:!!el.checked})),
+    chargesHtml:$('charges')?.innerHTML||'',
+    discountsHtml:$('quoteDiscounts')?.innerHTML||'',
+    details:[...document.querySelectorAll('#view-quotation details')].map(el=>!!el.open),
+    quoteNumber:$('quoteNumber')?.textContent||'',
+    selectedStockQuoteVehicle:window.selectedStockQuoteVehicle||null
+  });
+  const restoreQuotationForm = snapshot => {
+    if(!snapshot)return;
+    if($('charges')&&snapshot.chargesHtml)$('charges').innerHTML=snapshot.chargesHtml;
+    if($('quoteDiscounts')&&snapshot.discountsHtml)$('quoteDiscounts').innerHTML=snapshot.discountsHtml;
+    const controls=[...document.querySelectorAll('#view-quotation input, #view-quotation textarea, #view-quotation select')];
+    snapshot.fields.forEach((saved,index)=>{const el=saved.key.startsWith('field-')?controls[index]:$(saved.key);if(el){el.value=saved.value??'';if('checked'in el)el.checked=!!saved.checked;}});
+    document.querySelectorAll('#view-quotation details').forEach((el,index)=>{el.open=!!snapshot.details[index];});
+    if($('quoteNumber'))$('quoteNumber').textContent=snapshot.quoteNumber;
+    window.selectedStockQuoteVehicle=snapshot.selectedStockQuoteVehicle;
+    if(typeof calc==='function')calc();
+  };
   const quotationFormFingerprint = () => JSON.stringify({
     department:typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'',
     fields:[...document.querySelectorAll('#view-quotation input, #view-quotation textarea, #view-quotation select')].map(el=>[el.id||el.name||el.className||el.tagName,String(el.value??'')])
@@ -899,6 +919,7 @@
   window.saveQuote = async (printAfter=false) => {
     try {
       const q=getQuotePayload(); if(!q) return;
+      const formSnapshot=captureQuotationForm();
       const submittedFingerprint=quotationFormFingerprint();
       const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
       const model=$('qVehicle').value.trim(),variant=$('qVariant').value.trim();
@@ -927,9 +948,9 @@
         await audit('quotation_management','edit','Edited quotation; approval reset to Pending','quotation',id,{quote_number:q.no});
         editingQuotationId=null;
         await reloadQuoteList();
-        // Keep the saved quotation visible in the form. It is printable only
-        // while the form still matches this successfully saved snapshot.
-        savedQuotationFormFingerprint=submittedFingerprint;
+        // Restore the exact submitted form after the records list refresh.
+        restoreQuotationForm(formSnapshot);
+        savedQuotationFormFingerprint=quotationFormFingerprint();
         notify('Quotation updated. Approval reset to Pending.');
         if(printAfter){const idx=quoteRecords.findIndex(x=>x.id===id);if(idx>=0)window.printSavedQuote(idx);}
         return;
@@ -947,8 +968,10 @@
       const updatedExisting=!!upsertResult.updated_existing;
       await audit('quotation_management',updatedExisting?'edit':'create',updatedExisting?'Updated latest quotation for customer and vehicle':'Saved quotation','quotation',saved.id,{quote_number:saved.quote_number,phone:phoneKey,model,variant});
       await reloadQuoteList();
+      // Keep the just-saved quotation on screen; only New Quotation clears it.
+      restoreQuotationForm(formSnapshot);
       if($('quoteNumber'))$('quoteNumber').textContent=saved.quote_number;
-      savedQuotationFormFingerprint=submittedFingerprint;
+      savedQuotationFormFingerprint=quotationFormFingerprint();
       notify(updatedExisting?'Existing quotation updated. Same quotation number retained.':'New quotation saved to Supabase.');
       if(printAfter) {
         const savedIndex=quoteRecords.findIndex(x=>x.id===saved.id);
