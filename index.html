@@ -297,28 +297,29 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
  .quote-number-strip strong{font-size:13px}
 }
 
-/* Quotation Management: mobile-only register layout. Keep all other tables unchanged. */
-#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-#view-quotation-management .table-wrap table{width:100%;min-width:1120px;table-layout:auto}
-#view-quotation-management .table-wrap th,
-#view-quotation-management .table-wrap td{white-space:nowrap}
+/* Quotation Management: responsive register with explicit mobile field labels */
+#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+#view-quotation-management .table-wrap table{width:max-content;min-width:1120px;table-layout:auto}
+#view-quotation-management .table-wrap th,#view-quotation-management .table-wrap td{white-space:nowrap;vertical-align:middle}
+#view-quotation-management .qm-action{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
 @media(max-width:680px){
  #view-quotation-management .table-wrap{overflow:visible}
  #view-quotation-management .table-wrap table{display:block;width:100%;min-width:0;border-collapse:separate;border-spacing:0}
  #view-quotation-management .table-wrap thead{display:none}
  #view-quotation-management .table-wrap tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:10px}
- #view-quotation-management .table-wrap tbody tr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 12px;min-width:0;padding:9px 11px;border:1px solid #e4e9ef;border-radius:10px;background:#fff;box-shadow:0 2px 8px rgba(25,39,58,.045)}
- #view-quotation-management .table-wrap tbody td{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-width:0;width:100%;padding:7px 0;border:0;white-space:normal;overflow-wrap:anywhere;word-break:break-word;line-height:1.35;font-size:12px}
- #view-quotation-management .table-wrap tbody td::before{content:attr(data-label);display:block;margin-bottom:3px;color:#7b8794;font-size:9px;font-weight:850;letter-spacing:.45px;text-transform:uppercase}
- #view-quotation-management .table-wrap tbody td:first-child{grid-column:1/-1;border-bottom:1px solid #edf0f3;margin-bottom:4px;padding-bottom:9px;font-size:13px}
- #view-quotation-management .table-wrap tbody td:first-child::before{content:"Quotation No."}
- #view-quotation-management .table-wrap tbody td:last-child{grid-column:1/-1;align-items:flex-start;border-top:1px solid #edf0f3;margin-top:4px;padding-top:9px}
- #view-quotation-management .table-wrap tbody td:last-child::before{content:"Action"}
- #view-quotation-management .qm-action{flex-wrap:wrap;gap:7px}
- #view-quotation-management .qm-action .btn{min-height:34px;padding:7px 12px;font-size:11px}
+ #view-quotation-management .table-wrap tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;min-width:0;padding:10px 12px;border:1px solid #e4e9ef;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(25,39,58,.045)}
+ #view-quotation-management .table-wrap tbody td{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-width:0;width:100%;padding:8px 0;border:0;white-space:normal;overflow-wrap:break-word;word-break:normal;line-height:1.35;font-size:12px}
+ #view-quotation-management .table-wrap tbody td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#7b8794;font-size:9px;font-weight:850;letter-spacing:.45px;text-transform:uppercase}
+ #view-quotation-management .table-wrap tbody td:nth-child(1),
+ #view-quotation-management .table-wrap tbody td:nth-child(2),
+ #view-quotation-management .table-wrap tbody td:nth-child(4),
+ #view-quotation-management .table-wrap tbody td:nth-child(12){grid-column:1/-1}
+ #view-quotation-management .table-wrap tbody td:nth-child(1){border-bottom:1px solid #edf0f3;margin-bottom:4px;padding-bottom:10px;font-size:13px;font-weight:800}
+ #view-quotation-management .table-wrap tbody td:nth-child(12){border-top:1px solid #edf0f3;margin-top:5px;padding-top:10px}
+ #view-quotation-management .qm-action{align-items:center;gap:7px}
+ #view-quotation-management .qm-action .btn{min-height:35px;padding:7px 12px;font-size:11px}
  #view-quotation-management .table-wrap tbody tr td[colspan]{grid-column:1/-1}
 }
-
 @media print{
  body{background:#fff!important}
  .topbar,.sidebar,.scrim,.page-head,.footer-note,.quote-actions,.quote-charge-heading .btn{display:none!important}
