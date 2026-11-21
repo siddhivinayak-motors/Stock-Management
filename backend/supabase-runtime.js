@@ -146,8 +146,9 @@
   const db = () => { if (!client) throw new Error('Supabase client is not ready'); return client; };
   async function call(q) { const {data,error}=await q; if(error) throw error; return data; }
   function has(module,action='view') {
-    // OTF visibility must come from an explicit employee permission and the
-    // assigned department scope; a job title alone never grants OTF access.
+    // OTF view is role-eligible, but every OTF department is still restricted
+    // by the employee's explicit Department Access below and in the database.
+    if(module==='otf_management'&&action==='view'&&['Manager','General Manager','Admin','HR','DMS','Accountant','Accounts','Executive','Reception','Receptionist','Driver'].includes(currentProfile?.designation)) return true;
     if(module==='quotation_management'&&action==='view'&&
       ['Manager','General Manager','Admin','HR','DMS','Accountant','Accounts','Executive','Reception','Receptionist','Driver'].includes(currentProfile?.designation)) return true;
     // Super Admin can view all records, but audit() below never records Super Admin activity.
