@@ -1526,7 +1526,7 @@ function printQuoteDocumentPaper(q){
  const otherDiscounts=discounts.filter(x=>!/retail|exchange/i.test(x.name||''));
  const itemRows=regular.map((x,i)=>'<tr><td class="sl">'+(i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">'+amount(x.amount)+'</td></tr>').join('');
  // Print each saved discount line with its own name and amount; do not print a redundant aggregate "Total Discount" row.
- const discountRows=discounts.filter(x=>Number(x.amount||0)>0).map((x,i)=>'<tr class="discount-line"><td class="sl">−</td><td>Less&nbsp; '+esc(String(x.name||'Discount').replace(/^\\s*less\\s*/i,''))+'</td><td class="amt">− ₹ '+moneyPrint(x.amount)+'</td></tr>').join('');
+ const discountRows=discounts.filter(x=>Number(x.amount||0)>0).map((x,i)=>'<tr class="discount-line"><td class="sl">−</td><td>Less&nbsp; '+esc(String(x.name||'Discount').replace(/^LESS /i,''))+'</td><td class="amt">− ₹ '+moneyPrint(x.amount)+'</td></tr>').join('');
  const sumRows='<tr class="sum"><td colspan="2">TOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
   discountRows+
   '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(q.total)+'</td></tr>';
