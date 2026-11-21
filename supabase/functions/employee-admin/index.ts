@@ -145,7 +145,7 @@ Deno.serve(async (req: Request) => {
     const selectedWorkspaceModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
     if (selectedWorkspaceModules.some(m => !ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
     // Department access automatically includes stock register, stock hold and quotation functions.
-    const selectedModules = [...new Set([...selectedWorkspaceModules,...(departments.length?["stock_register","stock_hold_management","quotation_management","price_list_management"]:[])])];
+    const selectedModules = [...new Set([...selectedWorkspaceModules,...(departments.length?["stock_register","stock_hold_management","quotation_management","price_list_management",...(canGrantModule("dashboard")?["dashboard"]:[])]:[])])];
     const forbiddenModules = selectedModules.filter(m => !canGrantModule(m));
     if (forbiddenModules.length) return json({error:"You cannot grant permissions you do not have: "+forbiddenModules.join(", ")},403);
     const selectedShortcuts = Array.isArray(body.dashboard_shortcuts) ? [...new Set(body.dashboard_shortcuts.map(String))] : [];
@@ -279,7 +279,7 @@ Deno.serve(async (req: Request) => {
     const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
     if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
     const requestedModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
-    const selected = [...new Set([...requestedModules,...(requestedModules.includes("quotation_management")?["price_list_management"]:[])])];
+    const selected = [...new Set([...requestedModules,...(requestedModules.includes("quotation_management")?["price_list_management"]:[]),...(requestedDepartments.length&&canGrantModule("dashboard")?["dashboard"]:[])])];
     if(selected.some(m=>!ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
     const forbidden=selected.filter((m:string)=>!canGrantModule(m));
     if(forbidden.length) return json({error:"You cannot grant permissions you do not have: "+forbidden.join(", ")},403);

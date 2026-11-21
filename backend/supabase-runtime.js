@@ -146,7 +146,8 @@
   const db = () => { if (!client) throw new Error('Supabase client is not ready'); return client; };
   async function call(q) { const {data,error}=await q; if(error) throw error; return data; }
   function has(module,action='view') {
-    // Quotation visibility is a fixed role rule, enforced again by Supabase RLS.
+    // OTF view is role-eligible, but every OTF department is still restricted
+    // by the employee's explicit Department Access below and in the database.
     if(module==='otf_management'&&action==='view'&&['Manager','General Manager','Admin','HR','DMS','Accountant','Accounts','Executive','Reception','Receptionist','Driver'].includes(currentProfile?.designation)) return true;
     if(module==='quotation_management'&&action==='view'&&
       ['Manager','General Manager','Admin','HR','DMS','Accountant','Accounts','Executive','Reception','Receptionist','Driver'].includes(currentProfile?.designation)) return true;
@@ -332,21 +333,17 @@
     document.querySelectorAll('[data-sub]').forEach(sub=>{
       const dept=departmentKeys[sub.dataset.sub];
       const allowed=!!dept&&allowedDepartments.has(String(dept).toLowerCase());
-      const otfManagerAccess=has('otf_management','view')&&canManageOtf();
-      sub.style.display=(allowed||otfManagerAccess)?'':'none';
+      sub.style.display=allowed?'':'none';
+      // Department Access scopes every item, including OTF. OTF additionally
+      // requires its explicit module permission.
       sub.querySelectorAll('[data-page]').forEach(item=>{
-        const module=pageModule(item.dataset.page||'');
-        item.style.display=allowed&&(!module||has(module,'view'))?'':'none';
+        const page=item.dataset.page||'';
+        const isOtf=page.startsWith('otf-');
+        const module=pageModule(page);
+        item.style.display=allowed&&(!isOtf||has('otf_management','view'))&&(!module||has(module,'view'))?'':'none';
       });
       const group=document.querySelector('[data-group="'+sub.dataset.sub+'"]');
-       // Department Access grants all four department functions; no separate
-       // module checkbox is required for Personal / EV / Commercial / LLM.
-       sub.querySelectorAll('[data-page]').forEach(item=>item.style.display=allowed?'':'none');
-       sub.querySelectorAll('[data-page^="otf-"]').forEach(item=>{
-         const isManagement=(item.dataset.page||'').startsWith('otf-management-');
-         item.style.display=has('otf_management','view')&&(allowed|| (isManagement&&canManageOtf()))?'':'none';
-       });
-       if(group)group.style.display=(allowed||otfManagerAccess)?'':'none';
+      if(group)group.style.display=allowed?'':'none';
     });
     document.querySelectorAll('[data-page]').forEach(item=>{
       if(item.closest('[data-sub]'))return;
@@ -1454,7 +1451,7 @@
   // Department functions are inherited automatically from Department Access.
   const EMPLOYEE_MENU_GROUPS = [
     {title:'Workspace',items:[
-      ['price_list_management','Price List','otf_management'],['employee_management','Employee Management'],
+      ['price_list_management','Price List'],['otf_management','OTF Management'],['employee_management','Employee Management'],
       ['audit_history','Audit History'],['retail_reports','Retail Reports'],
       ['common_excel_upload','Common Excel Upload'],['backup_restore','Backup & Restore']
     ]},
@@ -1964,7 +1961,7 @@
   window.otfOpenDepartment=async function(department){
     if(!['Personal','EV','Commercial','LLM'].includes(department))return;
     if(!has('otf_management','view')){notify('Quotation / OTF permission required.');return;}
-    if(!allowedDepartmentList().includes(department)&&!canManageOtf()){notify('You do not have access to '+department+'.');return;}
+    if(!allowedDepartmentList().includes(department)){notify('You do not have access to '+department+'.');return;}
     otfDepartment=department;otfResetSelection();otfMatches=[];
     if($('otfPageTitle'))$('otfPageTitle').textContent=department+' — OTF Order Book';
     if($('otfPhoneSearch'))$('otfPhoneSearch').value='';
@@ -2171,6 +2168,7 @@
   function canManageOtf(){return ['Super Admin','Admin','General Manager','Manager','Accountant','Accounts','HR','DMS'].includes(String(currentProfile?.designation||''))||currentProfile?.is_super_admin===true;}
   async function loadOtfManagement(department=otfManagementDepartment){
     if(!has('otf_management','view'))throw new Error('OTF Management view permission required.');
+    if(!allowedDepartmentList().includes(department))throw new Error('You do not have access to '+department+' OTF Management.');
     otfManagementDepartment=department;
     otfManagementRows=await call(db().from('otf_order_books').select('*').eq('department',department).order('created_at',{ascending:false}).limit(2000));
     renderOtfManagement();
