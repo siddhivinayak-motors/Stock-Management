@@ -17,6 +17,7 @@ declare
   v_variant text := trim(coalesce(p_quote->>'variant',''));
   v_row public.quotations%rowtype;
   v_updated boolean := false;
+  v_new_quote_number text;
   v_item jsonb;
   v_line integer := 0;
 begin
@@ -85,13 +86,14 @@ begin
     v_updated := true;
     delete from public.quotation_items where quotation_id = v_row.id;
   else
+    v_new_quote_number := public.next_quote_number(v_department);
     insert into public.quotations (
       quote_number, department, quote_date, customer_name, phone, address, customer_gstin, sales_mobile,
       vehicle_count, hypo, model, variant, colour, sales_person, contact_person, contact_mobile,
       email, branch_address, helpline, pan, gstin, subtotal, discount, total, amount_words,
       terms, bank_details, created_by, updated_by
     ) values (
-      coalesce(nullif(p_quote->>'no',''), 'AUTO'), v_department,
+      v_new_quote_number, v_department,
       nullif(p_quote->>'date','')::date, p_quote->>'customer', v_phone,
       nullif(p_quote->>'address',''), nullif(p_quote->>'customerGstin',''), nullif(p_quote->>'salesMobile',''),
       coalesce(nullif(p_quote->>'vehicleNos','')::integer, 1), nullif(p_quote->>'hypo',''),
