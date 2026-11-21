@@ -820,7 +820,7 @@
       if(typeof renumberCharges==='function')renumberCharges();
       if($('quotationPageTitle'))$('quotationPageTitle').textContent=currentQuoteDepartment+' — Edit Quotation';
       const head=document.querySelector('#view-quotation .card-title');if(head)head.textContent='Edit Quotation';
-      const desc=document.querySelector('#view-quotation .card-desc');if(desc)desc.textContent='Edit quotation details, save changes, then print the revised quotation.';
+      const desc=document.querySelector('#view-quotation .card-desc');if(desc)desc.textContent='Save updates this quotation. Print opens the latest saved version.';
       const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='EDIT MODE';tag.className='pill orange';}
       if($('saveQuote'))$('saveQuote').textContent='Save Changes';
       if($('printQuote'))$('printQuote').textContent='Print Quotation';
@@ -908,7 +908,7 @@
     if(index<0){notify('This quotation is not saved yet. Click Save Quotation first.');return;}
     window.printSavedQuote(index);
   };
-  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Complete customer and vehicle details, review all charge heads, then save or print.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('printQuote'))$('printQuote').textContent='Print Quotation';})(window.resetQuotationForm);
+  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Save updates the latest matching customer and vehicle quotation. Print opens the latest saved version.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('printQuote'))$('printQuote').textContent='Print Quotation';})(window.resetQuotationForm);
   window.saveRecords = () => {}; // Quotation records now live in Supabase, not localStorage.
   window.loadDepartmentQuotes = () => { reloadQuoteList().catch(e=>{console.error(e);notify(e.message);}); };
   window.approveQuote = async (i) => {
