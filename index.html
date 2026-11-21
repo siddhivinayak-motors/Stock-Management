@@ -870,6 +870,51 @@ td,.data-table td{font-size:13px;line-height:1.45}
  .quote-subtotal-line .subtotal-label{padding:0 2px}
  .quote-subtotal-line #subtotal{padding:0 7px;font-size:12px}
 }
+
+
+/* V26 — fit tables and action columns to the available screen width */
+@media (min-width: 681px){
+  .main{width:calc(100% - var(--sidebar));max-width:none;min-width:0;padding-left:clamp(14px,1.55vw,28px);padding-right:clamp(14px,1.55vw,28px)}
+  .view,.card,.table-wrap{min-width:0;max-width:100%}
+  .table-wrap{overflow-x:hidden;overscroll-behavior-x:contain}
+  table,.data-table{width:100%;min-width:0!important;max-width:100%;table-layout:fixed}
+  th,td{padding:9px 8px;font-size:11px;overflow:hidden;text-overflow:ellipsis}
+  th{font-size:9px;letter-spacing:.35px;white-space:normal;line-height:1.25}
+  td{white-space:nowrap}
+  td .btn,.qm-action .btn{padding:5px 7px;font-size:9px;min-width:0}
+  td .qm-action,.qm-action{display:flex;align-items:center;gap:4px;white-space:nowrap}
+  td:last-child,th:last-child{width:112px}
+  #quoteManagementRows td,#quoteManagementRows th{padding:9px 7px}
+  #quoteManagementRows td:nth-child(1),#quoteManagementRows th:nth-child(1){width:10%}
+  #quoteManagementRows td:nth-child(2),#quoteManagementRows th:nth-child(2){width:8%}
+  #quoteManagementRows td:nth-child(3),#quoteManagementRows th:nth-child(3){width:7%}
+  #quoteManagementRows td:nth-child(4),#quoteManagementRows th:nth-child(4){width:19%}
+  #quoteManagementRows td:nth-child(5),#quoteManagementRows th:nth-child(5){width:8%}
+  #quoteManagementRows td:nth-child(6),#quoteManagementRows th:nth-child(6){width:7%}
+  #quoteManagementRows td:nth-child(7),#quoteManagementRows th:nth-child(7){width:9%}
+  #quoteManagementRows td:nth-child(8),#quoteManagementRows th:nth-child(8){width:8%}
+  #quoteManagementRows td:nth-child(9),#quoteManagementRows th:nth-child(9){width:7%}
+  #quoteManagementRows td:nth-child(10),#quoteManagementRows th:nth-child(10){width:6%}
+  #quoteManagementRows td:nth-child(11),#quoteManagementRows th:nth-child(11){width:4%}
+  #quoteManagementRows td:nth-child(12),#quoteManagementRows th:nth-child(12){width:7%}
+  #quoteManagementRows .qm-vehicle,#quoteManagementRows .qm-date,#quoteManagementRows .qm-mobile,
+  #quoteManagementRows .qm-department{min-width:0!important;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+  .hold-register-card .table-wrap,.stock-register-card .table-wrap{overflow-x:hidden}
+  .hold-register-card table,.stock-register-card table{table-layout:fixed}
+}
+@media (min-width:681px) and (max-width:1200px){
+  th,td{padding:7px 5px;font-size:10px}
+  th{font-size:8px}
+  td .btn,.qm-action .btn{padding:4px 5px;font-size:8px}
+  td:last-child,th:last-child{width:96px}
+}
+@media(max-width:680px){
+  .table-wrap{width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table,.data-table{min-width:760px}
+  .main{width:100%;max-width:100%;overflow-x:hidden}
+  .card{max-width:100%}
+}
+
 </style>
 <style id="svResetTreeStyles">#svResetTree .sv-reset-options{display:grid;gap:10px}#svResetTree .sv-reset-options label{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45;color:#344054;cursor:pointer}#svResetTree input[type=checkbox],#svResetSelectAll{accent-color:#d71927;flex:0 0 auto;width:17px;height:17px;margin:0}#svResetTree h3{margin:0 0 13px}#svResetDialog .card{box-shadow:none;border:1px solid #e5eaf0}@media(max-width:600px){#svResetDialog{padding:8px}#svResetDialog>div{margin:4px auto}#svResetDialog>div>div:nth-child(2){padding:12px;max-height:70vh}}</style><style id="retail-report-dashboard-styles">
 #view-reports [hidden]{display:none!important}\n#view-reports .retail-filter-card{margin-bottom:16px}
