@@ -978,6 +978,38 @@ td,.data-table td{font-size:13px;line-height:1.45}
  #view-quotation-management .table-wrap>table{min-width:1180px!important}
 }
 </style>
+
+<style id="quotation-management-action-buttons-final">
+/* Final polish: distinct, evenly spaced action controls in the last column. */
+#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto}
+#view-quotation-management .table-wrap table{width:100%;min-width:1180px;table-layout:fixed}
+#view-quotation-management .table-wrap th:nth-last-child(2),
+#view-quotation-management .table-wrap td:nth-last-child(2){width:5%;text-align:center;padding-left:4px;padding-right:4px}
+#view-quotation-management .table-wrap th:last-child,
+#view-quotation-management .table-wrap td:last-child{width:21%;min-width:245px;padding:7px 10px}
+#view-quotation-management .table-wrap td:last-child{overflow:visible}
+#view-quotation-management .qm-action{
+ display:flex!important;flex-flow:row nowrap!important;align-items:center!important;
+ justify-content:flex-start!important;gap:7px!important;width:100%;min-width:0;
+ white-space:nowrap;padding:1px 0
+}
+#view-quotation-management .qm-action .btn{
+ display:inline-flex!important;align-items:center;justify-content:center;
+ flex:0 0 auto!important;min-width:48px;height:30px;padding:0 10px!important;
+ border-radius:8px!important;font-size:10px!important;font-weight:750!important;
+ line-height:1!important;white-space:nowrap!important;letter-spacing:0!important;
+ box-shadow:0 1px 3px rgba(24,39,58,.08);border:1px solid #dfe5ec
+}
+#view-quotation-management .qm-action .btn.primary{background:#e51e2a;color:#fff;border-color:#e51e2a}
+#view-quotation-management .qm-action .btn:not(.primary){background:#fff;color:#344052}
+#view-quotation-management .qm-action .btn.danger,
+#view-quotation-management .qm-action .btn.delete{background:#fff1f2;color:#c51d2a;border-color:#ffd0d4}
+#view-quotation-management .qm-action .btn:hover{transform:translateY(-1px);box-shadow:0 3px 8px rgba(24,39,58,.13)}
+@media(max-width:1200px){
+ #view-quotation-management .table-wrap table{min-width:1180px}
+ #view-quotation-management .table-wrap td:last-child{min-width:245px}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
