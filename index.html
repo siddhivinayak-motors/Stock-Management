@@ -297,28 +297,36 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
  .quote-number-strip strong{font-size:13px}
 }
 
-/* Quotation Management: responsive register with explicit mobile field labels */
-#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+/* Quotation Management: compact, balanced mobile quotation cards */
+#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
 #view-quotation-management .table-wrap table{width:max-content;min-width:1120px;table-layout:auto}
 #view-quotation-management .table-wrap th,#view-quotation-management .table-wrap td{white-space:nowrap;vertical-align:middle}
-#view-quotation-management .qm-action{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+#view-quotation-management .qm-action{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
 @media(max-width:680px){
- #view-quotation-management .table-wrap{overflow:visible}
- #view-quotation-management .table-wrap table{display:block;width:100%;min-width:0;border-collapse:separate;border-spacing:0}
+ #view-quotation-management .card-head{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px}
+ #view-quotation-management #quotationCityFilterWrap{width:100%;justify-content:flex-end;margin-left:0!important}
+ #view-quotation-management .table-wrap{overflow:visible;width:100%;max-width:100%}
+ #view-quotation-management .table-wrap table{display:block;width:100%;min-width:0;table-layout:fixed;border-collapse:separate;border-spacing:0}
  #view-quotation-management .table-wrap thead{display:none}
- #view-quotation-management .table-wrap tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:10px}
- #view-quotation-management .table-wrap tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;min-width:0;padding:10px 12px;border:1px solid #e4e9ef;border-radius:11px;background:#fff;box-shadow:0 2px 8px rgba(25,39,58,.045)}
- #view-quotation-management .table-wrap tbody td{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-width:0;width:100%;padding:8px 0;border:0;white-space:normal;overflow-wrap:break-word;word-break:normal;line-height:1.35;font-size:12px}
- #view-quotation-management .table-wrap tbody td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#7b8794;font-size:9px;font-weight:850;letter-spacing:.45px;text-transform:uppercase}
+ #view-quotation-management .table-wrap tbody{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:12px}
+ #view-quotation-management .table-wrap tbody tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:2px;min-width:0;width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;box-shadow:0 2px 9px rgba(20,35,55,.05)}
+ #view-quotation-management .table-wrap tbody td{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;min-width:0;width:100%;max-width:100%;box-sizing:border-box;padding:9px 0;border:0;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.4;font-size:13px;color:#344054}
+ #view-quotation-management .table-wrap tbody td::before{content:attr(data-label);display:block;max-width:100%;margin:0 0 4px;color:#84909c;font-size:10px;font-weight:800;letter-spacing:.35px;line-height:1.25;text-transform:uppercase;white-space:normal}
  #view-quotation-management .table-wrap tbody td:nth-child(1),
- #view-quotation-management .table-wrap tbody td:nth-child(2),
  #view-quotation-management .table-wrap tbody td:nth-child(4),
  #view-quotation-management .table-wrap tbody td:nth-child(12){grid-column:1/-1}
- #view-quotation-management .table-wrap tbody td:nth-child(1){border-bottom:1px solid #edf0f3;margin-bottom:4px;padding-bottom:10px;font-size:13px;font-weight:800}
- #view-quotation-management .table-wrap tbody td:nth-child(12){border-top:1px solid #edf0f3;margin-top:5px;padding-top:10px}
- #view-quotation-management .qm-action{align-items:center;gap:7px}
- #view-quotation-management .qm-action .btn{min-height:35px;padding:7px 12px;font-size:11px}
+ #view-quotation-management .table-wrap tbody td:nth-child(1){padding:2px 0 11px;margin-bottom:3px;border-bottom:1px solid #edf0f3;font-size:15px;font-weight:800;color:#26313d}
+ #view-quotation-management .table-wrap tbody td:nth-child(4){padding-top:10px;border-top:1px solid #edf0f3}
+ #view-quotation-management .table-wrap tbody td:nth-child(12){padding-top:11px;margin-top:5px;border-top:1px solid #edf0f3}
+ #view-quotation-management .table-wrap tbody td:nth-child(10) .pill{max-width:100%;white-space:normal}
+ #view-quotation-management .qm-action{display:flex;align-items:center;flex-wrap:wrap;gap:8px;width:100%}
+ #view-quotation-management .qm-action .btn{min-height:38px;padding:8px 13px;font-size:12px;white-space:nowrap}
  #view-quotation-management .table-wrap tbody tr td[colspan]{grid-column:1/-1}
+}
+@media(max-width:380px){
+ #view-quotation-management .table-wrap tbody tr{column-gap:10px;padding:10px}
+ #view-quotation-management .table-wrap tbody td{font-size:12px}
+ #view-quotation-management .table-wrap tbody td::before{font-size:9px}
 }
 @media print{
  body{background:#fff!important}
