@@ -13,7 +13,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 const ROLE_MODULES: Record<string,string[]> = {
   "Admin": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","audit_history","retail_reports"],
   "General Manager": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","audit_history","retail_reports"],
-  "Manager": ["dashboard","stock_register","stock_hold_management","quotation_management","otf_management","employee_management","common_excel_upload","retail_reports"],
+  "Manager": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","retail_reports"],
   "Accountant": ["stock_register","retail_reports","common_excel_upload","quotation_management","otf_management"],
   "HR": ["stock_register","stock_hold_management","retail_reports","common_excel_upload","quotation_management","otf_management"],
   "DMS": ["stock_register","retail_reports","common_excel_upload","quotation_management","otf_management"],
@@ -278,7 +278,7 @@ Deno.serve(async (req: Request) => {
   if (action === "save_employee_permissions") {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({error:"Select another employee"},400);
-    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation,department,department_access,city").eq("user_id",userId).maybeSingle();
+    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation,department,department_access,city,city_access").eq("user_id",userId).maybeSingle();
     if(targetError||!target||target.deleted_at) return json({error:"Active employee not found"},404);
     if(target.is_super_admin) return json({error:"Super Admin permissions cannot be changed"},403);
     const requestedDepartments=Array.isArray(body.departments)?[...new Set(body.departments.map(String))]:[];
@@ -294,7 +294,7 @@ Deno.serve(async (req: Request) => {
     const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
     if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
     const requestedModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
-    const selected = [...new Set([...requestedModules,...(requestedDepartments.length?["stock_register","stock_hold_management","quotation_management","otf_management"]:[]),...(requestedDepartments.length&&canGrantModule("dashboard")?["dashboard"]:[])])];
+    const selected = [...new Set(requestedModules)];
     if(selected.some(m=>!ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
     const forbidden=selected.filter((m:string)=>!canGrantModule(m));
     if(forbidden.length) return json({error:"You cannot grant permissions you do not have: "+forbidden.join(", ")},403);
