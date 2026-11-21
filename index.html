@@ -1060,6 +1060,42 @@ td,.data-table td{font-size:13px;line-height:1.45}
 }
 </style>
 
+
+<style id="stock-edit-button-horizontal-v1">
+/* Narrow, targeted fix: keep Stock Register row actions readable on phones. */
+#view-stock #stockTable th:first-child,
+#view-stock #stockTable td:first-child{
+  width:96px!important;
+  min-width:96px!important;
+  text-align:center;
+}
+#view-stock #stockTable td.stock-hold-cell .btn{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  box-sizing:border-box!important;
+  width:auto!important;
+  min-width:72px!important;
+  max-width:none!important;
+  min-height:42px!important;
+  height:auto!important;
+  padding:8px 10px!important;
+  margin:3px 0!important;
+  writing-mode:horizontal-tb!important;
+  text-orientation:mixed!important;
+  white-space:nowrap!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  line-height:1.2!important;
+  letter-spacing:normal!important;
+}
+#view-stock #stockTable td.stock-hold-cell{
+  white-space:normal!important;
+  padding:7px 5px!important;
+  vertical-align:middle!important;
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
