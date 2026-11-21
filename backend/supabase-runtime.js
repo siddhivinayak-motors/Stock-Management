@@ -153,6 +153,10 @@
     // Super Admin can view all records, but audit() below never records Super Admin activity.
     const role=String(currentProfile?.designation||'').trim();
     const roleKey=role.toLowerCase();
+    // Backup & Restore is reserved for the unique Super Admin account.
+    if(module==='backup_restore') return resetIsSuperAdmin();
+    // Price List menu and write actions are restricted to Admin-tier users.
+    if(module==='price_list_management' && !currentProfile?.is_super_admin && !['admin','general manager','super admin'].includes(roleKey)) return false;
     // Treat the canonical Super Admin designation as a full-access identity too.
     // Some legacy profiles may have the designation but a false/null flag.
     if(currentProfile?.is_super_admin===true||roleKey==='super admin') return true;
@@ -1355,15 +1359,15 @@
     await loadEmployees();return data;
   }
   const ROLE_MODULES_UI={
-    'Admin':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports','otf_management'],
-    'General Manager':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','audit_history','retail_reports','otf_management'],
-    'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','price_list_management','common_excel_upload','backup_restore','retail_reports','otf_management'],
-    'Accountant':['stock_register','price_list_management','retail_reports','common_excel_upload','otf_management'],
-    'HR':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','backup_restore','retail_reports','otf_management'],
-    'DMS':['stock_register','price_list_management','retail_reports','common_excel_upload','otf_management'],
-    'Executive':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports','otf_management'],
-    'Reception':['dashboard','stock_register','stock_hold_management','quotation_management','price_list_management','retail_reports','otf_management'],
-    'Driver':['stock_register','otf_management']
+    'Admin':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','audit_history','retail_reports','otf_management'],
+    'General Manager':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','audit_history','retail_reports','otf_management'],
+    'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','common_excel_upload','retail_reports','otf_management'],
+    'Accountant':['stock_register','retail_reports','common_excel_upload','otf_management'],
+    'HR':['dashboard','stock_register','stock_hold_management','quotation_management','common_excel_upload','retail_reports','otf_management'],
+    'DMS':['stock_register','retail_reports','common_excel_upload','otf_management'],
+    'Executive':['dashboard','stock_register','stock_hold_management','quotation_management','retail_reports','otf_management'],
+    'Reception':['dashboard','stock_register','stock_hold_management','quotation_management','retail_reports','otf_management'],
+    'Driver':['stock_register','stock_hold_management','quotation_management','otf_management']
   };
   const MODULE_LABELS_UI={dashboard:'Dashboard',stock_register:'Stock Register',stock_hold_management:'Stock Hold Management',price_list_management:'Price List',quotation_management:'Quotation',otf_management:'OTF Management',employee_management:'Employee Management',common_excel_upload:'Excel Upload',backup_restore:'Backup & Restore',audit_history:'Audit History',retail_reports:'Retail Reports'};
   function moduleAccessMarkup(role,selected=[]){
