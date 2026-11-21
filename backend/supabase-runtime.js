@@ -1921,7 +1921,7 @@
   }
 
   // OTF Order Book — quotation lookup and independent chassis verification.
-  let otfDepartment='Personal', otfMatches=[], otfSelectedQuote=null, otfVerifiedVehicle=null;
+  let otfDepartment='Personal', otfMatches=[], otfSelectedQuote=null, otfVerifiedVehicle=null, otfImportedVehicleId=null;
   const otfDigits=v=>String(v||'').replace(/\D/g,'');
   const otfNorm=v=>String(v||'').normalize('NFD').replace(/\p{M}/gu,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const otfValue=id=>$(id)?.value?.trim()||'';
@@ -1930,7 +1930,7 @@
   const otfDeptCode={Personal:'PV',EV:'EV',Commercial:'CV',LLM:'LV'};
   function otfSetStatus(message,isError=false){const el=$('otfFormStatus');if(el){el.textContent=message;el.style.color=isError?'#b4232c':'#64748b';}}
   function otfResetSelection(){
-    otfSelectedQuote=null;otfVerifiedVehicle=null;
+    otfSelectedQuote=null;otfVerifiedVehicle=null;otfImportedVehicleId=null;
     if($('otfSelectedQuote')){$('otfSelectedQuote').hidden=true;$('otfSelectedQuote').textContent='';}
     if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}
     if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;
@@ -2012,6 +2012,7 @@
         const v=list[Number(btn.dataset.otfImportIndex)];if(!v)return;
         if(!v.chassis_number){notify('This stock record has no chassis number. Please correct the Stock Register record first.');return;}
         $('otfChassisInput').value=v.chassis_number;
+        otfImportedVehicleId=v.id;
         otfVerifiedVehicle=null;
         if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}
         if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;
@@ -2058,8 +2059,11 @@
     // Search the employee's accessible departments so a chassis from EV/Commercial/LLM
     // cannot be accidentally booked under the currently open department.
     const accessible=allowedDepartmentList();
-    const matches=await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').in('department',accessible).eq('chassis_number',chassis).limit(5));
+    const matches=otfImportedVehicleId
+      ? await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').in('department',accessible).eq('id',otfImportedVehicleId).limit(1))
+      : await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').in('department',accessible).eq('chassis_number',chassis).limit(5));
     const row=matches[0]||null;
+    if(row&&otfNorm(row.chassis_number)!==otfNorm(chassis))throw new Error('The selected stock vehicle chassis number changed. Import it again from Stock Register.');
     if(row&&row.department!==otfDepartment){
       otfVerifiedVehicle=null;if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;
       throw new Error('Department mismatch: this chassis belongs to '+row.department+', but you opened '+otfDepartment+' OTF. Open '+row.department+' OTF Order Book and select the matching quotation.');
