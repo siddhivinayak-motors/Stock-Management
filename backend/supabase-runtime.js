@@ -927,7 +927,9 @@
         await audit('quotation_management','edit','Edited quotation; approval reset to Pending','quotation',id,{quote_number:q.no});
         editingQuotationId=null;
         await reloadQuoteList();
-        if(typeof resetQuotationForm==='function')resetQuotationForm();
+        // Keep the saved quotation visible in the form. It is printable only
+        // while the form still matches this successfully saved snapshot.
+        savedQuotationFormFingerprint=submittedFingerprint;
         notify('Quotation updated. Approval reset to Pending.');
         if(printAfter){const idx=quoteRecords.findIndex(x=>x.id===id);if(idx>=0)window.printSavedQuote(idx);}
         return;
