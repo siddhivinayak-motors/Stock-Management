@@ -156,8 +156,7 @@
     const roleKey=role.toLowerCase();
     // Backup & Restore is reserved for the unique Super Admin account.
     if(module==='backup_restore') return resetIsSuperAdmin();
-    // Price List menu and write actions are restricted to Admin-tier users.
-    if(module==='price_list_management' && !currentProfile?.is_super_admin && !['admin','general manager','super admin'].includes(roleKey)) return false;
+    // Price List visibility follows the employee's explicitly saved module permission.
     // Treat the canonical Super Admin designation as a full-access identity too.
     // Some legacy profiles may have the designation but a false/null flag.
     if(currentProfile?.is_super_admin===true||roleKey==='super admin') return true;
