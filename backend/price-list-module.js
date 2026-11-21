@@ -73,9 +73,11 @@
   if(altCount>=Math.max(2,Math.ceil(valid*0.55)))variantRow=alt;
   var title=modelTitle(rows),eff=effectiveDate(rows),customer='';
   for(var r=0;r<Math.min(8,rows.length);r++)for(var c=0;c<(rows[r]||[]).length;c++)if(/customer\s*type/i.test(clean(rows[r][c])))customer=clean(rows[r][c+1]||'').replace(/^:/,'').trim();
-  var byCol={};
+  var byCol={},colourByCol={};
   for(var rr=hi+1;rr<rows.length;rr++){
-   var dr=rows[rr]||[],label=clean(dr[col]);if(!label)continue;var vals=[];
+   var dr=rows[rr]||[],label=clean(dr[col]);if(!label)continue;
+   if(/\b(colou?r|shade|paint)\b/i.test(label)){for(var cx=col+1;cx<variantRow.length;cx++){var colourValue=clean(dr[cx]);if(colourValue&&!/^[-—]+$/.test(colourValue))colourByCol[cx]=colourValue;}continue;}
+   var vals=[];
    for(var cc=col+1;cc<variantRow.length;cc++)vals.push(num(dr[cc]));
    if(vals.some(function(x){return x!==null}))vals.forEach(function(value,index){if(value===null)return;var abs=col+1+index;if(!byCol[abs])byCol[abs]=[];byCol[abs].push({label:label,value:value})});
   }
@@ -84,10 +86,11 @@
   var items=[];
   for(var vc=col+1;vc<variantRow.length;vc++){
    var variant=clean(variantRow[vc]);if(!variant)continue;var components=byCol[vc]||[];if(!components.length)continue;
-   var ex=0,rto=0,tcs=0,insurance=0,total=0;
-   components.forEach(function(p){var l=p.label.toLowerCase();if(/ex[\s-]*showroom/.test(l))ex=p.value;else if(!ex&&/vehicle\s*price/.test(l))ex=p.value;if(/\btcs\b/.test(l))tcs=p.value;if(/insurance/.test(l)&&!/zero dep/.test(l))insurance=p.value;if(/road tax|registration/.test(l))rto=p.value;if(/total\s*on[\s-]*road/.test(l))total=p.value});
+   var ex=0,rto=0,tcs=0,insurance=0,total=0,other=0;
+   components.forEach(function(p){var l=p.label.toLowerCase();if(/ex[\s-]*showroom/.test(l))ex=p.value;else if(!ex&&/vehicle\s*price/.test(l))ex=p.value;if(/\btcs\b/.test(l))tcs=p.value;if(/insurance/.test(l)&&!/zero dep/.test(l))insurance=p.value;if(/road tax|registration/.test(l))rto=p.value;if(/total\s*on[\s-]*road/.test(l))total=p.value;});
+   components.forEach(function(p){var l=p.label.toLowerCase();if(!/ex[\s-]*showroom|vehicle\s*price|\btcs\b|insurance|road tax|registration|total\s*on[\s-]*road|discount|rebate|benefit|zero dep/.test(l))other+=Number(p.value)||0;});
    var vehicle=modelFromSheet(title,variant),department=departmentFor(fileName,vehicle,stockRows);
-   items.push({department:department,vehicle:vehicle,variant:variant,colour:'',exShowroom:ex,rto:rto,other:0,onRoadTotal:total,tcs:tcs,insurance:insurance,components:components,sourceFile:fileName,sourceSheet:sheetName,effectiveDate:eff,customerType:customer,variantCode:(variant.match(/\b(NCH|C11|C7)\s*$/i)||[])[1]||''});
+   items.push({department:department,vehicle:vehicle,variant:variant,colour:colourByCol[vc]||'',exShowroom:ex,rto:rto,other:other,onRoadTotal:total,tcs:tcs,insurance:insurance,components:components,sourceFile:fileName,sourceSheet:sheetName,effectiveDate:eff,customerType:customer,variantCode:(variant.match(/\b(NCH|C11|C7)\s*$/i)||[])[1]||''});
   }
   return {items:items,warning:items.length?'':'No price columns found',skippedColumns:skippedColumns};
  }
@@ -152,10 +155,11 @@
   if(model)out=out.filter(function(x){return modelKey(x.vehicle)===modelKey(model)});if(q)out=out.filter(function(x){var text=[x.vehicle,x.variant,x.colour,x.source_file,x.sourceFile,x.sourceSheet].join(' ').toLowerCase();return text.indexOf(q)>=0});
   out.sort(function(a,b){return String(a.vehicle).localeCompare(String(b.vehicle))||String(a.variant).localeCompare(String(b.variant))});
   var body=$('plRows');if(body){setupBreakupPopover();body.innerHTML=out.length?out.map(function(x){
-   var d=x.other_data||x,ex=Number(x.exShowroom!=null?x.exShowroom:x.ex_showroom||d.exShowroom||0),rto=Number(x.rto||d.rto||0),total=Number(d.onRoadTotal||d.totalOnRoad||0);
-   if(!total)total=ex+Number(d.tcs||0)+Number(d.insurance||0)+rto+Number(d.other||0);
-   return '<tr><td><b>'+esc(x.vehicle)+'</b></td><td>'+esc(x.variant)+'</td><td>'+esc(x.colour||'—')+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>';
-  }).join(''):'<tr><td colspan="9" class="empty">'+(rows.length?'No uploaded price list matches these filters. Try another model or use direct search.':'No price lists have been uploaded yet. Use Upload Price Lists to add the Excel files.')+'</td></tr>';}
+   var d=x.other_data||x,ex=Number(x.exShowroom!=null?x.exShowroom:x.ex_showroom||d.exShowroom||0),rto=Number(x.rto||d.rto||0),total=Number(d.onRoadTotal||d.totalOnRoad||0),other=Number(d.other||0);
+   if(!other&&Array.isArray(d.components))other=d.components.reduce(function(sum,p){var l=String(p.label||'').toLowerCase();return /ex[\s-]*showroom|vehicle\s*price|\btcs\b|insurance|road tax|registration|total\s*on[\s-]*road|discount|rebate|benefit|zero dep/.test(l)?sum:sum+(Number(p.value)||0)},0);
+   if(!total)total=ex+Number(d.tcs||0)+Number(d.insurance||0)+rto+other;
+   return '<tr><td><b>'+esc(x.vehicle)+'</b></td><td>'+esc(x.variant)+'</td><td>'+esc(x.colour||d.colour||'—')+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td>'+money(other)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>';
+  }).join(''):'<tr><td colspan="10" class="empty">'+(rows.length?'No uploaded price list matches these filters. Try another model or use direct search.':'No price lists have been uploaded yet. Use Upload Price Lists to add the Excel files.')+'</td></tr>';}
   if($('plResultsSummary'))$('plResultsSummary').textContent=out.length+' variant price(s)'+(rows.length?' · '+rows.length+' total uploaded':'');
   try{plData=window.plData||{}}catch(e){}
  }
