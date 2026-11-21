@@ -1784,7 +1784,7 @@
       finally{if(button){button.disabled=false;button.textContent='Change Password';}}
     });
     $('saveQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(false);},true);
-    $('savePrintQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.saveQuote(true);},true);
+    $('printQuote')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();window.printCurrentSavedQuote?.();},true);
     const auditView=$('view-audit');
     if(auditView){
       const toolbar=auditView.querySelector('.toolbar');
