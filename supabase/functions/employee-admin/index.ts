@@ -11,17 +11,17 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 });
 
 const ROLE_MODULES: Record<string,string[]> = {
-  "Admin": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"],
-  "General Manager": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"],
-  "Manager": ["dashboard","stock_register","stock_hold_management","quotation_management"],
-  "Accountant": ["price_list_management","retail_reports","common_excel_upload","quotation_management"],
-  "HR": ["price_list_management","employee_management","retail_reports","common_excel_upload","quotation_management"],
-  "DMS": ["price_list_management","retail_reports","common_excel_upload","quotation_management"],
-  "Executive": ["dashboard","stock_register","stock_hold_management","quotation_management","price_list_management","retail_reports"],
-  "Reception": ["dashboard","stock_register","stock_hold_management","quotation_management","price_list_management","retail_reports"],
-  "Driver": ["stock_register","quotation_management"]
+  "Admin": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"],
+  "General Manager": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"],
+  "Manager": ["dashboard","stock_register","stock_hold_management","quotation_management","otf_management","employee_management","common_excel_upload"],
+  "Accountant": ["price_list_management","retail_reports","common_excel_upload","quotation_management","otf_management"],
+  "HR": ["price_list_management","retail_reports","common_excel_upload","quotation_management","otf_management"],
+  "DMS": ["price_list_management","retail_reports","common_excel_upload","quotation_management","otf_management"],
+  "Executive": ["dashboard","stock_register","stock_hold_management","quotation_management","price_list_management","retail_reports","otf_management"],
+  "Reception": ["dashboard","stock_register","stock_hold_management","quotation_management","price_list_management","retail_reports","otf_management"],
+  "Driver": ["stock_register","stock_hold_management","quotation_management","otf_management"]
 };
-const ALL_MODULES = ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"];
+const ALL_MODULES = ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"];
 function rolePermissionRows(role: string, userId: string, grantedBy: string, selectedModules?: string[]) {
   const selected = selectedModules || [];
   const full = ["view","create","edit","delete","approve","manage_users","export","restore"];
@@ -30,17 +30,17 @@ function rolePermissionRows(role: string, userId: string, grantedBy: string, sel
   if (role === "Admin" || role === "General Manager") {
     for (const m of ALL_MODULES) map[m] = [...full];
   } else if (role === "Manager") {
-    Object.assign(map,{dashboard:view,stock_register:["view","create","edit","delete","export"],stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve","export"],employee_management:["view","create","edit","delete","manage_users"],common_excel_upload:["view","create"]});
+    Object.assign(map,{dashboard:view,stock_register:["view","create","edit","delete","export"],stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve","export"],otf_management:["view","create","edit","approve","delete","export"],employee_management:["view","create","edit","delete","manage_users"],common_excel_upload:["view","create"]});
   } else if (role === "Accountant") {
-    Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"]});
+    Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view});
   } else if (role === "HR") {
-    Object.assign(map,{price_list_management:view,employee_management:["view","create","edit","delete","manage_users"],retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"]});
+    Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view});
   } else if (role === "DMS") {
-    Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"]});
+    Object.assign(map,{price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view});
   } else if (role === "Executive" || role === "Reception") {
-    Object.assign(map,{dashboard:view,stock_register:["view","create","edit"],stock_hold_management:["view","create"],quotation_management:["view","create","edit"],price_list_management:view,retail_reports:view});
+    Object.assign(map,{dashboard:view,stock_register:view,stock_hold_management:["view","create"],quotation_management:["view","create","edit"],price_list_management:view,retail_reports:view,otf_management:["view","create","edit"]});
   } else if (role === "Driver") {
-    Object.assign(map,{stock_register:view,quotation_management:["view","edit"]});
+    Object.assign(map,{stock_register:view,stock_hold_management:["view","create"],quotation_management:["view","edit"],otf_management:view});
   }
   return selected.filter(m=>ALL_MODULES.includes(m)).map(module=>({
     user_id:userId,module,actions:map[module]||view,granted_by:grantedBy
@@ -85,12 +85,14 @@ Deno.serve(async (req: Request) => {
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON body" }, 400); }
   const action = String(body.action || "");
   const isRoot = profile.is_super_admin === true;
-  const allowed = isRoot
-    || (action === "create_employee" && canCreateResult.data === true)
+  const employeeManagerRole = isRoot || ["Admin","General Manager","Manager"].includes(String(profile.designation||""));
+  const allowed = isRoot || (employeeManagerRole && (
+    (action === "create_employee" && canCreateResult.data === true)
     || (action === "update_employee" && canEditResult.data === true)
     || (action === "deactivate_employee" && canEditResult.data === true)
     || (action === "delete_employee" && canDeleteResult.data === true)
-    || (action === "save_employee_permissions" && canManageResult.data === true);
+    || (action === "save_employee_permissions" && canManageResult.data === true)
+  ));
   const permissionError = canManageResult.error || canCreateResult.error || canEditResult.error || canDeleteResult.error;
   if (permissionError || !allowed) return json({ error: "You do not have the required permission for this employee action." }, 403);
   const ROLE_LEVEL: Record<string,number> = {
@@ -99,7 +101,7 @@ Deno.serve(async (req: Request) => {
   };
   const callerRole=profile.is_super_admin?"Super Admin":String(profile.designation||"");
   const callerLevel=ROLE_LEVEL[callerRole]??0;
-  const isOrgAdmin=isRoot||callerRole==="Admin"||callerRole==="General Manager"||callerRole==="HR";
+  const isOrgAdmin=isRoot||callerRole==="Admin"||callerRole==="General Manager";
   const callerDepartmentScope=new Set(
     (Array.isArray(profile.department_access)&&profile.department_access.length?profile.department_access:[profile.department].filter(Boolean))
       .map((d:string)=>String(d).toLowerCase())
