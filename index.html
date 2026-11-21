@@ -1248,6 +1248,59 @@ td,.data-table td{font-size:13px;line-height:1.45}
 }
 </style>
 
+<style id="register-column-and-quotation-actions-final">
+@media (min-width:681px) {
+  /* Shared Stock Register table: balanced 100% widths for all four departments. */
+  #view-stock #stockTable {width:100%!important;min-width:0!important;table-layout:fixed!important}
+  #view-stock #stockTable th,#view-stock #stockTable td {padding:6px 3px!important}
+  #view-stock #stockTable th:nth-child(1),#view-stock #stockTable td:nth-child(1){width:4%!important}
+  #view-stock #stockTable th:nth-child(2),#view-stock #stockTable td:nth-child(2){width:3%!important}
+  #view-stock #stockTable th:nth-child(3),#view-stock #stockTable td:nth-child(3){width:8%!important}
+  #view-stock #stockTable th:nth-child(4),#view-stock #stockTable td:nth-child(4){width:10%!important}
+  #view-stock #stockTable th:nth-child(5),#view-stock #stockTable td:nth-child(5){width:3%!important}
+  #view-stock #stockTable th:nth-child(6),#view-stock #stockTable td:nth-child(6){width:5%!important}
+  #view-stock #stockTable th:nth-child(7),#view-stock #stockTable td:nth-child(7){width:4%!important}
+  #view-stock #stockTable th:nth-child(8),#view-stock #stockTable td:nth-child(8){width:6%!important}
+  #view-stock #stockTable th:nth-child(9),#view-stock #stockTable td:nth-child(9){width:8%!important}
+  #view-stock #stockTable th:nth-child(10),#view-stock #stockTable td:nth-child(10){width:6%!important}
+  #view-stock #stockTable th:nth-child(11),#view-stock #stockTable td:nth-child(11){width:6%!important}
+  #view-stock #stockTable th:nth-child(12),#view-stock #stockTable td:nth-child(12){width:4%!important}
+  #view-stock #stockTable th:nth-child(13),#view-stock #stockTable td:nth-child(13){width:3%!important}
+  #view-stock #stockTable th:nth-child(14),#view-stock #stockTable td:nth-child(14){width:4%!important}
+  #view-stock #stockTable th:nth-child(15),#view-stock #stockTable td:nth-child(15){width:5%!important}
+  #view-stock #stockTable th:nth-child(16),#view-stock #stockTable td:nth-child(16){width:6%!important}
+  #view-stock #stockTable th:nth-child(17),#view-stock #stockTable td:nth-child(17){width:5%!important}
+  #view-stock #stockTable th:nth-child(18),#view-stock #stockTable td:nth-child(18){width:4%!important}
+  #view-stock #stockTable th:nth-child(19),#view-stock #stockTable td:nth-child(19){width:6%!important}
+  #view-stock #stockTable td:last-child .btn {height:26px!important;min-height:26px!important;padding:2px 5px!important;font-size:9px!important;line-height:1!important}
+  #view-stock #stockTable td.stock-hold-cell .btn {height:26px!important;min-height:26px!important}
+  /* Quotation Management: reserve enough room for the complete action group. */
+  #view-quotation-management .table-wrap>table {width:100%!important;min-width:0!important;table-layout:fixed!important}
+  #view-quotation-management .table-wrap>table th:nth-child(1),#view-quotation-management .table-wrap>table td:nth-child(1){width:8%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(2),#view-quotation-management .table-wrap>table td:nth-child(2){width:8%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(3),#view-quotation-management .table-wrap>table td:nth-child(3){width:7%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(4),#view-quotation-management .table-wrap>table td:nth-child(4){width:10%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(5),#view-quotation-management .table-wrap>table td:nth-child(5){width:9%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(6),#view-quotation-management .table-wrap>table td:nth-child(6){width:7%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(7),#view-quotation-management .table-wrap>table td:nth-child(7){width:8%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(8),#view-quotation-management .table-wrap>table td:nth-child(8){width:7%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(9),#view-quotation-management .table-wrap>table td:nth-child(9){width:8%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(10),#view-quotation-management .table-wrap>table td:nth-child(10){width:7%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(11),#view-quotation-management .table-wrap>table td:nth-child(11){width:4%!important}
+  #view-quotation-management .table-wrap>table th:nth-child(12),#view-quotation-management .table-wrap>table td:nth-child(12){width:17%!important;overflow:visible!important}
+  #view-quotation-management .qm-action {display:flex!important;flex-flow:row wrap!important;align-items:center!important;justify-content:flex-start!important;gap:3px!important;min-width:0!important;white-space:normal!important}
+  #view-quotation-management .qm-action .btn {flex:0 1 auto!important;width:auto!important;min-width:42px!important;height:23px!important;min-height:23px!important;padding:2px 6px!important;font-size:9px!important;line-height:1!important;border-radius:7px!important;white-space:nowrap!important}
+  #view-quotation-management .qm-action .btn[onclick*="approve" i] {background:#e8f7ee!important;color:#137a3e!important;border:1px solid #9bd8b2!important}
+  #view-quotation-management .qm-action .btn[onclick*="deny" i],
+  #view-quotation-management .qm-action .btn[onclick*="reject" i],
+  #view-quotation-management .qm-action .btn[onclick*="delete" i] {background:#fff0f0!important;color:#c62828!important;border:1px solid #f2b5b5!important}
+  #view-quotation-management .qm-action .btn[onclick*="edit" i] {background:#fff8df!important;color:#946200!important;border:1px solid #ead28a!important}
+}
+@media (min-width:681px) and (max-width:1100px) {
+  #view-stock #stockTable th,#view-stock #stockTable td {padding:5px 2px!important}
+  #view-quotation-management .qm-action .btn {min-width:36px!important;padding:2px 4px!important;font-size:8px!important}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
