@@ -664,7 +664,7 @@
       sales_person:q.salesPerson,contact_person:contactPerson,contact_mobile:contactMobile,
       email:QUOTE_COMPANY_DEFAULTS.email,branch_address:QUOTE_COMPANY_DEFAULTS.branch_address,
       helpline:QUOTE_COMPANY_DEFAULTS.helplines.join(' / '),pan:QUOTE_COMPANY_DEFAULTS.pan,gstin:QUOTE_COMPANY_DEFAULTS.gstin,
-      subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:q.amountWords,
+      subtotal:q.subtotal,discount:q.discount,total:q.subtotal,amount_words:numberWordsIndian(q.subtotal),
       terms:q.terms||QUOTE_COMPANY_DEFAULTS.terms,bank_details:q.bank||QUOTE_COMPANY_DEFAULTS.bank_details,
       created_by:currentUser.id,updated_by:currentUser.id
     }).select().single());
@@ -696,7 +696,7 @@
     total:Number(row.total||0),subtotal:Number(row.subtotal||0),discount:Number(row.discount||0),
     amountWords:row.amount_words||'',terms:Array.isArray(row.terms)?row.terms:[],
     bank:row.bank_details&&typeof row.bank_details==='object'?row.bank_details:{},
-    status:String(row.status||'Pending').toUpperCase(),prints:Number(row.print_count||0),
+    status:String(row.status||'Pending').toUpperCase(),approvedBy:row.approved_by||null,approvedAt:row.approved_at||null,prints:Number(row.print_count||0),
     date:row.quote_date,items:(row.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount||/discount|\\bless\\b/i.test(String(x.particulars||'')),custom:!!x.is_custom}))
   });
   const sameQuoteKey=(a,b)=>
@@ -856,7 +856,7 @@
           hypo:q.hypo,model,variant,colour:q.colour,
           sales_person:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
           email:q.email,branch_address:q.branchAddress,helpline:q.helpline,pan:q.pan,gstin:q.gstin,
-          subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:q.amountWords||'',
+          subtotal:q.subtotal,discount:q.discount,total:q.subtotal,amount_words:numberWordsIndian(q.subtotal)||'',
           terms:q.terms||[],bank_details:q.bank||{},status:'Pending',approved_by:null,approved_at:null,
           updated_by:currentUser.id,updated_at:new Date().toISOString()
         };
@@ -916,7 +916,8 @@
       const q=quoteRecords[i];if(!q?.id) return;
       if(!canReviewQuotationRecords() || !has('quotation_management','approve')) throw new Error('Only Manager, General Manager, Admin and Super Admin can approve quotations.');
       if(quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી APPROVED છે. આ duplicate quotation approve નહીં થાય.');
-      const {data,error}=await db().from('quotations').update({status:'Approved',approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id).eq('status','Pending').select('id');
+      const approvedTotal=Math.max(0,Number(q.subtotal||0)-Number(q.discount||0));
+      const {data,error}=await db().from('quotations').update({status:'Approved',total:approvedTotal,amount_words:numberWordsIndian(approvedTotal),approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id).eq('status','Pending').select('id');
       if(error)throw error;
       if(!data?.length)throw new Error('Quotation is not pending or was already approved.');
       await audit('quotation_management','approve','Approved quotation','quotation',q.id);
