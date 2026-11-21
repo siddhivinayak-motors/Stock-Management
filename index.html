@@ -1074,7 +1074,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
      <div><b>RTGS Details</b><p>Account Name: SIDDHIVINAYAK MOTORS PVT. LTD.<br>Bank: State Bank of India<br>Account Number: 33349775105<br>IFSC: SBIN0060231<br>Branch: Chitra, Bhavnagar</p></div>
     </div>
    </details>
-   <div class="quote-actions"><button class="btn primary" id="saveQuote">Save Quotation</button><button class="btn" id="savePrintQuote">Save &amp; Print</button><span class="card-desc">Quotation records are separated by department.</span></div>
+   <div class="quote-actions"><button class="btn primary" id="saveQuote">Save Quotation</button><button class="btn" id="printQuote">Print Quotation</button><span class="card-desc">Quotation records are separated by department.</span></div>
   </div>
  </div>
 </section>
@@ -1583,7 +1583,7 @@ function saveQuote(printAfter){
  if(printAfter)printSavedQuote(0);
 }
 document.getElementById('saveQuote').addEventListener('click',()=>saveQuote(false));
-document.getElementById('savePrintQuote').addEventListener('click',()=>saveQuote(true));
+document.getElementById('printQuote').addEventListener('click',()=>{if(typeof window.printCurrentSavedQuote==='function')window.printCurrentSavedQuote();else toast('Print service is not ready. Refresh the page and try again.');});
 charges.addEventListener('input',calc);charges.addEventListener('change',calc);quoteDiscounts.addEventListener('input',calc);quoteDiscounts.addEventListener('change',calc);
 // Zero remains a faint example only; amount inputs use text/decimal entry without spinner controls.
 charges.querySelectorAll('.amount').forEach(input=>{input.type='text';input.inputMode='decimal';input.placeholder='0.00';if(input.value.trim()!==''&&Number(input.value)===0)input.value='';});
