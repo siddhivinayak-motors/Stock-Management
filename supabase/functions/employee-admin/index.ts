@@ -199,7 +199,7 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin,designation,department,department_access,city").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,designation,department,department_access,city,city_access").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "A Super Admin profile cannot be edited here" }, 403);
     if (!canManageTargetDepartments(target)) return json({error:"You can manage employees only in your assigned department."},403);
@@ -221,6 +221,14 @@ Deno.serve(async (req: Request) => {
     if (typeof patch.city === "string" && patch.city && !["Bhavnagar","Amreli","Botad","Rajula"].includes(patch.city)) return json({error:"Select a valid city"},400);
     if(callerRole==="Manager"&&Object.prototype.hasOwnProperty.call(patch,"city")&&String(patch.city||"").trim()!==String(profile.city||"").trim())return json({error:"A Manager can assign employees only within their own city."},403);
     if (typeof patch.department === "string" && patch.department && !["Personal","EV","Commercial","LLM"].includes(patch.department)) return json({ error: "Invalid department" }, 400);
+    if (body.city_access !== undefined) {
+      const access = Array.isArray(body.city_access) ? [...new Set(body.city_access.map(String))] : [];
+      const allowedCities = new Set(["Bhavnagar","Amreli","Botad","Rajula"]);
+      if (!access.length || access.some((c:string)=>!allowedCities.has(c))) return json({error:"Select at least one valid City Access."},400);
+      if (callerRole==="Manager" && access.some((c:string)=>c!==String(profile.city||"").trim())) return json({error:"A Manager can assign City Access only within their own city."},403);
+      patch.city_access = access;
+      if (!patch.city && !target.city) patch.city = access[0];
+    }
     if (body.department_access !== undefined) {
       const access = Array.isArray(body.department_access) ? body.department_access.map(String) : [];
       const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
