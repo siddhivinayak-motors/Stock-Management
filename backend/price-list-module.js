@@ -120,6 +120,29 @@
  }
  function stockFilterChanged(which){if(which==='department'&&$('plStockVehicle'))$('plStockVehicle').value='';populateFilters();render()}
  function resetFilters(){['plDepartmentFilter','plStockVehicle','plSearch'].forEach(function(id){if($(id))$(id).value=''});populateFilters();render()}
+ function setupBreakupPopover(){
+  var body=$('plRows');if(!body||body.dataset.breakupPopoverBound==='1')return;
+  body.dataset.breakupPopoverBound='1';
+  body.addEventListener('click',function(event){
+   var summary=event.target.closest('.pl-breakup summary');if(!summary)return;
+   event.preventDefault();
+   var details=summary.closest('.pl-breakup'),opening=!details.open;
+   body.querySelectorAll('.pl-breakup[open]').forEach(function(el){el.open=false;var old=el.querySelector('.pl-breakup-content');if(old)old.style.cssText=''});
+   if(!opening)return;
+   details.open=true;
+   var panel=details.querySelector('.pl-breakup-content');if(!panel)return;
+   var rect=summary.getBoundingClientRect(),width=Math.min(360,window.innerWidth-24),left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12));
+   var maxHeight=Math.min(420,window.innerHeight-24),top=rect.bottom+7;
+   if(top+maxHeight>window.innerHeight-12&&rect.top>maxHeight+12)top=Math.max(12,rect.top-maxHeight-7);
+   panel.style.cssText='position:fixed!important;left:'+left+'px!important;right:auto!important;top:'+top+'px!important;width:'+width+'px!important;max-width:calc(100vw - 24px)!important;max-height:'+maxHeight+'px!important;overflow:auto!important;z-index:100000!important;display:block!important;box-sizing:border-box!important';
+  });
+  document.addEventListener('click',function(event){
+   if(event.target.closest('.pl-breakup'))return;
+   body.querySelectorAll('.pl-breakup[open]').forEach(function(el){el.open=false;var panel=el.querySelector('.pl-breakup-content');if(panel)panel.style.cssText=''});
+  });
+  window.addEventListener('resize',function(){body.querySelectorAll('.pl-breakup[open]').forEach(function(el){el.open=false;var panel=el.querySelector('.pl-breakup-content');if(panel)panel.style.cssText=''})});
+  window.addEventListener('scroll',function(){body.querySelectorAll('.pl-breakup[open]').forEach(function(el){el.open=false;var panel=el.querySelector('.pl-breakup-content');if(panel)panel.style.cssText=''})},true);
+ }
  function breakup(item){
   var parts=(item.other_data||item).components||[];if(!parts.length)return '<span class="muted">—</span>';
   return '<details class="pl-breakup"><summary>View breakup</summary><div class="pl-breakup-content">'+parts.map(function(p){return '<div class="pl-breakup-row"><span>'+esc(p.label)+'</span><b>'+money(p.value)+'</b></div>'}).join('')+'</div></details>';
@@ -128,11 +151,11 @@
   populateFilters();var rows=departmentRows(),model=$('plStockVehicle')?.value||'',q=clean($('plSearch')?.value).toLowerCase(),out=rows;
   if(model)out=out.filter(function(x){return modelKey(x.vehicle)===modelKey(model)});if(q)out=out.filter(function(x){var text=[x.vehicle,x.variant,x.colour,x.source_file,x.sourceFile,x.sourceSheet].join(' ').toLowerCase();return text.indexOf(q)>=0});
   out.sort(function(a,b){return String(a.vehicle).localeCompare(String(b.vehicle))||String(a.variant).localeCompare(String(b.variant))});
-  var body=$('plRows');if(body)body.innerHTML=out.length?out.map(function(x){
+  var body=$('plRows');if(body){setupBreakupPopover();body.innerHTML=out.length?out.map(function(x){
    var d=x.other_data||x,ex=Number(x.exShowroom!=null?x.exShowroom:x.ex_showroom||d.exShowroom||0),rto=Number(x.rto||d.rto||0),total=Number(d.onRoadTotal||d.totalOnRoad||0);
    if(!total)total=ex+Number(d.tcs||0)+Number(d.insurance||0)+rto+Number(d.other||0);
    return '<tr><td><b>'+esc(x.vehicle)+'</b></td><td>'+esc(x.variant)+'</td><td>'+esc(x.colour||'—')+'</td><td>'+money(ex)+'</td><td>'+money(d.tcs||0)+'</td><td>'+money(d.insurance||0)+'</td><td>'+money(rto)+'</td><td><b>'+money(total)+'</b></td><td>'+breakup(x)+'</td></tr>';
-  }).join(''):'<tr><td colspan="9" class="empty">'+(rows.length?'No uploaded price list matches these filters. Try another model or use direct search.':'No price lists have been uploaded yet. Use Upload Price Lists to add the Excel files.')+'</td></tr>';
+  }).join(''):'<tr><td colspan="9" class="empty">'+(rows.length?'No uploaded price list matches these filters. Try another model or use direct search.':'No price lists have been uploaded yet. Use Upload Price Lists to add the Excel files.')+'</td></tr>';}
   if($('plResultsSummary'))$('plResultsSummary').textContent=out.length+' variant price(s)'+(rows.length?' · '+rows.length+' total uploaded':'');
   try{plData=window.plData||{}}catch(e){}
  }
