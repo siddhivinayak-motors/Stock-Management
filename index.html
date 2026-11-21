@@ -2051,9 +2051,7 @@ function printQuoteDocumentPaper(q){
  const effectiveDiscount=itemDiscountTotal>0?itemDiscountTotal:savedDiscount;
  const netTotal=Math.max(0,grossSubtotal-effectiveDiscount);
  // Older quotations may contain only the aggregate discount field; never invent a Retail/Exchange split.
- const discountRows=discounts.length
-  ? discounts.map((x,i)=>'<tr class="discount-line"><td class="sl">'+(regular.length+i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">− ₹ '+moneyPrint(Math.abs(Number(x.amount)||0))+'</td></tr>').join('')
-  : effectiveDiscount>0?'<tr class="discount-line"><td class="sl">'+(regular.length+1)+'</td><td>TOTAL DISCOUNT</td><td class="amt">− ₹ '+moneyPrint(effectiveDiscount)+'</td></tr>':'';
+ const discountRows=discounts.map((x,i)=>'<tr class="discount-line"><td class="sl">'+(regular.length+i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">− ₹ '+moneyPrint(Math.abs(Number(x.amount)||0))+'</td></tr>').join('');
  const sumRows='<tr class="sum"><td colspan="2">SUBTOTAL</td><td class="amt">₹ '+moneyPrint(grossSubtotal)+'</td></tr>'+
   discountRows+
   '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(netTotal)+'</td></tr>'+
