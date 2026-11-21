@@ -41,6 +41,49 @@
       @media(max-width:480px){.selected-stock-context{padding:13px}.selected-stock-context .ssc-grid{gap:8px}.selected-stock-context .ssc-value{font-size:12px}}
       .q-stock-suggestions{grid-column:1/-1;position:relative;z-index:40;max-height:330px;overflow:auto;border:1px solid #e1aeb4;border-radius:11px;background:#fff;box-shadow:0 12px 28px rgba(20,30,45,.14);margin:-8px 0 8px}.q-stock-suggestions[hidden]{display:none}.q-stock-count,.q-stock-empty{padding:10px 13px;font-size:11px;color:#6b7280;background:#fff8f8}.q-stock-option{width:100%;border:0;border-top:1px solid #edf0f3;background:#fff;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer;color:#263445}.q-stock-option:hover,.q-stock-option:focus{background:#fff0f1;outline:0}.q-stock-main{display:grid;gap:3px;min-width:0}.q-stock-main b{font-size:13px}.q-stock-main span,.q-stock-meta small{font-size:11px;color:#64748b}.q-stock-meta{display:grid;gap:3px;text-align:right;max-width:45%;overflow-wrap:anywhere}.q-stock-meta b{font-size:10px;color:#344054}
     `;
+
+      /* Stock Register: balanced full-width desktop grid with a useful compact tablet view. */
+      #stockTable{width:100%!important;max-width:100%!important;min-width:0!important;table-layout:fixed!important;border-collapse:collapse}
+      #stockTable th,#stockTable td{box-sizing:border-box;padding:7px 5px!important;white-space:normal!important;overflow-wrap:anywhere;word-break:normal;vertical-align:middle}
+      #stockTable th{font-size:9px!important;line-height:1.15;letter-spacing:.15px}
+      #stockTable td{font-size:11px!important;line-height:1.25}
+      #stockTable th:nth-child(1),#stockTable td:nth-child(1){width:5%;min-width:66px}
+      #stockTable th:nth-child(2),#stockTable td:nth-child(2){width:4%;text-align:center}
+      #stockTable th:nth-child(3),#stockTable td:nth-child(3){width:8%}
+      #stockTable th:nth-child(4),#stockTable td:nth-child(4){width:14%;min-width:0}
+      #stockTable th:nth-child(5),#stockTable td:nth-child(5){width:4%;text-align:center}
+      #stockTable th:nth-child(6),#stockTable td:nth-child(6){width:6%}
+      #stockTable th:nth-child(7),#stockTable td:nth-child(7){width:5%;text-align:center}
+      #stockTable th:nth-child(8),#stockTable td:nth-child(8){width:6%}
+      #stockTable th:nth-child(9),#stockTable td:nth-child(9){width:9%}
+      #stockTable th:nth-child(10),#stockTable td:nth-child(10){width:6%}
+      #stockTable th:nth-child(11),#stockTable td:nth-child(11){width:5%}
+      #stockTable th:nth-child(12),#stockTable td:nth-child(12){width:5%}
+      #stockTable th:nth-child(13),#stockTable td:nth-child(13){width:3%}
+      #stockTable th:nth-child(14),#stockTable td:nth-child(14){width:4%}
+      #stockTable th:nth-child(15),#stockTable td:nth-child(15){width:5%}
+      #stockTable th:nth-child(16),#stockTable td:nth-child(16){width:5%}
+      #stockTable th:nth-child(17),#stockTable td:nth-child(17){width:5%}
+      #stockTable th:nth-child(18),#stockTable td:nth-child(18){width:3%}
+      #stockTable td:nth-child(4){overflow:visible;text-overflow:clip}
+      #stockTable .stock-hold-cell{min-width:66px}
+      @media(max-width:1200px){
+        #stockTable{table-layout:fixed!important;width:100%!important;min-width:0!important}
+        #stockTable th:nth-child(n+8),#stockTable td:nth-child(n+8){display:none!important}
+        #stockTable th:nth-child(1),#stockTable td:nth-child(1){width:9%;min-width:62px}
+        #stockTable th:nth-child(2),#stockTable td:nth-child(2){width:7%}
+        #stockTable th:nth-child(3),#stockTable td:nth-child(3){width:13%}
+        #stockTable th:nth-child(4),#stockTable td:nth-child(4){width:27%;min-width:0}
+        #stockTable th:nth-child(5),#stockTable td:nth-child(5){width:9%}
+        #stockTable th:nth-child(6),#stockTable td:nth-child(6){width:19%}
+        #stockTable th:nth-child(7),#stockTable td:nth-child(7){width:16%}
+        #stockTable th,#stockTable td{padding:8px 6px!important}
+        #stockTable td:nth-child(4){white-space:normal!important;overflow-wrap:anywhere;word-break:normal}
+      }
+      @media(max-width:680px){
+        #stockTable th,#stockTable td{font-size:10px!important;padding:7px 4px!important}
+        #stockTable .stock-hold-btn{min-width:0;padding:4px 5px!important}
+      }
     document.head.appendChild(style);
   }
   const $ = id => document.getElementById(id);
