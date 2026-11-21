@@ -1968,8 +1968,16 @@
     if(!otfSelectedQuote)throw new Error('Select a quotation first.');
     const chassis=otfValue('otfChassisInput').toUpperCase().replace(/\\s+/g,'');
     if(chassis.length<5)throw new Error('Enter the complete chassis number.');
-    const row=await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').eq('department',otfDepartment).eq('chassis_number',chassis).maybeSingle());
-    if(!row){otfVerifiedVehicle=null;if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;otfShowExternalChoice('Chassis not found.');return;}
+    // Search the employee's accessible departments so a chassis from EV/Commercial/LLM
+    // cannot be accidentally booked under the currently open department.
+    const accessible=allowedDepartmentList();
+    const matches=await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').in('department',accessible).eq('chassis_number',chassis).limit(5));
+    const row=matches[0]||null;
+    if(row&&row.department!==otfDepartment){
+      otfVerifiedVehicle=null;if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;
+      throw new Error('Department mismatch: this chassis belongs to '+row.department+', but you opened '+otfDepartment+' OTF. Open '+row.department+' OTF Order Book and select the matching quotation.');
+    }
+    if(!row){otfVerifiedVehicle=null;if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;otfShowExternalChoice('Chassis not found in your accessible department stock. If it is genuinely an external vehicle, use the external option.');return;}
     const active=await call(db().from('otf_order_books').select('id,chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000));
     if(active.some(x=>otfNorm(x.chassis_number)===otfNorm(chassis)&&x.id!==otfEditingId))throw new Error('This chassis already has an active OTF booking. A second OTF cannot be created.');
     const mismatch=otfNorm(row.model)!==otfNorm(otfSelectedQuote.model)||
