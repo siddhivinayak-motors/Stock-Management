@@ -876,7 +876,7 @@
       if(phoneKey.length!==10) throw new Error('Enter a valid 10-digit mobile number.');
       // Reuse the latest visible quotation for this department + mobile + model + variant.
       // The database function preserves its quotation number and refreshes all price/charge rows.
-      const {data:upsertResult,error:upsertError}=await db().rpc('upsert_customer_vehicle_quotation',{p_quote:q,p_items:q.items||[]});
+      const {data:upsertResult,error:upsertError}=await db().rpc('upsert_customer_vehicle_quotation',{p_quote:{...q,total:q.subtotal,amountWords:numberWordsIndian(q.subtotal)},p_items:q.items||[]});
       if(upsertError)throw upsertError;
       const saved=upsertResult?.row;
       if(!saved?.id)throw new Error('Quotation save returned no record. Please refresh and try again.');
