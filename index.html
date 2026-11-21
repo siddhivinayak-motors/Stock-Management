@@ -1366,19 +1366,23 @@ td,.data-table td{font-size:13px;line-height:1.45}
   }
 }
 </style>
-<style id="price-list-breakup-and-column-layout-v2">
+<style id="price-list-breakup-and-column-layout-v3">
 @media (min-width:681px) {
-  #view-price-list .pl-table {width:100%!important;min-width:980px!important;table-layout:fixed!important}
-  #view-price-list .pl-table th,#view-price-list .pl-table td {padding:10px 9px!important;vertical-align:middle!important}
-  #view-price-list .pl-table th:nth-child(1),#view-price-list .pl-table td:nth-child(1){width:12%!important}
+  #view-price-list .pl-table {width:100%!important;min-width:1120px!important;table-layout:fixed!important}
+  #view-price-list .pl-table th,#view-price-list .pl-table td {padding:9px 8px!important;vertical-align:middle!important}
+  #view-price-list .pl-table th:nth-child(1),#view-price-list .pl-table td:nth-child(1){width:11%!important}
   #view-price-list .pl-table th:nth-child(2),#view-price-list .pl-table td:nth-child(2){width:18%!important}
   #view-price-list .pl-table th:nth-child(3),#view-price-list .pl-table td:nth-child(3){width:7%!important}
-  #view-price-list .pl-table th:nth-child(4),#view-price-list .pl-table td:nth-child(4){width:12%!important}
-  #view-price-list .pl-table th:nth-child(5),#view-price-list .pl-table td:nth-child(5){width:8%!important}
-  #view-price-list .pl-table th:nth-child(6),#view-price-list .pl-table td:nth-child(6){width:10%!important}
-  #view-price-list .pl-table th:nth-child(7),#view-price-list .pl-table td:nth-child(7){width:12%!important}
-  #view-price-list .pl-table th:nth-child(8),#view-price-list .pl-table td:nth-child(8){width:12%!important}
-  #view-price-list .pl-table th:nth-child(9),#view-price-list .pl-table td:nth-child(9){width:9%!important;text-align:center!important}
+  #view-price-list .pl-table th:nth-child(4),#view-price-list .pl-table td:nth-child(4){width:11%!important}
+  #view-price-list .pl-table th:nth-child(5),#view-price-list .pl-table td:nth-child(5){width:6%!important}
+  #view-price-list .pl-table th:nth-child(6),#view-price-list .pl-table td:nth-child(6){width:9%!important}
+  #view-price-list .pl-table th:nth-child(7),#view-price-list .pl-table td:nth-child(7){width:11%!important}
+  #view-price-list .pl-table th:nth-child(8),#view-price-list .pl-table td:nth-child(8){width:9%!important}
+  #view-price-list .pl-table th:nth-child(9),#view-price-list .pl-table td:nth-child(9){width:10%!important}
+  #view-price-list .pl-table th:nth-child(10),#view-price-list .pl-table td:nth-child(10){width:8%!important;text-align:center!important}
+  #view-price-list .pl-table th:nth-child(n+4):nth-child(-n+9){text-align:right!important}
+  #view-price-list .pl-table td:nth-child(n+4):nth-child(-n+9){text-align:right!important;font-variant-numeric:tabular-nums!important;white-space:nowrap!important}
+  #view-price-list .pl-table td:nth-child(2){white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.35!important}
   #view-price-list .pl-breakup-content {border-radius:12px!important;padding:12px 14px!important;box-shadow:0 16px 42px rgba(20,32,48,.22)!important}
   #view-price-list .pl-breakup-row {display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:16px!important;padding:8px 2px!important;font-size:12px!important;line-height:1.35!important}
   #view-price-list .pl-breakup-row span {white-space:normal!important;overflow-wrap:anywhere!important}
@@ -1712,7 +1716,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
   <div class="pl-results-bar"><span id="plResultsSummary">Loading price lists…</span><span id="plStockSummary"></span></div>
   <div class="table-wrap pl-table-wrap">
    <table class="data-table pl-table">
-    <thead><tr><th>Vehicle / Model</th><th>Variant</th><th>Colour</th><th>Ex-Showroom</th><th>TCS</th><th>Insurance</th><th>Road Tax / RTO</th><th>On-Road Total</th><th>Breakup</th></tr></thead>
+    <thead><tr><th>Vehicle / Model</th><th>Variant</th><th>Colour</th><th>Ex-Showroom Price</th><th>TCS</th><th>Insurance</th><th>Road Tax / RTO</th><th>Other Charges</th><th>On-Road Total</th><th>Breakup</th></tr></thead>
     <tbody id="plRows"><tr><td colspan="9" class="empty">Loading price list…</td></tr></tbody>
    </table>
   </div>
@@ -2477,5 +2481,5 @@ quoteDiscounts.addEventListener('change',calc);
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
 <script src="./backend/supabase-runtime.js?v=role-scope-20261121a"></script>
-<script src="./backend/price-list-module.js?v=price-breakup-popup-20261121b"></script>
+<script src="./backend/price-list-module.js?v=other-charges-columns-20261121c"></script>
 </body></html>
