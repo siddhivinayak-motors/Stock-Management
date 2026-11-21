@@ -38,8 +38,8 @@ begin
   perform pg_advisory_xact_lock(hashtextextended(
     jsonb_build_array(
       lower(trim(v_department)), v_phone,
-      lower(regexp_replace(trim(v_model), '\\s+', ' ', 'g')),
-      lower(regexp_replace(trim(v_variant), '\\s+', ' ', 'g'))
+      lower(regexp_replace(trim(v_model), '\s+', ' ', 'g')),
+      lower(regexp_replace(trim(v_variant), '\s+', ' ', 'g'))
     )::text, 0
   ));
 
