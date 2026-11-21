@@ -150,8 +150,8 @@ Deno.serve(async (req: Request) => {
     if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
     const selectedWorkspaceModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
     if (selectedWorkspaceModules.some(m => !ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
-    // Department access automatically includes stock register, stock hold and quotation functions.
-    const selectedModules = [...new Set([...selectedWorkspaceModules,...(departments.length?["stock_register","stock_hold_management","quotation_management","otf_management",...(canGrantModule("dashboard")?["dashboard"]:[])]:[])])];
+    // Department membership and menu permissions are independent; only checked menu items are granted.
+    const selectedModules = [...new Set(selectedWorkspaceModules)];
     const forbiddenModules = selectedModules.filter(m => !canGrantModule(m));
     if (forbiddenModules.length) return json({error:"You cannot grant permissions you do not have: "+forbiddenModules.join(", ")},403);
     const selectedShortcuts = Array.isArray(body.dashboard_shortcuts) ? [...new Set(body.dashboard_shortcuts.map(String))] : [];
@@ -173,7 +173,7 @@ Deno.serve(async (req: Request) => {
     }
     const userId = created.user.id;
     const { error: insertError } = await adminClient.from("profiles").upsert({
-      user_id: userId, full_name: fullName, email, employee_code: null, phone: phone||null, city: city||null,
+      user_id: userId, full_name: fullName, email, employee_code: null, phone: phone||null, city: city||null, city_access: city?[city]:[],
       designation: role, department: finalDepartments[0], department_access: finalDepartments,
       status: "active", is_super_admin: false, dashboard_shortcuts: selectedShortcuts,
     }, { onConflict: "user_id" });
