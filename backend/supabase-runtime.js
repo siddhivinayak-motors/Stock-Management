@@ -916,8 +916,9 @@
       const q=quoteRecords[i];if(!q?.id) return;
       if(!canReviewQuotationRecords() || !has('quotation_management','approve')) throw new Error('Only Manager, General Manager, Admin and Super Admin can approve quotations.');
       if(quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી APPROVED છે. આ duplicate quotation approve નહીં થાય.');
-      const approvedTotal=Math.max(0,Number(q.subtotal||0)-Number(q.discount||0));
-      const {data,error}=await db().from('quotations').update({status:'Approved',total:approvedTotal,amount_words:numberWordsIndian(approvedTotal),approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id).eq('status','Pending').select('id');
+      const approvedDiscountTotal=(q.items||[]).filter(x=>x.discount).reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
+      const approvedTotal=Math.max(0,Number(q.subtotal||0)-approvedDiscountTotal);
+      const {data,error}=await db().from('quotations').update({status:'Approved',discount:approvedDiscountTotal,total:approvedTotal,amount_words:numberWordsIndian(approvedTotal),approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id).eq('status','Pending').select('id');
       if(error)throw error;
       if(!data?.length)throw new Error('Quotation is not pending or was already approved.');
       await audit('quotation_management','approve','Approved quotation','quotation',q.id);
