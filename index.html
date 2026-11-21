@@ -1623,21 +1623,18 @@ function printQuoteDocumentPaper(q){
  const moneyPrint=v=>Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
  const amount=v=>Number(v||0)===0?'—':'₹ '+moneyPrint(v);
  const all=q.items||[];
+ // Discount is effective on the printed quotation only after a recorded Manager+ approval.
+ const discountApproved=String(q.status||'').toUpperCase()==='APPROVED' && !!q.approvedBy && !!q.approvedAt;
  const regular=all.filter(x=>!x.discount);
- const discounts=all.filter(x=>x.discount);
- const retail=discounts.filter(x=>/retail/i.test(x.name||''));
- const exchange=discounts.filter(x=>/exchange/i.test(x.name||''));
- const otherDiscounts=discounts.filter(x=>!/retail|exchange/i.test(x.name||''));
+ const discounts=discountApproved?all.filter(x=>x.discount):[];
  const itemRows=regular.map((x,i)=>'<tr><td class="sl">'+(i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">'+amount(x.amount)+'</td></tr>').join('');
- // Keep both discount rows (Retail Offer and Exchange Offer); only the aggregate Total Discount row is omitted.
- const retailAmount=retail.reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
- const exchangeAmount=exchange.reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
- const discountRows=
-  '<tr class="discount-line"><td class="sl">11</td><td>LESS RETAIL OFFER</td><td class="amt">'+(retailAmount?'− ₹ '+moneyPrint(retailAmount):'—')+'</td></tr>'+
-  '<tr class="discount-line"><td class="sl">12</td><td>LESS EXCHANGE OFFER</td><td class="amt">'+(exchangeAmount?'− ₹ '+moneyPrint(exchangeAmount):'—')+'</td></tr>';
+ // Print every approved discount line with its actual amount; unapproved discounts are excluded.
+ const discountRows=discounts.map((x,i)=>'<tr class="discount-line"><td class="sl">'+(regular.length+i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">− ₹ '+moneyPrint(Math.abs(Number(x.amount)||0))+'</td></tr>').join('');
+ const approvedDiscountTotal=discounts.reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
+ const effectiveTotal=Math.max(0,Number(q.subtotal||0)-(discountApproved?approvedDiscountTotal:0));
  const sumRows='<tr class="sum"><td colspan="2">TOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
   discountRows+
-  '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(q.total)+'</td></tr>';
+  '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(effectiveTotal)+'</td></tr>';
  const dateRaw=String(q.date||new Date().toISOString().slice(0,10));
  const dateObj=new Date(dateRaw+'T00:00:00');
  const dateText=Number.isNaN(dateObj.getTime())?dateRaw:dateObj.toLocaleDateString('en-IN');
