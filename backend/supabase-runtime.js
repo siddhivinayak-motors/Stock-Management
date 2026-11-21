@@ -847,8 +847,7 @@
       const regularRows=regularItems.map((x,n)=>{const removable=!!x.custom;return '<div class="charge-row"'+(removable?' data-custom-charge="true"':'')+'><span class="charge-index">'+String(n+1).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(x.name)+'</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" value="'+Number(x.amount||0).toFixed(2)+'" data-charge="'+escAttr(x.name)+'"></div>'+(removable?'<button class="icon-btn remove-charge" aria-label="Remove charge">×</button>':'')+'</div>';}).join('');
       const discountDefs=[
         {name:'LESS RETAIL OFFER',match:/retail/i},
-        {name:'LESS EXCHANGE OFFER',match:/exchange/i},
-        {name:'LESS EXTRA DISCOUNT',match:/extra|discount/i}
+        {name:'LESS EXCHANGE OFFER',match:/exchange/i}
       ];
       const usedDiscounts=new Set();
       const discountRow=(name,amount,n)=>'<div class="charge-row discount-charge"><span class="charge-index">'+String(n).padStart(2,'0')+'</span><div class="q-charge-name">'+esc(name)+'</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" value="'+Number(amount||0).toFixed(2)+'" data-charge="'+escAttr(name)+'"></div><span class="discount-lock">LESS</span></div>';
@@ -857,7 +856,6 @@
         if(found)usedDiscounts.add(found);
         return discountRow(def.name,found?.amount||0,n+1);
       }).join('');
-      discountItems.filter(x=>!usedDiscounts.has(x)).forEach((x,n)=>{discountRows+=discountRow(x.name, x.amount, discountDefs.length+n+1);});
       $('charges').innerHTML=regularRows;
       if($('quoteDiscounts'))$('quoteDiscounts').innerHTML=discountRows;
       if(typeof renumberCharges==='function')renumberCharges();
@@ -899,7 +897,7 @@
           hypo:q.hypo,model,variant,colour:q.colour,
           sales_person:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
           email:q.email,branch_address:q.branchAddress,helpline:q.helpline,pan:q.pan,gstin:q.gstin,
-          subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:numberWordsIndian(q.total)||'',
+          subtotal:q.subtotal,discount:q.discount,total:q.subtotal,amount_words:numberWordsIndian(q.subtotal)||'',
           terms:q.terms||[],bank_details:q.bank||{},status:'Pending',approved_by:null,approved_at:null,
           updated_by:currentUser.id,updated_at:new Date().toISOString()
         };
@@ -923,7 +921,7 @@
       if(phoneKey.length!==10) throw new Error('Enter a valid 10-digit mobile number.');
       // Reuse the latest visible quotation for this department + mobile + model + variant.
       // The database function preserves its quotation number and refreshes all price/charge rows.
-      const {data:upsertResult,error:upsertError}=await db().rpc('upsert_customer_vehicle_quotation',{p_quote:{...q,total:q.total,amountWords:numberWordsIndian(q.total)},p_items:q.items||[]});
+      const {data:upsertResult,error:upsertError}=await db().rpc('upsert_customer_vehicle_quotation',{p_quote:{...q,total:q.subtotal,amountWords:numberWordsIndian(q.subtotal)},p_items:q.items||[]});
       if(upsertError)throw upsertError;
       const saved=upsertResult?.row;
       if(!saved?.id)throw new Error('Quotation save returned no record. Please refresh and try again.');
@@ -963,7 +961,7 @@
       const q=quoteRecords[i];if(!q?.id) return;
       if(!canReviewQuotationRecords() || !has('quotation_management','approve')) throw new Error('Only Manager, General Manager, Admin and Super Admin can approve quotations.');
       if(quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી APPROVED છે. આ duplicate quotation approve નહીં થાય.');
-      const approvedDiscountTotal=(q.items||[]).filter(x=>x.discount).reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
+      const approvedDiscountTotal=(q.items||[]).filter(x=>x.discount&&/retail|exchange/i.test(String(x.name||''))).reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
       const approvedTotal=Math.max(0,Number(q.subtotal||0)-approvedDiscountTotal);
       const {data,error}=await db().from('quotations').update({status:'Approved',discount:approvedDiscountTotal,total:approvedTotal,amount_words:numberWordsIndian(approvedTotal),approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id).eq('status','Pending').select('id');
       if(error)throw error;
