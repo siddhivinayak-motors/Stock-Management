@@ -707,7 +707,7 @@
       sales_person:q.salesPerson,contact_person:contactPerson,contact_mobile:contactMobile,
       email:QUOTE_COMPANY_DEFAULTS.email,branch_address:QUOTE_COMPANY_DEFAULTS.branch_address,
       helpline:QUOTE_COMPANY_DEFAULTS.helplines.join(' / '),pan:QUOTE_COMPANY_DEFAULTS.pan,gstin:QUOTE_COMPANY_DEFAULTS.gstin,
-      subtotal:q.subtotal,discount:q.discount,total:q.subtotal,amount_words:numberWordsIndian(q.subtotal),
+      subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:numberWordsIndian(q.total)||'',
       terms:q.terms||QUOTE_COMPANY_DEFAULTS.terms,bank_details:q.bank||QUOTE_COMPANY_DEFAULTS.bank_details,
       created_by:currentUser.id,updated_by:currentUser.id
     }).select().single());
@@ -904,7 +904,7 @@
           hypo:q.hypo,model,variant,colour:q.colour,
           sales_person:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
           email:q.email,branch_address:q.branchAddress,helpline:q.helpline,pan:q.pan,gstin:q.gstin,
-          subtotal:q.subtotal,discount:q.discount,total:q.subtotal,amount_words:numberWordsIndian(q.subtotal)||'',
+          subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:numberWordsIndian(q.total)||'',
           terms:q.terms||[],bank_details:q.bank||{},status:'Pending',approved_by:null,approved_at:null,
           updated_by:currentUser.id,updated_at:new Date().toISOString()
         };
@@ -928,7 +928,7 @@
       if(phoneKey.length!==10) throw new Error('Enter a valid 10-digit mobile number.');
       // Reuse the latest visible quotation for this department + mobile + model + variant.
       // The database function preserves its quotation number and refreshes all price/charge rows.
-      const {data:upsertResult,error:upsertError}=await db().rpc('upsert_customer_vehicle_quotation',{p_quote:{...q,total:q.subtotal,amountWords:numberWordsIndian(q.subtotal)},p_items:q.items||[]});
+      const {data:upsertResult,error:upsertError}=await db().rpc('upsert_customer_vehicle_quotation',{p_quote:{...q,total:q.total,amountWords:numberWordsIndian(q.total)},p_items:q.items||[]});
       if(upsertError)throw upsertError;
       const saved=upsertResult?.row;
       if(!saved?.id)throw new Error('Quotation save returned no record. Please refresh and try again.');
