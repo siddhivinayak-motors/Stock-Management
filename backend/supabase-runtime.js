@@ -889,9 +889,17 @@
       notify('Quotation deleted.');
     } catch(e){notify(e.message);}
   };
+  // Print from the form only when it exactly matches the last successful save.
+  // Capture before async writes so edits made while saving remain unsaved.
+  let savedQuotationFormFingerprint = null;
+  const quotationFormFingerprint = () => JSON.stringify({
+    department:typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'',
+    fields:[...document.querySelectorAll('#view-quotation input, #view-quotation textarea, #view-quotation select')].map(el=>[el.id||el.name||el.className||el.tagName,String(el.value??'')])
+  });
   window.saveQuote = async (printAfter=false) => {
     try {
       const q=getQuotePayload(); if(!q) return;
+      const submittedFingerprint=quotationFormFingerprint();
       const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
       const model=$('qVehicle').value.trim(),variant=$('qVariant').value.trim();
       if(editingQuotationId){
@@ -938,6 +946,7 @@
       await audit('quotation_management',updatedExisting?'edit':'create',updatedExisting?'Updated latest quotation for customer and vehicle':'Saved quotation','quotation',saved.id,{quote_number:saved.quote_number,phone:phoneKey,model,variant});
       await reloadQuoteList();
       if($('quoteNumber'))$('quoteNumber').textContent=saved.quote_number;
+      savedQuotationFormFingerprint=submittedFingerprint;
       notify(updatedExisting?'Existing quotation updated. Same quotation number retained.':'New quotation saved to Supabase.');
       if(printAfter) {
         const savedIndex=quoteRecords.findIndex(x=>x.id===saved.id);
@@ -951,6 +960,8 @@
     const variant=String($('qVariant')?.value||'').trim().replace(/\s+/g,' ').toLowerCase();
     const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
     if(phone.length!==10||!model){notify('Enter the customer mobile number and vehicle model, then Save the quotation first.');return;}
+    if(!savedQuotationFormFingerprint){notify('આ quotation હજી Save થયું નથી. પહેલાં Save Quotation કરો, પછી જ Print કરી શકશો.');return;}
+    if(quotationFormFingerprint()!==savedQuotationFormFingerprint){notify('Save કર્યા પછી quotationમાં ફેરફાર થયો છે. Print પહેલાં ફરીથી Save Quotation કરો.');return;}
     const index=(quoteRecords||[]).findIndex(q=>
       String(q.department||'').toLowerCase()===String(dept).toLowerCase() &&
       String(q.phone||'').replace(/\D/g,'')===phone &&
@@ -960,7 +971,7 @@
     if(index<0){notify('This quotation is not saved yet. Click Save Quotation first.');return;}
     window.printSavedQuote(index);
   };
-  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Save updates the latest matching customer and vehicle quotation. Print opens the latest saved version.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('printQuote'))$('printQuote').textContent='Print Quotation';})(window.resetQuotationForm);
+  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; savedQuotationFormFingerprint=null; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Save updates the latest matching customer and vehicle quotation. Print opens the latest saved version.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('printQuote'))$('printQuote').textContent='Print Quotation';})(window.resetQuotationForm);
   window.saveRecords = () => {}; // Quotation records now live in Supabase, not localStorage.
   window.loadDepartmentQuotes = () => { reloadQuoteList().catch(e=>{console.error(e);notify(e.message);}); };
   window.approveQuote = async (i) => {
