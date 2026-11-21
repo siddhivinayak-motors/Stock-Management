@@ -1,3 +1,22 @@
+create or replace function public.guard_quotation_discount_on_insert()
+returns trigger
+language plpgsql
+set search_path = public, private
+as $function$
+begin
+  new.status := 'Pending';
+  new.approved_by := null;
+  new.approved_at := null;
+  new.total := coalesce(new.subtotal,0);
+  return new;
+end;
+$function$;
+
+drop trigger if exists quotations_guard_discount_on_insert on public.quotations;
+create trigger quotations_guard_discount_on_insert
+before insert on public.quotations
+for each row execute function public.guard_quotation_discount_on_insert();
+
 create or replace function public.guard_quotation_review_fields()
 returns trigger
 language plpgsql
@@ -36,6 +55,9 @@ begin
     end if;
   end if;
   if new.status='Approved' then
+    if new.approved_by is distinct from auth.uid() or new.approved_at is null then
+      raise exception 'Approval must be recorded by the approving Manager or above.';
+    end if;
     new.total := greatest(0,coalesce(new.subtotal,0)-coalesce(new.discount,0));
   else
     new.total := coalesce(new.subtotal,0);
