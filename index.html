@@ -1010,6 +1010,56 @@ td,.data-table td{font-size:13px;line-height:1.45}
  #view-quotation-management .table-wrap td:last-child{min-width:245px}
 }
 </style>
+
+<style id="quotation-management-register-layout-v4">
+/* Final 12-column register grid: readable status, compact print count, balanced actions. */
+#view-quotation-management .table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:visible}
+#view-quotation-management .table-wrap>table{
+ width:100%;min-width:1480px;max-width:none;table-layout:fixed;border-collapse:collapse
+}
+#view-quotation-management .table-wrap>table th,
+#view-quotation-management .table-wrap>table td{
+ box-sizing:border-box;padding:9px 7px;vertical-align:middle
+}
+#view-quotation-management .table-wrap>table th:nth-child(1),#view-quotation-management .table-wrap>table td:nth-child(1){width:9%}
+#view-quotation-management .table-wrap>table th:nth-child(2),#view-quotation-management .table-wrap>table td:nth-child(2){width:7%}
+#view-quotation-management .table-wrap>table th:nth-child(3),#view-quotation-management .table-wrap>table td:nth-child(3){width:6.5%}
+#view-quotation-management .table-wrap>table th:nth-child(4),#view-quotation-management .table-wrap>table td:nth-child(4){width:13%}
+#view-quotation-management .table-wrap>table th:nth-child(5),#view-quotation-management .table-wrap>table td:nth-child(5){width:8%}
+#view-quotation-management .table-wrap>table th:nth-child(6),#view-quotation-management .table-wrap>table td:nth-child(6){width:5.5%}
+#view-quotation-management .table-wrap>table th:nth-child(7),#view-quotation-management .table-wrap>table td:nth-child(7){width:8.5%}
+#view-quotation-management .table-wrap>table th:nth-child(8),#view-quotation-management .table-wrap>table td:nth-child(8){width:7%}
+#view-quotation-management .table-wrap>table th:nth-child(9),#view-quotation-management .table-wrap>table td:nth-child(9){width:8%}
+#view-quotation-management .table-wrap>table th:nth-child(10),#view-quotation-management .table-wrap>table td:nth-child(10){width:8%;text-align:center;white-space:nowrap}
+#view-quotation-management .table-wrap>table th:nth-child(11),#view-quotation-management .table-wrap>table td:nth-child(11){width:4%;text-align:center;padding-left:3px;padding-right:3px}
+#view-quotation-management .table-wrap>table th:nth-child(12),#view-quotation-management .table-wrap>table td:nth-child(12){width:15.5%;padding-left:7px;padding-right:7px}
+#view-quotation-management .table-wrap>table td:nth-child(10) .pill{
+ display:inline-flex;align-items:center;justify-content:center;width:auto;min-width:0;max-width:none;
+ padding:5px 9px;white-space:nowrap;overflow:visible;text-overflow:clip;line-height:1.2;
+ font-size:10px;letter-spacing:.15px
+}
+#view-quotation-management .table-wrap>table td:nth-child(11){font-variant-numeric:tabular-nums;font-weight:750}
+#view-quotation-management .table-wrap>table td:nth-child(12){overflow:visible}
+#view-quotation-management .qm-action{
+ display:flex!important;flex-flow:row nowrap!important;align-items:center!important;justify-content:flex-start!important;
+ gap:5px!important;width:100%;min-width:0;white-space:nowrap;padding:1px 0
+}
+#view-quotation-management .qm-action .btn{
+ display:inline-flex!important;flex:0 0 auto!important;align-items:center;justify-content:center;
+ min-width:43px;height:29px;padding:0 7px!important;font-size:10px!important;line-height:1!important;
+ white-space:nowrap!important;letter-spacing:0!important;border-radius:7px!important
+}
+@media(min-width:1481px){
+ #view-quotation-management .table-wrap>table{min-width:0;width:100%}
+}
+@media(max-width:1480px){
+ #view-quotation-management .table-wrap>table{min-width:1480px}
+}
+@media(max-width:680px){
+ #view-quotation-management .table-wrap>table{min-width:1480px}
+}
+</style>
+
 </head>
 <body>
 <header class="topbar">
