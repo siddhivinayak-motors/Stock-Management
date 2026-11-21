@@ -6,7 +6,7 @@ create or replace function public.upsert_customer_vehicle_quotation(
 )
 returns jsonb
 language plpgsql
-security definer
+security invoker
 set search_path = public, private, pg_temp
 as $$
 declare
@@ -122,6 +122,42 @@ begin
   return jsonb_build_object('row', to_jsonb(v_row), 'updated_existing', v_updated);
 end;
 $$;
+
+
+-- Allow a quotation creator with create permission to refresh their own latest
+-- matching customer/vehicle quotation. Manager edit permissions remain unchanged.
+drop policy if exists quotations_update on public.quotations;
+create policy quotations_update on public.quotations
+for update to authenticated
+using (
+  private.can_view_quotation_creator(created_by, department)
+  and (
+    private.has_permission('quotation_management'::app_module, 'edit'::app_action)
+    or (created_by = auth.uid() and private.has_permission('quotation_management'::app_module, 'create'::app_action))
+  )
+)
+with check (
+  private.can_view_quotation_creator(created_by, department)
+  and (
+    private.has_permission('quotation_management'::app_module, 'edit'::app_action)
+    or (created_by = auth.uid() and private.has_permission('quotation_management'::app_module, 'create'::app_action))
+  )
+);
+
+drop policy if exists quotation_items_delete_for_edit on public.quotation_items;
+create policy quotation_items_delete_for_edit on public.quotation_items
+for delete to authenticated
+using (
+  exists (
+    select 1 from public.quotations q
+    where q.id = quotation_items.quotation_id
+      and private.can_view_quotation_creator(q.created_by, q.department)
+      and (
+        private.has_permission('quotation_management'::app_module, 'edit'::app_action)
+        or (q.created_by = auth.uid() and private.has_permission('quotation_management'::app_module, 'create'::app_action))
+      )
+  )
+);
 
 revoke all on function public.upsert_customer_vehicle_quotation(jsonb,jsonb) from public;
 grant execute on function public.upsert_customer_vehicle_quotation(jsonb,jsonb) to authenticated;
