@@ -34,6 +34,15 @@ begin
     raise exception 'Enter a valid 10-digit mobile number and vehicle model.';
   end if;
 
+  -- Serialize concurrent saves for this customer/vehicle key to prevent duplicate rows.
+  perform pg_advisory_xact_lock(hashtextextended(
+    jsonb_build_array(
+      lower(trim(v_department)), v_phone,
+      lower(regexp_replace(trim(v_model), '\\s+', ' ', 'g')),
+      lower(regexp_replace(trim(v_variant), '\\s+', ' ', 'g'))
+    )::text, 0
+  ));
+
   -- Match by mobile + same model and variant (colour/price may be refreshed).
   -- Only update a record visible to the current employee under existing city/department scope.
   select q.* into v_row
