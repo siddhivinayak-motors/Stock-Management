@@ -823,7 +823,7 @@
       const desc=document.querySelector('#view-quotation .card-desc');if(desc)desc.textContent='Edit quotation details, save changes, then print the revised quotation.';
       const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='EDIT MODE';tag.className='pill orange';}
       if($('saveQuote'))$('saveQuote').textContent='Save Changes';
-      if($('savePrintQuote'))$('savePrintQuote').textContent='Save Changes & Print';
+      if($('printQuote'))$('printQuote').textContent='Print Quotation';
       if(typeof calc==='function')calc();
       notify('Quotation loaded for editing.');
     } catch(e){notify(e.message);}
@@ -872,52 +872,43 @@
         if(printAfter){const idx=quoteRecords.findIndex(x=>x.id===id);if(idx>=0)window.printSavedQuote(idx);}
         return;
       }
-      const normalizeText=v=>String(v||'').trim().replace(/\s+/g,' ').toLocaleLowerCase();
-      const normalizePhone=v=>String(v||'').replace(/\D/g,'');
-      const phoneKey=normalizePhone(q.phone);
+      const phoneKey=String(q.phone||'').replace(/\D/g,'');
       if(phoneKey.length!==10) throw new Error('Enter a valid 10-digit mobile number.');
-      let existing=[];
-      try {
-        existing=await call(db().from('quotations').select('id,quote_number,customer_name,phone,model,variant,total').eq('department',dept));
-      } catch(checkError) {
-        if(!/permission|policy|row.level security|not allowed/i.test(String(checkError.message||''))) throw checkError;
-        // Users with create-only access rely on the database trigger for the authoritative duplicate check.
-      }
-      const duplicate=existing.find(row=>
-        normalizeText(row.customer_name)===normalizeText(q.customer) &&
-        normalizePhone(row.phone)===phoneKey &&
-        normalizeText(row.model)===normalizeText(model) &&
-        normalizeText(row.variant)===normalizeText(variant) &&
-        Math.round(Number(row.total||0)*100)===Math.round(Number(q.total||0)*100)
-      );
-      if(duplicate) throw new Error('આ ગ્રાહકના આ મોબાઇલ નંબર અને આ જ ગાડીનું આ જ Grand Total વાળું quotation પહેલેથી નોંધાયેલું છે ('+duplicate.quote_number+'). ભાવ અથવા quotation detailsમાં ફેરફાર કર્યા વગર ફરીથી quotation બનાવી શકાશે નહીં.');
-      // Allocate a department-specific PV / EV / CV / LV number atomically per India-local day.
-      const allocatedNumber=await call(db().rpc('next_quote_number',{p_department:dept}));
-      q.no=allocatedNumber;
-      if($('quoteNumber'))$('quoteNumber').textContent=allocatedNumber;
-      const payload={
-        quote_number:allocatedNumber,department:dept,quote_date:q.date||new Date().toISOString().slice(0,10),
-        customer_name:q.customer,phone:q.phone,address:$('qAddress')?.value||'',customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,
-        vehicle_count:Number($('qVehicleNos')?.value||1),hypo:$('qHypo')?.value||'',
-        model,variant,colour:$('qColour')?.value||'',
-        sales_person:$('qSalesPerson')?.value||'',
-        contact_person:$('qContactPerson')?.value||'',contact_mobile:$('qContactMobile')?.value||'',
-        email:q.email||$('qEmail')?.value||'',branch_address:q.branchAddress||$('qBranchAddress')?.value||'',
-        helpline:q.helpline||$('qHelpline')?.value||'',pan:q.pan||$('qPan')?.value||'',gstin:q.gstin||$('qGstin')?.value||'',
-        subtotal:q.subtotal,discount:q.discount,total:q.total,
-        amount_words:q.amountWords||'',terms:q.terms||[],bank_details:q.bank||{},
-        created_by:currentUser.id,updated_by:currentUser.id
-      };
-      const saved=await call(db().from('quotations').insert(payload).select().single());
-      const itemRows=q.items.map((x,i)=>({quotation_id:saved.id,line_no:i+1,particulars:x.name,amount:x.amount,is_discount:x.discount}));
-      if(itemRows.length) await call(db().from('quotation_items').insert(itemRows));
-      await audit('quotation_management','create','Saved quotation','quotation',saved.id,{quote_number:q.no});
+      // Reuse the latest visible quotation for this department + mobile + model + variant.
+      // The database function preserves its quotation number and refreshes all price/charge rows.
+      const {data:upsertResult,error:upsertError}=await db().rpc('upsert_customer_vehicle_quotation',{p_quote:q,p_items:q.items||[]});
+      if(upsertError)throw upsertError;
+      const saved=upsertResult?.row;
+      if(!saved?.id)throw new Error('Quotation save returned no record. Please refresh and try again.');
+      q.no=saved.quote_number;
+      if($('quoteNumber'))$('quoteNumber').textContent=saved.quote_number;
+      const updatedExisting=!!upsertResult.updated_existing;
+      await audit('quotation_management',updatedExisting?'edit':'create',updatedExisting?'Updated latest quotation for customer and vehicle':'Saved quotation','quotation',saved.id,{quote_number:saved.quote_number,phone:phoneKey,model,variant});
       await reloadQuoteList();
-      notify('Quotation saved to Supabase.');
-      if(printAfter) window.printSavedQuote(quoteRecords.findIndex(x=>x.id===saved.id));
+      if($('quoteNumber'))$('quoteNumber').textContent=saved.quote_number;
+      notify(updatedExisting?'Existing quotation updated. Same quotation number retained.':'New quotation saved to Supabase.');
+      if(printAfter) {
+        const savedIndex=quoteRecords.findIndex(x=>x.id===saved.id);
+        if(savedIndex>=0)window.printSavedQuote(savedIndex);
+      }
     } catch(e){console.error(e);const duplicateError=e.code==='23505'||String(e.message||'').includes('Duplicate quotation');notify(duplicateError?'આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી નોંધાયેલું છે. ફરીથી એન્ટ્રી કરી શકાશે નહીં.':(e.message||'Could not save quotation.'));}
   };
-  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Complete customer and vehicle details, review all charge heads, then save or print.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('savePrintQuote'))$('savePrintQuote').textContent='Save & Print';})(window.resetQuotationForm);
+  window.printCurrentSavedQuote = () => {
+    const phone=String($('qPhone')?.value||'').replace(/\D/g,'');
+    const model=String($('qVehicle')?.value||'').trim().replace(/\s+/g,' ').toLowerCase();
+    const variant=String($('qVariant')?.value||'').trim().replace(/\s+/g,' ').toLowerCase();
+    const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
+    if(phone.length!==10||!model){notify('Enter the customer mobile number and vehicle model, then Save the quotation first.');return;}
+    const index=(quoteRecords||[]).findIndex(q=>
+      String(q.department||'').toLowerCase()===String(dept).toLowerCase() &&
+      String(q.phone||'').replace(/\D/g,'')===phone &&
+      String(q.model||'').trim().replace(/\s+/g,' ').toLowerCase()===model &&
+      String(q.variant||'').trim().replace(/\s+/g,' ').toLowerCase()===variant
+    );
+    if(index<0){notify('This quotation is not saved yet. Click Save Quotation first.');return;}
+    window.printSavedQuote(index);
+  };
+  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Complete customer and vehicle details, review all charge heads, then save or print.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('printQuote'))$('printQuote').textContent='Print Quotation';})(window.resetQuotationForm);
   window.saveRecords = () => {}; // Quotation records now live in Supabase, not localStorage.
   window.loadDepartmentQuotes = () => { reloadQuoteList().catch(e=>{console.error(e);notify(e.message);}); };
   window.approveQuote = async (i) => {
