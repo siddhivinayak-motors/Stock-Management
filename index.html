@@ -1645,8 +1645,12 @@ function printQuoteDocumentPaper(q){
  const regular=all.filter(x=>!x.discount);
  const discounts=all.filter(x=>x.discount);
  const itemRows=regular.map((x,i)=>'<tr><td class="sl">'+(i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">'+amount(x.amount)+'</td></tr>').join('');
- const discountRows=discounts.map((x,i)=>'<tr class="discount-line"><td class="sl">'+(regular.length+i+1)+'</td><td>'+esc(x.name)+(discountApproved?'':' <span class="pending-note">(Pending approval)</span>')+'</td><td class="amt">− ₹ '+moneyPrint(Math.abs(Number(x.amount)||0))+'</td></tr>').join('');
- const totalDiscount=discounts.reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
+ const itemDiscountTotal=discounts.reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
+ const legacyDiscount=discounts.length?0:Math.max(0,Number(q.discount||0));
+ const discountRows=discounts.length
+  ? discounts.map((x,i)=>'<tr class="discount-line"><td class="sl">'+(regular.length+i+1)+'</td><td>'+esc(x.name)+(discountApproved?'':' <span class="pending-note">(Pending approval)</span>')+'</td><td class="amt">− ₹ '+moneyPrint(Math.abs(Number(x.amount)||0))+'</td></tr>').join('')
+  : legacyDiscount>0?'<tr class="discount-line"><td class="sl">'+(regular.length+1)+'</td><td>TOTAL DISCOUNT (ITEMIZED SPLIT NOT SAVED IN ORIGINAL RECORD)</td><td class="amt">− ₹ '+moneyPrint(legacyDiscount)+'</td></tr>':'';
+ const totalDiscount=itemDiscountTotal+legacyDiscount;
  const netTotal=Math.max(0,Number(q.subtotal||0)-totalDiscount);
  const sumRows='<tr class="sum"><td colspan="2">SUBTOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
   discountRows+
