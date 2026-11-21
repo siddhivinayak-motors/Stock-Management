@@ -1985,6 +1985,43 @@
     box.innerHTML='<div class="q-stock-count">'+candidates.length+' matching chassis in Stock Register · '+esc(otfSelectedQuote.model)+' / '+esc(otfSelectedQuote.variant)+'. Previously booked vehicles remain visible.</div>'+candidates.map((v,i)=>'<button type="button" class="q-stock-option" data-otf-stock-index="'+i+'"><span class="q-stock-main"><b>'+esc(v.chassis_number)+'</b><span>'+esc(v.model)+' / '+esc(v.variant)+' · '+esc(v.colour||'Colour not recorded')+'</span></span><span class="q-stock-meta"><b>'+esc(v.activeOtf?'Already OTF · '+v.activeOtf.status:(v.status||'')+' · '+(v.stage||''))+'</b><small>'+esc(v.place||'')+(v.activeOtf?' · '+esc(v.activeOtf.order_number||'Existing OTF'):'')+'</small></span></button>').join('');
     box.querySelectorAll('[data-otf-stock-index]').forEach(btn=>btn.addEventListener('click',async()=>{const v=candidates[Number(btn.dataset.otfStockIndex)];if(!v)return;$('otfChassisInput').value=v.chassis_number;await verifyOtfChassis();box.hidden=true;}));
   }
+  async function openOtfStockPicker(){
+    if(!has('otf_management','view'))throw new Error('OTF Stock import permission required.');
+    const existing=$('otfStockPicker');if(existing)existing.remove();
+    const wrap=document.createElement('div');wrap.id='otfStockPicker';
+    wrap.style.cssText='position:fixed;inset:0;z-index:10050;background:rgba(15,23,42,.48);display:flex;align-items:center;justify-content:center;padding:16px';
+    wrap.innerHTML='<section style="width:min(980px,100%);max-height:90vh;overflow:hidden;background:#fff;border-radius:16px;box-shadow:0 22px 70px rgba(15,23,42,.28);display:flex;flex-direction:column"><header style="padding:18px 20px;border-bottom:1px solid #e5eaf0;display:flex;justify-content:space-between;gap:12px;align-items:center"><div><h2 style="margin:0;font-size:19px;color:#1d2733">Import Vehicle from '+esc(otfDepartment)+' Stock</h2><p style="margin:5px 0 0;color:#64748b;font-size:13px">Select the exact vehicle from the live Stock Register, then press Verify Chassis.</p></div><button type="button" class="btn" data-otf-stock-close>Close</button></header><div style="padding:14px 20px;border-bottom:1px solid #e5eaf0"><input id="otfStockPickerSearch" class="field" style="width:100%;min-height:42px" placeholder="Search model, variant, chassis number, colour or engine number"></div><div id="otfStockPickerCount" style="padding:9px 20px;color:#64748b;font-size:12px"></div><div id="otfStockPickerRows" style="overflow:auto;padding:0 20px 18px;display:grid;gap:7px"></div></section>';
+    document.body.appendChild(wrap);
+    const close=()=>wrap.remove();
+    wrap.querySelector('[data-otf-stock-close]').addEventListener('click',close);
+    wrap.addEventListener('click',e=>{if(e.target===wrap)close();});
+    const rowsBox=$('otfStockPickerRows'),count=$('otfStockPickerCount'),search=$('otfStockPickerSearch');
+    rowsBox.innerHTML='<div class="notice">Loading live stock records…</div>';
+    const [stock,bookings]=await Promise.all([
+      call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year,place').eq('department',otfDepartment).order('model',{ascending:true}).limit(2000)),
+      call(db().from('otf_order_books').select('id,order_number,chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000))
+    ]);
+    const booked=new Map(bookings.map(x=>[otfNorm(x.chassis_number),x]));
+    const list=stock.map(v=>({...v,activeOtf:booked.get(otfNorm(v.chassis_number))||null}));
+    const render=()=>{
+      const term=otfNorm(search.value);
+      const filtered=list.filter(v=>!term||[v.model,v.variant,v.chassis_number,v.colour,v.engine_number,v.status,v.stage,v.place].some(x=>otfNorm(x).includes(term)));
+      count.textContent=filtered.length+' of '+list.length+' stock vehicles · '+otfDepartment+' Department';
+      rowsBox.innerHTML=filtered.length?filtered.map((v,i)=>'<button type="button" data-otf-import-index="'+list.indexOf(v)+'" style="width:100%;text-align:left;border:1px solid #e1e7ef;background:#fff;border-radius:10px;padding:11px 13px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;color:#253140"><span style="display:grid;gap:4px"><b>'+esc(v.model||'Model not recorded')+' · '+esc(v.variant||'Variant not recorded')+'</b><span style="font-size:12px;color:#64748b">Chassis: '+esc(v.chassis_number||'Not recorded')+' · Colour: '+esc(v.colour||'Not recorded')+' · Mfg. Year: '+esc(v.manufacturing_year||'Not recorded')+'</span><small style="color:#64748b">Engine: '+esc(v.engine_number||'Not recorded')+' · '+esc(v.place||'')+'</small></span><span style="font-size:12px;font-weight:700;color:'+(v.activeOtf?'#b4232c':'#16734a')+'">'+esc(v.activeOtf?'Already OTF · '+v.activeOtf.order_number:(v.status||'')+' · '+(v.stage||''))+'</span></button>').join(''):'<div class="notice">No stock vehicles match this search.</div>';
+      rowsBox.querySelectorAll('[data-otf-import-index]').forEach(btn=>btn.addEventListener('click',()=>{
+        const v=list[Number(btn.dataset.otfImportIndex)];if(!v)return;
+        if(!v.chassis_number){notify('This stock record has no chassis number. Please correct the Stock Register record first.');return;}
+        $('otfChassisInput').value=v.chassis_number;
+        otfVerifiedVehicle=null;
+        if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}
+        if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;
+        close();
+        otfSetStatus('Imported '+v.model+' / '+(v.variant||'')+' from Stock Register. Press Verify Chassis to load and confirm the vehicle details.');
+        notify('Chassis selected from Stock. Now press Verify Chassis.');
+      }));
+    };
+    search.addEventListener('input',render);render();search.focus();
+  }
   function otfShowExternalChoice(message){
     const box=$('otfVehicleVerified');if(!box)return;box.hidden=false;box.innerHTML='';
     const msg=document.createElement('div');msg.textContent=message+' This chassis is not in '+otfDepartment+' Stock Register.';
@@ -2034,7 +2071,10 @@
       (otfNorm(row.variant)!==otfNorm(otfSelectedQuote.variant));
     if(mismatch)throw new Error('Vehicle mismatch: this chassis belongs to '+[row.model,row.variant].filter(Boolean).join(' / ')+', but selected quotation is '+[otfSelectedQuote.model,otfSelectedQuote.variant].filter(Boolean).join(' / ')+'. Select the matching quotation or correct chassis.');
     otfVerifiedVehicle={...row,activeOtfBooking:activeBooking};
-    if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent='VERIFIED · '+row.chassis_number+' · '+row.model+' / '+(row.variant||'')+' · '+(row.colour||'Colour not recorded')+' · Engine '+(row.engine_number||'Not recorded')+' · Stage '+(row.stage||'Not recorded')+' · '+(row.status||'Not recorded')+(activeBooking?' · ALREADY OTF: '+activeBooking.order_number+' ('+activeBooking.status+'). This chassis is selectable, but a duplicate active OTF save is blocked.':'');}
+    if($('otfVehicleVerified')){
+      $('otfVehicleVerified').hidden=false;
+      $('otfVehicleVerified').innerHTML='<b style="display:block;margin-bottom:8px">VERIFIED FROM LIVE STOCK REGISTER</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px 14px"><span><b>Model:</b> '+esc(row.model||'Not recorded')+'</span><span><b>Variant:</b> '+esc(row.variant||'Not recorded')+'</span><span><b>Colour:</b> '+esc(row.colour||'Not recorded')+'</span><span><b>Manufacturing Year:</b> '+esc(row.manufacturing_year||'Not recorded')+'</span><span><b>Chassis Number:</b> '+esc(row.chassis_number||'Not recorded')+'</span><span><b>Engine Number:</b> '+esc(row.engine_number||'Not recorded')+'</span><span><b>Stock Status:</b> '+esc(row.status||'Not recorded')+'</span><span><b>Stock Stage:</b> '+esc(row.stage||'Not recorded')+'</span></div>'+(activeBooking?'<div style="margin-top:8px;color:#b4232c;font-weight:700">ALREADY OTF: '+esc(activeBooking.order_number)+' ('+esc(activeBooking.status)+'). Duplicate active booking will be blocked.</div>':'');
+    }
     if($('otfPrintPreview'))$('otfPrintPreview').disabled=false;
     otfSetStatus(activeBooking?'Chassis details loaded. Existing OTF found; duplicate active booking will be prevented.':'Chassis verified against the live Stock Register.');
   }
@@ -2179,6 +2219,7 @@
       $('otfSearchQuotes').addEventListener('click',()=>searchOtfQuotes().catch(e=>{notify(e.message);}));
       $('otfPhoneSearch')?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();searchOtfQuotes().catch(x=>notify(x.message));}});
       $('otfChassisInput')?.addEventListener('input',()=>{otfVerifiedVehicle=null;if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=true;$('otfVehicleVerified').textContent='';}if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;});
+      $('otfImportStock')?.addEventListener('click',()=>openOtfStockPicker().catch(e=>notify('Could not load Stock Register: '+e.message)));
       $('otfVerifyChassis')?.addEventListener('click',()=>verifyOtfChassis().catch(e=>{otfVerifiedVehicle=null;if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent=e.message;}if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;if(/already has an active OTF booking/i.test(e.message))otfSetStatus(e.message,true);notify(e.message);}));
       $('otfSaveOrder')?.addEventListener('click',()=>saveOtfOrder(false));
       $('otfSavePrintOrder')?.addEventListener('click',()=>saveOtfOrder(true));
