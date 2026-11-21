@@ -1928,6 +1928,26 @@
   let otfDepartment='Personal', otfMatches=[], otfSelectedQuote=null, otfVerifiedVehicle=null, otfImportedVehicleId=null;
   const otfDigits=v=>String(v||'').replace(/\D/g,'');
   const otfNorm=v=>String(v||'').normalize('NFD').replace(/\p{M}/gu,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  // Model names can be stored differently between quotation and stock (e.g. BEV vs XEV 9S).
+  // Match only when the model family is represented in either model/variant and shared
+  // engineering codes agree. Chassis number remains an exact match.
+  function otfVehicleCompatibility(stock,quote){
+    const norm=otfNorm;
+    const sm=norm(stock?.model),qm=norm(quote?.model),sv=norm(stock?.variant),qv=norm(quote?.variant);
+    const familyMatch=!!(sm&&qm&&(sm===qm||sv.includes(qm)||qv.includes(sm)||sv.includes(qm)||qv.includes(sm)));
+    const stockCodes=(String(stock?.variant||'')+' '+String(stock?.model||'')).toUpperCase().match(/[A-Z]\\d{1,3}/g)||[];
+    const quoteCodes=(String(quote?.variant||'')+' '+String(quote?.model||'')).toUpperCase().match(/[A-Z]\\d{1,3}/g)||[];
+    const byFamily=new Map();
+    stockCodes.forEach(c=>byFamily.set(c[0],c));
+    let shared=0,conflict=[];
+    quoteCodes.forEach(c=>{const existing=byFamily.get(c[0]);if(existing){shared++;if(existing!==c)conflict.push(existing+' vs '+c);}});
+    const codeMatch=stockCodes.length===0||quoteCodes.length===0||shared===0||conflict.length===0;
+    const seatingMatch=!(stock?.seating&&quote?.seating)||norm(stock.seating)===norm(quote.seating);
+    // If both sides carry engineering codes, at least one matching code family must exist;
+    // conflicting C/R/B codes (e.g. C18 vs C20) are never silently accepted.
+    const codesSafe=stockCodes.length===0||quoteCodes.length===0||(shared>0&&conflict.length===0);
+    return {ok:familyMatch&&codeMatch&&codesSafe&&seatingMatch,stockCodes,quoteCodes,conflict,seatingMatch,familyMatch};
+  }
   const otfValue=id=>$(id)?.value?.trim()||'';
   const otfNumber=id=>Math.max(0,Number($(id)?.value||0)||0);
   const otfMoney=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -1979,11 +1999,11 @@
     const box=otfEnsureSuggestionUi();if(!box||!otfSelectedQuote)return;
     box.hidden=false;box.innerHTML='<div class="q-stock-count">Finding matching chassis in '+esc(otfDepartment)+' Stock Register…</div>';
     const [stock,bookings]=await Promise.all([
-      call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year,place').eq('department',otfDepartment).limit(2000)),
+      call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,seating,colour,status,stage,manufacturing_year,mfg_year_label,oem_invoice_date,place').eq('department',otfDepartment).limit(2000)),
       call(db().from('otf_order_books').select('id,order_number,chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000))
     ]);
     const booked=new Map(bookings.map(x=>[otfNorm(x.chassis_number),x]));
-    const candidates=stock.filter(v=>otfNorm(v.model)===otfNorm(otfSelectedQuote.model)&&otfNorm(v.variant)===otfNorm(otfSelectedQuote.variant))
+    const candidates=stock.filter(v=>otfVehicleCompatibility(v,otfSelectedQuote).ok)
       .map(v=>({...v,activeOtf:booked.get(otfNorm(v.chassis_number))||null}));
     if(!candidates.length){box.innerHTML='<div class="q-stock-empty">No matching chassis found for this exact Model + Variant in '+esc(otfDepartment)+' Stock Register. You may enter an external chassis if applicable.</div>';return;}
     box.innerHTML='<div class="q-stock-count">'+candidates.length+' matching chassis in Stock Register · '+esc(otfSelectedQuote.model)+' / '+esc(otfSelectedQuote.variant)+'. Previously booked vehicles remain visible.</div>'+candidates.map((v,i)=>'<button type="button" class="q-stock-option" data-otf-stock-index="'+i+'"><span class="q-stock-main"><b>'+esc(v.chassis_number)+'</b><span>'+esc(v.model)+' / '+esc(v.variant)+' · '+esc(v.colour||'Colour not recorded')+'</span></span><span class="q-stock-meta"><b>'+esc(v.activeOtf?'Already OTF · '+v.activeOtf.status:(v.status||'')+' · '+(v.stage||''))+'</b><small>'+esc(v.place||'')+(v.activeOtf?' · '+esc(v.activeOtf.order_number||'Existing OTF'):'')+'</small></span></button>').join('');
@@ -2064,7 +2084,7 @@
     // cannot be accidentally booked under the currently open department.
     const accessible=allowedDepartmentList();
     const matches=otfImportedVehicleId
-      ? await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').in('department',accessible).eq('id',otfImportedVehicleId).limit(1))
+      ? await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,seating,colour,status,stage,manufacturing_year,mfg_year_label,oem_invoice_date,place').in('department',accessible).eq('id',otfImportedVehicleId).limit(1))
       : await call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year').in('department',accessible).eq('chassis_number',chassis).limit(5));
     const row=matches[0]||null;
     if(row&&otfNorm(row.chassis_number)!==otfNorm(chassis))throw new Error('The selected stock vehicle chassis number changed. Import it again from Stock Register.');
@@ -2075,13 +2095,12 @@
     if(!row){otfVerifiedVehicle=null;if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;otfShowExternalChoice('Chassis not found in your accessible department stock. If it is genuinely an external vehicle, use the external option.');return;}
     const active=await call(db().from('otf_order_books').select('id,order_number,chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000));
     const activeBooking=active.find(x=>otfNorm(x.chassis_number)===otfNorm(chassis)&&x.id!==otfEditingId)||null;
-    const mismatch=otfNorm(row.model)!==otfNorm(otfSelectedQuote.model)||
-      (otfNorm(row.variant)!==otfNorm(otfSelectedQuote.variant));
-    if(mismatch)throw new Error('Vehicle mismatch: this chassis belongs to '+[row.model,row.variant].filter(Boolean).join(' / ')+', but selected quotation is '+[otfSelectedQuote.model,otfSelectedQuote.variant].filter(Boolean).join(' / ')+'. Select the matching quotation or correct chassis.');
+    const compatibility=otfVehicleCompatibility(row,otfSelectedQuote);
+    if(!compatibility.ok)throw new Error('Vehicle mismatch: stock vehicle '+[row.model,row.variant,row.seating].filter(Boolean).join(' / ')+' does not safely match quotation '+[otfSelectedQuote.model,otfSelectedQuote.variant,otfSelectedQuote.seating].filter(Boolean).join(' / ')+'. Check model family, seating and B/R/C code. Chassis verification remains exact.');
     otfVerifiedVehicle={...row,activeOtfBooking:activeBooking};
     if($('otfVehicleVerified')){
       $('otfVehicleVerified').hidden=false;
-      $('otfVehicleVerified').innerHTML='<b style="display:block;margin-bottom:8px">VERIFIED FROM LIVE STOCK REGISTER</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px 14px"><span><b>Model:</b> '+esc(row.model||'Not recorded')+'</span><span><b>Variant:</b> '+esc(row.variant||'Not recorded')+'</span><span><b>Colour:</b> '+esc(row.colour||'Not recorded')+'</span><span><b>Manufacturing Year:</b> '+esc(row.manufacturing_year||'Not recorded')+'</span><span><b>Chassis Number:</b> '+esc(row.chassis_number||'Not recorded')+'</span><span><b>Engine Number:</b> '+esc(row.engine_number||'Not recorded')+'</span><span><b>Stock Status:</b> '+esc(row.status||'Not recorded')+'</span><span><b>Stock Stage:</b> '+esc(row.stage||'Not recorded')+'</span></div>'+(activeBooking?'<div style="margin-top:8px;color:#b4232c;font-weight:700">ALREADY OTF: '+esc(activeBooking.order_number)+' ('+esc(activeBooking.status)+'). Duplicate active booking will be blocked.</div>':'');
+      $('otfVehicleVerified').innerHTML='<b style="display:block;margin-bottom:8px">VERIFIED FROM LIVE STOCK REGISTER</b><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:7px 14px"><span><b>Model:</b> '+esc(row.model||'Not recorded')+'</span><span><b>Variant:</b> '+esc(row.variant||'Not recorded')+'</span><span><b>Seating:</b> '+esc(row.seating||'Not recorded')+'</span><span><b>Colour:</b> '+esc(row.colour||'Not recorded')+'</span><span><b>Manufacturing Year:</b> '+esc(row.mfg_year_label||row.manufacturing_year||'Not recorded')+'</span><span><b>Stock Location:</b> '+esc(row.place||'Not recorded')+'</span><span><b>Chassis Number:</b> '+esc(row.chassis_number||'Not recorded')+'</span><span><b>Engine Number:</b> '+esc(row.engine_number||'Not recorded')+'</span><span><b>Stock Status:</b> '+esc(row.status||'Not recorded')+'</span><span><b>Stock Stage:</b> '+esc(row.stage||'Not recorded')+'</span></div>'+(activeBooking?'<div style="margin-top:8px;color:#b4232c;font-weight:700">ALREADY OTF: '+esc(activeBooking.order_number)+' ('+esc(activeBooking.status)+'). Duplicate active booking will be blocked.</div>':'');
     }
     if($('otfPrintPreview'))$('otfPrintPreview').disabled=false;
     otfSetStatus(activeBooking?'Chassis details loaded. Existing OTF found; duplicate active booking will be prevented.':'Chassis verified against the live Stock Register.');
@@ -2127,7 +2146,7 @@
       chassis_number:v.chassis_number,engine_number:v.engine_number,model:v.model,variant:v.variant,colour:v.colour,
       sales_person:q.sales_person||currentProfile?.full_name||'',
       quotation_snapshot:{quote_number:q.quote_number,quote_date:q.quote_date,branch_address:q.branch_address||'',subtotal:Number(q.subtotal||0),discount:Number(q.discount||0),total:Number(q.total||0),amount_words:q.amount_words||'',items:(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))},
-      vehicle_snapshot:{status:v.status,stage:v.stage,manufacturing_year:v.manufacturing_year,external:!!v.external},
+      vehicle_snapshot:{status:v.status,stage:v.stage,seating:v.seating||'',manufacturing_year:v.manufacturing_year,mfg_year_label:v.mfg_year_label||'',oem_invoice_date:v.oem_invoice_date||null,place:v.place||'',external:!!v.external},
       exchange_details:{model:otfValue('otfExchangeModel'),registration:otfValue('otfExchangeReg'),manufacturing_year:otfValue('otfExchangeYear'),old_value:otfNumber('otfExchangeValue'),extra_support:otfNumber('otfExchangeSupport'),total_value:otfNumber('otfExchangeTotal')},
       accessories_details:otfCollectRows('.otf-accessory-row',[['item','[data-acc="item"]'],['part_number','[data-acc="part"]'],['amount','[data-acc="amount"]']]),
       payment_details:otfCollectRows('.otf-payment-row',[['type','[data-pay="type"]'],['date','[data-pay="date"]'],['amount','[data-pay="amount"]'],['mode','[data-pay="mode"]']]),
