@@ -1926,13 +1926,13 @@
     box.hidden=false;box.innerHTML='<div class="q-stock-count">Finding matching chassis in '+esc(otfDepartment)+' Stock Register…</div>';
     const [stock,bookings]=await Promise.all([
       call(db().from('vehicles').select('id,department,chassis_number,engine_number,model,variant,colour,status,stage,manufacturing_year,place').eq('department',otfDepartment).limit(2000)),
-      call(db().from('otf_order_books').select('chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000))
+      call(db().from('otf_order_books').select('id,order_number,chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000))
     ]);
-    const booked=new Set(bookings.map(x=>otfNorm(x.chassis_number)));
-    const blocked=new Set(['RETAIL','DEMO','BILLINGDONE','DEALER','TRANSFEROUT','EXITED']);
-    const candidates=stock.filter(v=>otfNorm(v.model)===otfNorm(otfSelectedQuote.model)&&otfNorm(v.variant)===otfNorm(otfSelectedQuote.variant)&&!booked.has(otfNorm(v.chassis_number))&&!blocked.has(otfNorm(v.stage))&&otfNorm(v.status)!=='DELIVERED');
-    if(!candidates.length){box.innerHTML='<div class="q-stock-empty">No unbooked matching chassis found. If this vehicle is coming from outside stock, enter its chassis number and choose the external vehicle option after verification.</div>';return;}
-    box.innerHTML='<div class="q-stock-count">'+candidates.length+' matching chassis available · '+esc(otfSelectedQuote.model)+' / '+esc(otfSelectedQuote.variant)+'</div>'+candidates.map((v,i)=>'<button type="button" class="q-stock-option" data-otf-stock-index="'+i+'"><span class="q-stock-main"><b>'+esc(v.chassis_number)+'</b><span>'+esc(v.model)+' / '+esc(v.variant)+' · '+esc(v.colour||'Colour not recorded')+'</span></span><span class="q-stock-meta"><b>'+esc(v.status||'')+' · '+esc(v.stage||'')+'</b><small>'+esc(v.place||'')+'</small></span></button>').join('');
+    const booked=new Map(bookings.map(x=>[otfNorm(x.chassis_number),x]));
+    const candidates=stock.filter(v=>otfNorm(v.model)===otfNorm(otfSelectedQuote.model)&&otfNorm(v.variant)===otfNorm(otfSelectedQuote.variant))
+      .map(v=>({...v,activeOtf:booked.get(otfNorm(v.chassis_number))||null}));
+    if(!candidates.length){box.innerHTML='<div class="q-stock-empty">No matching chassis found for this exact Model + Variant in '+esc(otfDepartment)+' Stock Register. You may enter an external chassis if applicable.</div>';return;}
+    box.innerHTML='<div class="q-stock-count">'+candidates.length+' matching chassis in Stock Register · '+esc(otfSelectedQuote.model)+' / '+esc(otfSelectedQuote.variant)+'. Previously booked vehicles remain visible.</div>'+candidates.map((v,i)=>'<button type="button" class="q-stock-option" data-otf-stock-index="'+i+'"><span class="q-stock-main"><b>'+esc(v.chassis_number)+'</b><span>'+esc(v.model)+' / '+esc(v.variant)+' · '+esc(v.colour||'Colour not recorded')+'</span></span><span class="q-stock-meta"><b>'+esc(v.activeOtf?'Already OTF · '+v.activeOtf.status:(v.status||'')+' · '+(v.stage||''))+'</b><small>'+esc(v.place||'')+(v.activeOtf?' · '+esc(v.activeOtf.order_number||'Existing OTF'):'')+'</small></span></button>').join('');
     box.querySelectorAll('[data-otf-stock-index]').forEach(btn=>btn.addEventListener('click',async()=>{const v=candidates[Number(btn.dataset.otfStockIndex)];if(!v)return;$('otfChassisInput').value=v.chassis_number;await verifyOtfChassis();box.hidden=true;}));
   }
   function otfShowExternalChoice(message){
@@ -1978,15 +1978,15 @@
       throw new Error('Department mismatch: this chassis belongs to '+row.department+', but you opened '+otfDepartment+' OTF. Open '+row.department+' OTF Order Book and select the matching quotation.');
     }
     if(!row){otfVerifiedVehicle=null;if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;otfShowExternalChoice('Chassis not found in your accessible department stock. If it is genuinely an external vehicle, use the external option.');return;}
-    const active=await call(db().from('otf_order_books').select('id,chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000));
-    if(active.some(x=>otfNorm(x.chassis_number)===otfNorm(chassis)&&x.id!==otfEditingId))throw new Error('This chassis already has an active OTF booking. A second OTF cannot be created.');
+    const active=await call(db().from('otf_order_books').select('id,order_number,chassis_number,status').in('status',['BOOKED','IN PROCESS','DELIVERED']).limit(5000));
+    const activeBooking=active.find(x=>otfNorm(x.chassis_number)===otfNorm(chassis)&&x.id!==otfEditingId)||null;
     const mismatch=otfNorm(row.model)!==otfNorm(otfSelectedQuote.model)||
       (otfNorm(row.variant)!==otfNorm(otfSelectedQuote.variant));
     if(mismatch)throw new Error('Vehicle mismatch: this chassis belongs to '+[row.model,row.variant].filter(Boolean).join(' / ')+', but selected quotation is '+[otfSelectedQuote.model,otfSelectedQuote.variant].filter(Boolean).join(' / ')+'. Select the matching quotation or correct chassis.');
-    otfVerifiedVehicle=row;
-    if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent='VERIFIED · '+row.chassis_number+' · '+row.model+' / '+(row.variant||'')+' · '+(row.colour||'Colour not recorded')+' · Engine '+(row.engine_number||'Not recorded')+' · Stage '+row.stage+' · '+row.status;}
+    otfVerifiedVehicle={...row,activeOtfBooking:activeBooking};
+    if($('otfVehicleVerified')){$('otfVehicleVerified').hidden=false;$('otfVehicleVerified').textContent='VERIFIED · '+row.chassis_number+' · '+row.model+' / '+(row.variant||'')+' · '+(row.colour||'Colour not recorded')+' · Engine '+(row.engine_number||'Not recorded')+' · Stage '+(row.stage||'Not recorded')+' · '+(row.status||'Not recorded')+(activeBooking?' · ALREADY OTF: '+activeBooking.order_number+' ('+activeBooking.status+'). This chassis is selectable, but a duplicate active OTF save is blocked.':'');}
     if($('otfPrintPreview'))$('otfPrintPreview').disabled=false;
-    otfSetStatus('Chassis verified against the live Stock Register.');
+    otfSetStatus(activeBooking?'Chassis details loaded. Existing OTF found; duplicate active booking will be prevented.':'Chassis verified against the live Stock Register.');
   }
   function otfCollectRows(selector,fields){
     return [...document.querySelectorAll(selector)].map(row=>Object.fromEntries(fields.map(([key,sel])=>[key,row.querySelector(sel)?.value?.trim()||''])))
@@ -2007,6 +2007,7 @@
   function buildOtfPayload(){
     if(!otfSelectedQuote)throw new Error('Select a quotation by mobile number.');
     if(!otfVerifiedVehicle)throw new Error('Verify the chassis number against Stock Register.');
+    if(otfVerifiedVehicle.activeOtfBooking&&otfVerifiedVehicle.activeOtfBooking.id!==otfEditingId)throw new Error('This chassis already has active OTF '+otfVerifiedVehicle.activeOtfBooking.order_number+' ('+otfVerifiedVehicle.activeOtfBooking.status+'). Vehicle details are loaded, but a duplicate active OTF cannot be saved.');
     const address=otfValue('otfAddress');
     if(!address)throw new Error('Enter the complete customer address.');
     const aadhaar=otfDigits(otfValue('otfAadhaar')),pan=otfValue('otfPan').toUpperCase();
