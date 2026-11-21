@@ -707,7 +707,7 @@
       sales_person:q.salesPerson,contact_person:contactPerson,contact_mobile:contactMobile,
       email:QUOTE_COMPANY_DEFAULTS.email,branch_address:QUOTE_COMPANY_DEFAULTS.branch_address,
       helpline:QUOTE_COMPANY_DEFAULTS.helplines.join(' / '),pan:QUOTE_COMPANY_DEFAULTS.pan,gstin:QUOTE_COMPANY_DEFAULTS.gstin,
-      subtotal:q.subtotal,discount:q.discount,total:q.subtotal,amount_words:numberWordsIndian(q.subtotal),
+      subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:numberWordsIndian(q.total)||'',
       terms:q.terms||QUOTE_COMPANY_DEFAULTS.terms,bank_details:q.bank||QUOTE_COMPANY_DEFAULTS.bank_details,
       created_by:currentUser.id,updated_by:currentUser.id
     }).select().single());
