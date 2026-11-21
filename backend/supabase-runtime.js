@@ -185,6 +185,20 @@
     if(quotationPickerBound)return;
     quotationPickerBound=true;
     const fields=[model,variant,colour],hide=()=>{box.hidden=true;};
+    // When the user starts a different model search, discard dependent values and old Price List rows.
+    // This prevents the previous model's variant/colour from filtering out the next model.
+    let lastModelValue=model.value;
+    model.addEventListener('input',()=>{
+      if(model.value!==lastModelValue){
+        lastModelValue=model.value;
+        variant.value='';
+        colour.value='';
+        window.selectedStockQuoteVehicle=null;
+        if(typeof window.quoteClearPriceListRows==='function')window.quoteClearPriceListRows();
+        const status=$('qPriceListStatus');
+        if(status)status.textContent='Model changed. Select the matching variant and colour to load the current Price List.';
+      }
+    });
     const render=async()=>{
       const activeDept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
       const query=quoteSearchNorm([model.value,variant.value,colour.value].filter(Boolean).join(' '));
@@ -214,7 +228,7 @@
         box.querySelectorAll('[data-quote-price-index]').forEach(button=>button.addEventListener('click',()=>{
           const row=matches[Number(button.dataset.quotePriceIndex)];if(!row)return;
           if(typeof window.setQuotationDepartment==='function')window.setQuotationDepartment(row.department);
-          model.value=row.vehicle||'';variant.value=row.variant||'';if(row.colour)colour.value=row.colour;
+          model.value=row.vehicle||'';lastModelValue=model.value;variant.value=row.variant||'';colour.value=row.colour||'';
           if($('qCarDesc'))$('qCarDesc').value='';
           if($('qSalesPerson'))$('qSalesPerson').value=currentProfile?.full_name||currentUser?.email||'';
           hide();
