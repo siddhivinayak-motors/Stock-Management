@@ -1525,8 +1525,12 @@ function printQuoteDocumentPaper(q){
  const exchange=discounts.filter(x=>/exchange/i.test(x.name||''));
  const otherDiscounts=discounts.filter(x=>!/retail|exchange/i.test(x.name||''));
  const itemRows=regular.map((x,i)=>'<tr><td class="sl">'+(i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">'+amount(x.amount)+'</td></tr>').join('');
- // Print each saved discount line with its own name and amount; do not print a redundant aggregate "Total Discount" row.
- const discountRows=discounts.filter(x=>Number(x.amount||0)>0).map((x,i)=>'<tr class="discount-line"><td class="sl">−</td><td>Less&nbsp; '+esc(String(x.name||'Discount').replace(/^LESS /i,''))+'</td><td class="amt">− ₹ '+moneyPrint(x.amount)+'</td></tr>').join('');
+ // Keep both discount rows (Retail Offer and Exchange Offer); only the aggregate Total Discount row is omitted.
+ const retailAmount=retail.reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
+ const exchangeAmount=exchange.reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
+ const discountRows=
+  '<tr class="discount-line"><td class="sl">11</td><td>LESS RETAIL OFFER</td><td class="amt">'+(retailAmount?'− ₹ '+moneyPrint(retailAmount):'—')+'</td></tr>'+
+  '<tr class="discount-line"><td class="sl">12</td><td>LESS EXCHANGE OFFER</td><td class="amt">'+(exchangeAmount?'− ₹ '+moneyPrint(exchangeAmount):'—')+'</td></tr>';
  const sumRows='<tr class="sum"><td colspan="2">TOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
   discountRows+
   '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(q.total)+'</td></tr>';
