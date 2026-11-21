@@ -1,4 +1,4 @@
-const CACHE_NAME = "siddhivinayak-stock-pwa-v35";
+const CACHE_NAME = "siddhivinayak-stock-pwa-v36";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,7 +7,7 @@ const APP_SHELL = [
   "./icons/app-icon-v2.png",
   "./icons/siddhivinayak-premium.svg",
   "./icons/app-icon.png",
-  "./backend/supabase-runtime.js?v=otf-department-visibility-20261121c",
+  "./backend/supabase-runtime.js?v=quotation-upsert-20261121a",
   "./backend/price-list-module.js?v=department-filter-20261121a"
 ];
 
