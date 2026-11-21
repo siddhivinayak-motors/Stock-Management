@@ -1525,10 +1525,10 @@ function printQuoteDocumentPaper(q){
  const exchange=discounts.filter(x=>/exchange/i.test(x.name||''));
  const otherDiscounts=discounts.filter(x=>!/retail|exchange/i.test(x.name||''));
  const itemRows=regular.map((x,i)=>'<tr><td class="sl">'+(i+1)+'</td><td>'+esc(x.name)+'</td><td class="amt">'+amount(x.amount)+'</td></tr>').join('');
+ // Print each saved discount line with its own name and amount; do not print a redundant aggregate "Total Discount" row.
+ const discountRows=discounts.filter(x=>Number(x.amount||0)>0).map((x,i)=>'<tr class="discount-line"><td class="sl">−</td><td>Less&nbsp; '+esc(String(x.name||'Discount').replace(/^\\s*less\\s*/i,''))+'</td><td class="amt">− ₹ '+moneyPrint(x.amount)+'</td></tr>').join('');
  const sumRows='<tr class="sum"><td colspan="2">TOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
-  '<tr><td colspan="2">Less&nbsp; RETAIL OFFER (If any)</td><td class="amt">− '+(retail.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(retail.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
-  '<tr><td colspan="2">Less&nbsp; EXCHANGE BONUS (If any)</td><td class="amt">− '+(exchange.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(exchange.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
-  '<tr class="discount-total"><td colspan="2"><b>TOTAL DISCOUNT</b></td><td class="amt"><b>− ₹ '+moneyPrint(Number(q.discount??discounts.reduce((a,x)=>a+Number(x.amount||0),0)))+'</b></td></tr>'+
+  discountRows+
   '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(q.total)+'</td></tr>';
  const dateRaw=String(q.date||new Date().toISOString().slice(0,10));
  const dateObj=new Date(dateRaw+'T00:00:00');
