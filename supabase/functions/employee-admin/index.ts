@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
   const callerId = authData.user.id;
 
   const { data: profile, error: profileError } = await callerClient
-    .from("profiles").select("is_super_admin,status,designation,department,department_access").eq("user_id", callerId).maybeSingle();
+    .from("profiles").select("is_super_admin,status,designation,department,department_access,city").eq("user_id", callerId).maybeSingle();
   if (profileError || !profile || profile.status !== "active") return json({ error: "Active employee profile required" }, 403);
 
   const [canManageResult,canCreateResult,canEditResult,canDeleteResult] = await Promise.all([
@@ -110,7 +110,12 @@ Deno.serve(async (req: Request) => {
   const canManageTargetDepartments=(target:any)=>{
     const targetDepartments=Array.isArray(target.department_access)&&target.department_access.length
       ? target.department_access : [target.department].filter(Boolean);
-    return isOrgAdmin || targetDepartments.some((d:string)=>callerDepartmentScope.has(String(d).toLowerCase()));
+    if(isOrgAdmin) return true;
+    if(callerRole==="Manager"){
+      const sameCity=!!profile.city&&String(target.city||"").trim().toLowerCase()===String(profile.city).trim().toLowerCase();
+      return sameCity&&targetDepartments.some((d:string)=>callerDepartmentScope.has(String(d).trim().toLowerCase()));
+    }
+    return targetDepartments.some((d:string)=>callerDepartmentScope.has(String(d).trim().toLowerCase()));
   };
   const {data:callerPermRows,error:callerPermError}=await callerClient
     .from("employee_permissions").select("module,actions").eq("user_id",callerId);
@@ -134,6 +139,7 @@ Deno.serve(async (req: Request) => {
     const allowedCities=new Set(["Bhavnagar","Amreli","Botad","Rajula"]);
     if(body.phone&&phone.length!==10)return json({error:"Mobile number must be 10 digits. +91 or a leading 0 is accepted."},400);
     if(city&&!allowedCities.has(city))return json({error:"Select a valid city"},400);
+    if(callerRole==="Manager"&&(!profile.city||city!==profile.city))return json({error:"A Manager can create employees only in their own city."},403);
     const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
     if (!email || !fullName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Valid email and full name are required" }, 400);
     if (password.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
@@ -180,7 +186,7 @@ Deno.serve(async (req: Request) => {
       if(permissionSaveError){await adminClient.from("profiles").delete().eq("user_id",userId);await adminClient.auth.admin.deleteUser(userId);return json({error:permissionSaveError.message},500);}
     }
 
-    // New employees receive no workspace/module access until Super Admin assigns it from the Permissions menu.
+    // Department access automatically provisions the department's stock, hold, quotation and price-list view permissions.
     if (!isRoot) await adminClient.from("audit_logs").insert({
       actor_id: callerId, actor_email: authData.user.email, module:"employee_management",
       action:"create", action_label:"Created employee account", record_type:"profile", record_id:userId,
@@ -193,7 +199,7 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "A different employee user_id is required" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin,designation,department,department_access").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,designation,department,department_access,city").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "A Super Admin profile cannot be edited here" }, 403);
     if (!canManageTargetDepartments(target)) return json({error:"You can manage employees only in your assigned department."},403);
@@ -213,6 +219,7 @@ Deno.serve(async (req: Request) => {
       patch.phone=normalized;
     }
     if (typeof patch.city === "string" && patch.city && !["Bhavnagar","Amreli","Botad","Rajula"].includes(patch.city)) return json({error:"Select a valid city"},400);
+    if(callerRole==="Manager"&&Object.prototype.hasOwnProperty.call(patch,"city")&&String(patch.city||"").trim()!==String(profile.city||"").trim())return json({error:"A Manager can assign employees only within their own city."},403);
     if (typeof patch.department === "string" && patch.department && !["Personal","EV","Commercial","LLM"].includes(patch.department)) return json({ error: "Invalid department" }, 400);
     if (body.department_access !== undefined) {
       const access = Array.isArray(body.department_access) ? body.department_access.map(String) : [];
@@ -263,7 +270,7 @@ Deno.serve(async (req: Request) => {
   if (action === "save_employee_permissions") {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({error:"Select another employee"},400);
-    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation,department,department_access").eq("user_id",userId).maybeSingle();
+    const {data:target,error:targetError}=await adminClient.from("profiles").select("user_id,is_super_admin,deleted_at,designation,department,department_access,city").eq("user_id",userId).maybeSingle();
     if(targetError||!target||target.deleted_at) return json({error:"Active employee not found"},404);
     if(target.is_super_admin) return json({error:"Super Admin permissions cannot be changed"},403);
     const requestedDepartments=Array.isArray(body.departments)?[...new Set(body.departments.map(String))]:[];
@@ -312,7 +319,7 @@ Deno.serve(async (req: Request) => {
     const userId = String(body.user_id || "");
     if (!userId || userId === callerId) return json({ error: "You cannot delete your own account" }, 400);
     const { data: target, error: targetError } = await adminClient.from("profiles")
-      .select("user_id,email,is_super_admin,deleted_at,designation,department,department_access").eq("user_id", userId).maybeSingle();
+      .select("user_id,email,is_super_admin,deleted_at,designation,department,department_access,city").eq("user_id", userId).maybeSingle();
     if (targetError || !target) return json({ error: "Employee not found" }, 404);
     if (target.is_super_admin) return json({ error: "The Super Admin account is protected and cannot be deleted" }, 403);
     if (!canManageTargetDepartments(target)) return json({error:"You can delete employees only in your assigned department."},403);
