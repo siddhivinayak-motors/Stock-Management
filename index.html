@@ -1042,7 +1042,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <div class="charge-row"><span class="charge-index">05</span><div class="q-charge-name">HYPOTHECATION FEES</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Hypothecation Fees"></div></div>
     <div class="charge-row"><span class="charge-index">06</span><div class="q-charge-name">CORPORATION TAX</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Corporation Tax"></div></div>
     <div class="charge-row"><span class="charge-index">07</span><div class="q-charge-name">EXTENDED WARRANTY</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="Extended Warranty"></div></div>
-    <div class="charge-row"><span class="charge-index">08</span><div class="q-charge-name">ACCESSORIES</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="30000.00" data-charge="Accessories Kit"></div></div>
+    <div class="charge-row"><span class="charge-index">08</span><div class="q-charge-name">ACCESSORIES KIT</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Accessories Kit"></div></div>
     <div class="charge-row"><span class="charge-index">09</span><div class="q-charge-name">RSA</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" data-charge="RSA"></div></div>
     <div class="charge-row"><span class="charge-index">10</span><div class="q-charge-name">COATING</div><div class="amount-wrap"><span>₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Coating"></div></div>
    </div>
@@ -1050,7 +1050,6 @@ td,.data-table td{font-size:13px;line-height:1.45}
    <div class="quote-charge-list quote-discount-list" id="quoteDiscounts">
     <div class="charge-row discount-charge"><span class="charge-index">11</span><div class="q-charge-name">LESS RETAIL OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Retail Offer"></div><span class="discount-lock"></span></div>
     <div class="charge-row discount-charge"><span class="charge-index">12</span><div class="q-charge-name">LESS EXCHANGE OFFER</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Exchange Offer"></div><span class="discount-lock"></span></div>
-    <div class="charge-row discount-charge"><span class="charge-index">13</span><div class="q-charge-name">LESS EXTRA DISCOUNT</div><div class="amount-wrap discount-input"><span>− ₹</span><input class="amount" type="text" inputmode="decimal" placeholder="0.00" value="0.00" data-charge="Extra Discount"></div><span class="discount-lock"></span></div>
    </div>
    <div class="quote-total-panel">
     <div class="total-line discount-total"><span>TOTAL DISCOUNTS</span><b id="discount">− ₹0.00</b></div>
@@ -1529,7 +1528,7 @@ function printQuoteDocumentPaper(q){
  const sumRows='<tr class="sum"><td colspan="2">TOTAL</td><td class="amt">₹ '+moneyPrint(q.subtotal)+'</td></tr>'+
   '<tr><td colspan="2">Less&nbsp; RETAIL OFFER (If any)</td><td class="amt">− '+(retail.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(retail.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
   '<tr><td colspan="2">Less&nbsp; EXCHANGE BONUS (If any)</td><td class="amt">− '+(exchange.reduce((a,x)=>a+Number(x.amount||0),0)>0?'₹ '+moneyPrint(exchange.reduce((a,x)=>a+Number(x.amount||0),0)):'—')+'</td></tr>'+
-  otherDiscounts.map(x=>'<tr><td colspan="2">Less&nbsp; '+esc(String(x.name||'').replace(/^less\\s*/i,''))+'</td><td class="amt">− ₹ '+moneyPrint(x.amount)+'</td></tr>').join('')+
+  '<tr class="discount-total"><td colspan="2"><b>TOTAL DISCOUNT</b></td><td class="amt"><b>− ₹ '+moneyPrint(Number(q.discount??discounts.reduce((a,x)=>a+Number(x.amount||0),0)))+'</b></td></tr>'+
   '<tr class="grand"><td colspan="2">GRAND TOTAL</td><td class="amt">₹ '+moneyPrint(q.total)+'</td></tr>';
  const dateRaw=String(q.date||new Date().toISOString().slice(0,10));
  const dateObj=new Date(dateRaw+'T00:00:00');
@@ -1902,6 +1901,8 @@ function quoteApplyPriceList(selectedMatch){
  const details=Array.isArray(match.components)?match.components:(Array.isArray(match.other_data?.components)?match.other_data.components:[]);
  const isEv=String(match.department||currentQuoteDepartment||'').toUpperCase()==='EV';
  const rows=[];
+ const accessoriesComponent=details.find(p=>/accessor(?:y|ies)(?:\s+kit)?/i.test(String(p?.label||'')));
+ const accessoriesPrice=Number(accessoriesComponent?.value||0);
  const hasLabel=(re)=>rows.some(x=>re.test(x.label));
  if(isEv){
   const a=details.find(p=>/vehicle\s*price\s*\(\s*A\s*\)/i.test(String(p.label||'')));
@@ -1930,13 +1931,13 @@ function quoteApplyPriceList(selectedMatch){
    {label:'Road Tax + Registration',value:Number(match.rto??match.other_data?.rto??0)}
   );
  }
- const accessories={label:'Accessories Kit',value:30000};
+ const accessories={label:'Accessories Kit',value:accessoriesPrice};
  const coating={label:'Coating',value:0};
  let accessoryAt=-1;
  rows.forEach((x,i)=>{if(/extended\s*warranty/i.test(x.label))accessoryAt=i;});
  if(accessoryAt<0){const rsaAt=rows.findIndex(x=>/^RSA/i.test(x.label));accessoryAt=rsaAt>=0?rsaAt-1:rows.length-1;}
  if(!rows.some(x=>/accessor/i.test(x.label)))rows.splice(accessoryAt>=0?accessoryAt+1:rows.length,0,accessories);
- else rows.forEach(x=>{if(/accessor/i.test(x.label))x.value=30000;});
+ else rows.forEach(x=>{if(/accessor/i.test(x.label))x.value=accessoriesPrice;});
  rows.push(coating);
  charges.innerHTML='';
  const makeRow=(part,index)=>{
@@ -1953,7 +1954,7 @@ function quoteApplyPriceList(selectedMatch){
  rows.forEach((part,i)=>charges.appendChild(makeRow(part,i+1)));
  quoteDiscounts.innerHTML=defaultQuoteDiscountMarkup;
  renumberCharges();calc();
- const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Price List applied: '+match.vehicle+' · '+match.variant+' · Accessories default ₹30,000 · Coating ₹0.00';
+ const status=document.getElementById('qPriceListStatus');if(status)status.textContent='Price List applied: '+match.vehicle+' · '+match.variant+' · Accessories Kit from Price List · Coating ₹0.00';
  return true;
 }
 function quoteClearPriceListRows(){
