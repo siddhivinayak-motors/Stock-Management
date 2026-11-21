@@ -177,10 +177,10 @@
   function canSubmitStockHoldRole(){return STOCK_HOLD_ROLES.has(String(currentProfile?.designation||''));}
   function canManageHolds(){return roleLevel()>=70;}
   function allowedDepartmentList(){
-    // Department access is the source of truth for every role. Only Super Admin
-    // receives all four departments automatically; Admin/GM/Manager are scoped
-    // to the departments explicitly assigned in Employee Management.
-    if(currentProfile?.is_super_admin) return ['Personal','EV','Commercial','LLM'];
+    // Super Admin, Admin and General Manager have organization-wide department access.
+    // Managers and all other employees remain limited to explicitly assigned departments.
+    const role=String(currentProfile?.designation||'').trim().toLowerCase();
+    if(currentProfile?.is_super_admin||role==='super admin'||role==='admin'||role==='general manager') return ['Personal','EV','Commercial','LLM'];
     const valid=['Personal','EV','Commercial','LLM'];
     const assigned=Array.isArray(currentProfile?.department_access)&&currentProfile.department_access.length
       ?currentProfile.department_access
@@ -718,9 +718,16 @@
   }
   async function loadQuotations(department='Personal') {
     if(!has('quotation_management','view')) throw new Error('No quotation view permission.');
+    if(!allowedDepartmentList().some(d=>String(d).toLowerCase()===String(department).toLowerCase())) throw new Error('You do not have access to this department.');
+    const role=String(currentProfile?.designation||'').trim().toLowerCase();
+    const organizationWide=currentProfile?.is_super_admin===true||['super admin','admin','general manager','manager'].includes(role);
     const out=[];let from=0,chunk=500;
     while(true){
-      const part=await call(db().from('quotations').select('*,quotation_items(*)').eq('department',department).order('created_at',{ascending:false}).range(from,from+chunk-1));
+      let query=db().from('quotations').select('*,quotation_items(*)').eq('department',department);
+      // Individual employees see only their own quotations. Manager visibility is
+      // scoped by city + assigned department in Supabase RLS; Admin/GM see all.
+      if(!organizationWide) query=query.eq('created_by',currentUser.id);
+      const part=await call(query.order('created_at',{ascending:false}).range(from,from+chunk-1));
       out.push(...part);if(part.length<chunk)break;from+=chunk;
     }
     return out;
@@ -1508,11 +1515,13 @@
     rows=rows.filter(p=>!p.deleted_at);
     const designationFilter=section.querySelector('#svEmployeeDesignationFilter')?.value||'';
     const cityFilter=section.querySelector('#svEmployeeCityFilter')?.value||'';
-    if(currentProfile?.designation==='Manager'){
+    if(String(currentProfile?.designation||'').trim()==='Manager'){
       const managerDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
+      const managerCity=String(currentProfile?.city||'').trim().toLowerCase();
       rows=rows.filter(p=>{
-        const employeeDepartments=(Array.isArray(p.department_access)&&p.department_access.length?p.department_access:[p.department].filter(Boolean)).map(x=>String(x).toLowerCase());
-        return employeeDepartments.some(d=>managerDepartments.has(d));
+        const employeeDepartments=new Set((Array.isArray(p.department_access)&&p.department_access.length?p.department_access:[p.department].filter(Boolean)).map(x=>String(x).trim().toLowerCase()));
+        const sameCity=!!managerCity&&String(p.city||'').trim().toLowerCase()===managerCity;
+        return sameCity&&[...employeeDepartments].some(d=>managerDepartments.has(d));
       });
     }
     const roleOrder={'Super Admin':0,'Admin':1,'General Manager':2,'Manager':3,'Accountant':4,'HR':5,'DMS':6,'Executive':7,'Reception':8,'Receptionist':8,'Driver':9};
