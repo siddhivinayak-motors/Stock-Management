@@ -98,24 +98,35 @@
   var seen=new Set(),uniqueRows=[],duplicates=[];all.forEach(function(x){var k=norm(x.department)+'|'+norm(x.vehicle)+'|'+norm(variantKey(x.variant))+'|'+norm(x.colour);if(seen.has(k)){duplicates.push(x.vehicle+' / '+x.variant);return}seen.add(k);uniqueRows.push(x)});
   return {rows:uniqueRows,files:files.map(function(f){return f.name}),fileObjects:fileObjects,sheets:sheets,warnings:warnings,duplicates:duplicates,duplicatesSkipped:duplicates.length};
  }
- function getRows(){var by=window.plData||{},out=[];Object.keys(by).forEach(function(k){(by[k]||[]).forEach(function(x){out.push(x)})});return out}
- function unique(a){return Array.from(new Set(a.filter(Boolean))).sort(function(x,y){return String(x).localeCompare(String(y))})}
- function fillSelect(el,values,placeholder){if(!el)return;var cur=el.value,html='<option value="">'+esc(placeholder)+'</option>';values.forEach(function(v){html+='<option value="'+esc(v)+'">'+esc(v)+'</option>'});el.innerHTML=html;if(values.indexOf(cur)>=0)el.value=cur}
- function populateFilters(){
-  var rows=getRows(),model=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',models=unique(rows.map(function(r){return clean(r.vehicle)}));
-  fillSelect($('plStockVehicle'),models,'All vehicles');if(model&&models.indexOf(model)>=0)$('plStockVehicle').value=model;
-  var mr=rows.filter(function(r){return !model||modelKey(r.vehicle)===modelKey(model)}),variants=unique(mr.map(function(r){return clean(r.variant)}));
-  var variantSelect=$('plStockVariant');fillSelect(variantSelect,variants,'All variants');if(variantSelect){variantSelect.disabled=!model;if(variant&&variants.indexOf(variant)>=0)variantSelect.value=variant;}
+ function allowedDepartments(){
+  var api=window.SVMBackend,profile=api&&api.profile,all=['Personal','EV','Commercial','LLM'];
+  if(profile&&profile.is_super_admin)return all;
+  var assigned=profile&&Array.isArray(profile.department_access)&&profile.department_access.length?profile.department_access:[profile&&profile.department].filter(Boolean);
+  return all.filter(function(d){return assigned.some(function(x){return String(x).trim().toLowerCase()===d.toLowerCase()})});
  }
- function stockFilterChanged(which){var variantSelect=$('plStockVariant');if(which==='vehicle'&&variantSelect)variantSelect.value='';populateFilters();render()}
- function resetFilters(){['plStockVehicle','plStockVariant','plSearch'].forEach(function(id){if($(id))$(id).value=''});populateFilters();render()}
+ function getRows(){var by=window.plData||{},out=[];Object.keys(by).forEach(function(k){(by[k]||[]).forEach(function(x){out.push(Object.assign({department:k},x))})});return out}
+ function unique(a){return Array.from(new Set(a.filter(Boolean))).sort(function(x,y){return String(x).localeCompare(String(y))})}
+ function fillSelect(el,values,placeholder,labelFn){if(!el)return;var cur=el.value,html='<option value="">'+esc(placeholder)+'</option>';values.forEach(function(v){html+='<option value="'+esc(v)+'">'+esc(labelFn?labelFn(v):v)+'</option>'});el.innerHTML=html;if(values.indexOf(cur)>=0)el.value=cur}
+ function departmentRows(){
+  var selected=$('plDepartmentFilter')?.value||'';
+  return getRows().filter(function(r){return !selected||String(r.department||'').toLowerCase()===selected.toLowerCase()});
+ }
+ function populateFilters(){
+  var departments=allowedDepartments(),dept=$('plDepartmentFilter')?.value||'',rows=departmentRows(),model=$('plStockVehicle')?.value||'',models=unique(rows.map(function(r){return clean(r.vehicle)}));
+  fillSelect($('plDepartmentFilter'),departments,'All permitted departments',function(v){return ({Personal:'Personal Vehicle',EV:'Electric Vehicle',Commercial:'Commercial Vehicle',LLM:'LLM Vehicles'})[v]||v});
+  if(dept&&departments.indexOf(dept)>=0)$('plDepartmentFilter').value=dept;
+  rows=departmentRows();models=unique(rows.map(function(r){return clean(r.vehicle)}));
+  fillSelect($('plStockVehicle'),models,'All vehicles');if(model&&models.indexOf(model)>=0)$('plStockVehicle').value=model;
+ }
+ function stockFilterChanged(which){if(which==='department'&&$('plStockVehicle'))$('plStockVehicle').value='';populateFilters();render()}
+ function resetFilters(){['plDepartmentFilter','plStockVehicle','plSearch'].forEach(function(id){if($(id))$(id).value=''});populateFilters();render()}
  function breakup(item){
   var parts=(item.other_data||item).components||[];if(!parts.length)return '<span class="muted">—</span>';
   return '<details class="pl-breakup"><summary>View breakup</summary><div class="pl-breakup-content">'+parts.map(function(p){return '<div class="pl-breakup-row"><span>'+esc(p.label)+'</span><b>'+money(p.value)+'</b></div>'}).join('')+'</div></details>';
  }
  function render(){
-  populateFilters();var rows=getRows(),model=$('plStockVehicle')?.value||'',variant=$('plStockVariant')?.value||'',q=clean($('plSearch')?.value).toLowerCase(),out=rows;
-  if(model)out=out.filter(function(x){return modelKey(x.vehicle)===modelKey(model)});if(variant)out=out.filter(function(x){return variantMatch(variant,x.variant)});if(q)out=out.filter(function(x){var text=[x.vehicle,x.variant,x.colour,x.source_file,x.sourceFile,x.sourceSheet].join(' ').toLowerCase();return text.indexOf(q)>=0});
+  populateFilters();var rows=departmentRows(),model=$('plStockVehicle')?.value||'',q=clean($('plSearch')?.value).toLowerCase(),out=rows;
+  if(model)out=out.filter(function(x){return modelKey(x.vehicle)===modelKey(model)});if(q)out=out.filter(function(x){var text=[x.vehicle,x.variant,x.colour,x.source_file,x.sourceFile,x.sourceSheet].join(' ').toLowerCase();return text.indexOf(q)>=0});
   out.sort(function(a,b){return String(a.vehicle).localeCompare(String(b.vehicle))||String(a.variant).localeCompare(String(b.variant))});
   var body=$('plRows');if(body)body.innerHTML=out.length?out.map(function(x){
    var d=x.other_data||x,ex=Number(x.exShowroom!=null?x.exShowroom:x.ex_showroom||d.exShowroom||0),rto=Number(x.rto||d.rto||0),total=Number(d.onRoadTotal||d.totalOnRoad||0);
