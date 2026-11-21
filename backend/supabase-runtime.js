@@ -903,7 +903,11 @@
           terms:q.terms||[],bank_details:q.bank||{},status:'Pending',approved_by:null,approved_at:null,
           updated_by:currentUser.id,updated_at:new Date().toISOString()
         };
-        await call(db().from('quotations').update(payload).eq('id',id).select('id').single());
+        // RLS can legitimately return zero updated rows; .single() turns that into
+        // the opaque PostgREST "Cannot coerce the result to a single JSON object" error.
+        // Use maybeSingle() and report the actual no-row condition clearly.
+        const updatedQuote=await call(db().from('quotations').update(payload).eq('id',id).select('id').maybeSingle());
+        if(!updatedQuote?.id) throw new Error('Quotation was not updated. Check your Edit permission and confirm this quotation belongs to your assigned branch and department. No quotation items were changed.');
         await call(db().from('quotation_items').delete().eq('quotation_id',id));
         const itemRows=(q.items||[]).map((x,i)=>({quotation_id:id,line_no:i+1,particulars:x.name,amount:Number(x.amount||0),is_discount:!!x.discount,is_custom:!!x.custom}));
         if(itemRows.length) await call(db().from('quotation_items').insert(itemRows));
