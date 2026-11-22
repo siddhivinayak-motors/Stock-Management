@@ -372,13 +372,25 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
 }
 #view-dashboard .department-kpi .dashboard-status-grid{
   display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:9px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
   margin:0 0 15px;
-  padding:13px 0 14px;
-  border-top:1px solid rgba(119,135,153,.15);
-  border-bottom:1px solid rgba(119,135,153,.15);
+  padding:0;
+  border:0;
 }
+#view-dashboard .department-kpi .dashboard-status-item{
+  min-width:0;min-height:112px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:8px;
+  padding:15px 17px;border:1px solid transparent;border-radius:14px;text-align:left;
+}
+#view-dashboard .department-kpi .dashboard-status-item .status-value{display:block;width:100%;margin:0;font-size:35px;line-height:1;font-weight:950;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+#view-dashboard .department-kpi .dashboard-status-item .status-caption{display:block;width:100%;margin:0;font-size:14px;line-height:1.2;font-weight:850;letter-spacing:.1px}
+#view-dashboard .department-kpi .status-main{background:#164b36;border-color:#164b36;color:#62d6a0}
+#view-dashboard .department-kpi .status-main .status-caption{color:#d9f4e7}
+#view-dashboard .department-kpi .status-free{background:#173f70;border-color:#173f70;color:#79b9ff}
+#view-dashboard .department-kpi .status-free .status-caption{color:#e1efff}
+#view-dashboard .department-kpi .status-allotted,
+#view-dashboard .department-kpi .status-hold{background:#252525;border-color:#303030;color:#fff}
+#view-dashboard .department-kpi .status-subtitle{display:block;font-size:10px;line-height:1.25;font-weight:650;color:inherit;opacity:.86}
 #view-dashboard .department-kpi .dashboard-status-item{
   min-width:0;
   min-height:78px;
@@ -916,6 +928,20 @@ td,.data-table td{font-size:13px;line-height:1.45}
   .card{max-width:100%}
 }
 
+
+/* Dashboard stock cards: match the approved 2x2 Main / Free / Allotted / Hold layout */
+#view-dashboard .department-kpi .kpi-total{display:none}
+#view-dashboard .department-kpi .dashboard-status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0;padding:0;border:0}
+#view-dashboard .department-kpi .dashboard-status-item{min-height:112px;align-items:flex-start;justify-content:center;padding:15px 17px;gap:8px;text-align:left}
+#view-dashboard .department-kpi .dashboard-status-item .status-value{font-size:35px;line-height:1}
+#view-dashboard .department-kpi .dashboard-status-item .status-caption{font-size:14px;line-height:1.2}
+#view-dashboard .department-kpi .status-main{background:#164b36;border-color:#164b36;color:#62d6a0}
+#view-dashboard .department-kpi .status-main .status-caption{color:#d9f4e7}
+#view-dashboard .department-kpi .status-free{background:#173f70;border-color:#173f70;color:#79b9ff}
+#view-dashboard .department-kpi .status-free .status-caption{color:#e1efff}
+#view-dashboard .department-kpi .status-allotted,#view-dashboard .department-kpi .status-hold{background:#252525;border-color:#303030;color:#fff}
+#view-dashboard .department-kpi .status-subtitle{font-size:10px;line-height:1.25;font-weight:650;opacity:.86}
+@media(max-width:680px){#view-dashboard .department-kpi-grid{grid-template-columns:1fr}#view-dashboard .department-kpi .dashboard-status-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}#view-dashboard .department-kpi .dashboard-status-item{min-height:105px;padding:13px 14px}#view-dashboard .department-kpi .dashboard-status-item .status-value{font-size:32px}}
 </style>
 <style id="svResetTreeStyles">#svResetTree .sv-reset-options{display:grid;gap:10px}#svResetTree .sv-reset-options label{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45;color:#344054;cursor:pointer}#svResetTree input[type=checkbox],#svResetSelectAll{accent-color:#d71927;flex:0 0 auto;width:17px;height:17px;margin:0}#svResetTree h3{margin:0 0 13px}#svResetDialog .card{box-shadow:none;border:1px solid #e5eaf0}@media(max-width:600px){#svResetDialog{padding:8px}#svResetDialog>div{margin:4px auto}#svResetDialog>div>div:nth-child(2){padding:12px;max-height:70vh}}</style><style id="retail-report-dashboard-styles">
 #view-reports [hidden]{display:none!important}\n#view-reports .retail-filter-card{margin-bottom:16px}
@@ -1484,26 +1510,26 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <div class="department-kpi-grid" aria-label="Department stock overview">
   <button class="department-kpi personal-kpi" data-department="Personal" data-dept-key="personal" type="button">
    <span class="kpi-top"><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="12" rx="2"/><path d="M7 7l2-3h6l2 3M7 12h.01M17 12h.01M7 19v2m10-2v2"/></svg></span><span class="kpi-label">PERSONAL</span></span>
-   <span class="kpi-total"><strong>00</strong><small>Total Vehicles</small></span>
-   <div class="dashboard-status-grid" aria-label="Stock status"><div class="dashboard-status-item status-open"><span class="status-value">00</span><span class="status-caption">Open</span></div><div class="dashboard-status-item status-hold"><span class="status-value">00</span><span class="status-caption">Hold</span></div><div class="dashboard-status-item status-retail"><span class="status-value">00</span><span class="status-caption">Retail</span></div></div>
+   <span class="kpi-total"><strong>00</strong><small>Main Stock</small></span>
+   <div class="dashboard-status-grid" aria-label="Main and available stock"><div class="dashboard-status-item status-main"><span class="status-value">00</span><span class="status-caption">Main Stock</span><small class="status-subtitle">OPEN + ALLOTED + HOLD</small></div><div class="dashboard-status-item status-free"><span class="status-value">00</span><span class="status-caption">Free Stock</span><small class="status-subtitle">ફક્ત OPEN</small></div><div class="dashboard-status-item status-allotted"><span class="status-value">00</span><span class="status-caption">Allotted</span></div><div class="dashboard-status-item status-hold"><span class="status-value">00</span><span class="status-caption">Hold</span></div></div>
    <span class="kpi-foot">View Personal Stock Register <b>→</b></span>
   </button>
   <button class="department-kpi ev-kpi" data-department="EV" data-dept-key="ev" type="button">
    <span class="kpi-top"><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m13 2-3 8h7l-6 12 2-9H6l7-11Z"/></svg></span><span class="kpi-label">EV</span></span>
-   <span class="kpi-total"><strong>00</strong><small>Total Vehicles</small></span>
-   <div class="dashboard-status-grid" aria-label="Stock status"><div class="dashboard-status-item status-open"><span class="status-value">00</span><span class="status-caption">Open</span></div><div class="dashboard-status-item status-hold"><span class="status-value">00</span><span class="status-caption">Hold</span></div><div class="dashboard-status-item status-retail"><span class="status-value">00</span><span class="status-caption">Retail</span></div></div>
+   <span class="kpi-total"><strong>00</strong><small>Main Stock</small></span>
+   <div class="dashboard-status-grid" aria-label="Main and available stock"><div class="dashboard-status-item status-main"><span class="status-value">00</span><span class="status-caption">Main Stock</span><small class="status-subtitle">OPEN + ALLOTED + HOLD</small></div><div class="dashboard-status-item status-free"><span class="status-value">00</span><span class="status-caption">Free Stock</span><small class="status-subtitle">ફક્ત OPEN</small></div><div class="dashboard-status-item status-allotted"><span class="status-value">00</span><span class="status-caption">Allotted</span></div><div class="dashboard-status-item status-hold"><span class="status-value">00</span><span class="status-caption">Hold</span></div></div>
    <span class="kpi-foot">View EV Stock Register <b>→</b></span>
   </button>
   <button class="department-kpi commercial-kpi" data-department="Commercial" data-dept-key="commercial" type="button">
    <span class="kpi-top"><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h12v12H3zM15 10h4l3 4v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg></span><span class="kpi-label">COMMERCIAL</span></span>
-   <span class="kpi-total"><strong>00</strong><small>Total Vehicles</small></span>
-   <div class="dashboard-status-grid" aria-label="Stock status"><div class="dashboard-status-item status-open"><span class="status-value">00</span><span class="status-caption">Open</span></div><div class="dashboard-status-item status-hold"><span class="status-value">00</span><span class="status-caption">Hold</span></div><div class="dashboard-status-item status-retail"><span class="status-value">00</span><span class="status-caption">Retail</span></div></div>
+   <span class="kpi-total"><strong>00</strong><small>Main Stock</small></span>
+   <div class="dashboard-status-grid" aria-label="Main and available stock"><div class="dashboard-status-item status-main"><span class="status-value">00</span><span class="status-caption">Main Stock</span><small class="status-subtitle">OPEN + ALLOTED + HOLD</small></div><div class="dashboard-status-item status-free"><span class="status-value">00</span><span class="status-caption">Free Stock</span><small class="status-subtitle">ફક્ત OPEN</small></div><div class="dashboard-status-item status-allotted"><span class="status-value">00</span><span class="status-caption">Allotted</span></div><div class="dashboard-status-item status-hold"><span class="status-value">00</span><span class="status-caption">Hold</span></div></div>
    <span class="kpi-foot">View Commercial Stock Register <b>→</b></span>
   </button>
   <button class="department-kpi llm-kpi" data-department="LLM" data-dept-key="llm" type="button">
    <span class="kpi-top"><span class="kpi-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h13v11H3zM16 10h3l3 4v4h-6z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></svg></span><span class="kpi-label">LLM</span></span>
-   <span class="kpi-total"><strong>00</strong><small>Total Vehicles</small></span>
-   <div class="dashboard-status-grid" aria-label="Stock status"><div class="dashboard-status-item status-open"><span class="status-value">00</span><span class="status-caption">Open</span></div><div class="dashboard-status-item status-hold"><span class="status-value">00</span><span class="status-caption">Hold</span></div><div class="dashboard-status-item status-retail"><span class="status-value">00</span><span class="status-caption">Retail</span></div></div>
+   <span class="kpi-total"><strong>00</strong><small>Main Stock</small></span>
+   <div class="dashboard-status-grid" aria-label="Main and available stock"><div class="dashboard-status-item status-main"><span class="status-value">00</span><span class="status-caption">Main Stock</span><small class="status-subtitle">OPEN + ALLOTED + HOLD</small></div><div class="dashboard-status-item status-free"><span class="status-value">00</span><span class="status-caption">Free Stock</span><small class="status-subtitle">ફક્ત OPEN</small></div><div class="dashboard-status-item status-allotted"><span class="status-value">00</span><span class="status-caption">Allotted</span></div><div class="dashboard-status-item status-hold"><span class="status-value">00</span><span class="status-caption">Hold</span></div></div>
    <span class="kpi-foot">View LLM Stock Register <b>→</b></span>
   </button>
  </div>
