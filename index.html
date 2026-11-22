@@ -928,6 +928,20 @@ td,.data-table td{font-size:13px;line-height:1.45}
   .card{max-width:100%}
 }
 
+
+/* Dashboard stock cards: match the approved 2x2 Main / Free / Allotted / Hold layout */
+#view-dashboard .department-kpi .kpi-total{display:none}
+#view-dashboard .department-kpi .dashboard-status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0;padding:0;border:0}
+#view-dashboard .department-kpi .dashboard-status-item{min-height:112px;align-items:flex-start;justify-content:center;padding:15px 17px;gap:8px;text-align:left}
+#view-dashboard .department-kpi .dashboard-status-item .status-value{font-size:35px;line-height:1}
+#view-dashboard .department-kpi .dashboard-status-item .status-caption{font-size:14px;line-height:1.2}
+#view-dashboard .department-kpi .status-main{background:#164b36;border-color:#164b36;color:#62d6a0}
+#view-dashboard .department-kpi .status-main .status-caption{color:#d9f4e7}
+#view-dashboard .department-kpi .status-free{background:#173f70;border-color:#173f70;color:#79b9ff}
+#view-dashboard .department-kpi .status-free .status-caption{color:#e1efff}
+#view-dashboard .department-kpi .status-allotted,#view-dashboard .department-kpi .status-hold{background:#252525;border-color:#303030;color:#fff}
+#view-dashboard .department-kpi .status-subtitle{font-size:10px;line-height:1.25;font-weight:650;opacity:.86}
+@media(max-width:680px){#view-dashboard .department-kpi-grid{grid-template-columns:1fr}#view-dashboard .department-kpi .dashboard-status-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}#view-dashboard .department-kpi .dashboard-status-item{min-height:105px;padding:13px 14px}#view-dashboard .department-kpi .dashboard-status-item .status-value{font-size:32px}}
 </style>
 <style id="svResetTreeStyles">#svResetTree .sv-reset-options{display:grid;gap:10px}#svResetTree .sv-reset-options label{display:flex;align-items:flex-start;gap:9px;font-size:13px;line-height:1.45;color:#344054;cursor:pointer}#svResetTree input[type=checkbox],#svResetSelectAll{accent-color:#d71927;flex:0 0 auto;width:17px;height:17px;margin:0}#svResetTree h3{margin:0 0 13px}#svResetDialog .card{box-shadow:none;border:1px solid #e5eaf0}@media(max-width:600px){#svResetDialog{padding:8px}#svResetDialog>div{margin:4px auto}#svResetDialog>div>div:nth-child(2){padding:12px;max-height:70vh}}</style><style id="retail-report-dashboard-styles">
 #view-reports [hidden]{display:none!important}\n#view-reports .retail-filter-card{margin-bottom:16px}
