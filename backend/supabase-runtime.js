@@ -607,13 +607,17 @@
       const dept=card.dataset.department;
       if(!assigned.has(String(dept||'').toLowerCase()))continue;
       const list=rows.filter(x=>String(x.department||'').toLowerCase()===String(dept).toLowerCase());
-      const total=list.length,open=list.filter(x=>norm(x.stage)==='OPEN').length,hold=list.filter(x=>norm(x.stage)==='HOLD').length,retail=list.filter(x=>norm(x.stage)==='RETAIL').length;
+      const open=list.filter(x=>norm(x.stage)==='OPEN').length;
+      const allotted=list.filter(x=>norm(x.stage)==='ALLOTED').length;
+      const hold=list.filter(x=>norm(x.stage)==='HOLD').length;
+      const mainStock=open+allotted+hold;
       const totalNode=card.querySelector('.kpi-total strong');
-      if(totalNode)totalNode.textContent=String(total).padStart(2,'0');
+      if(totalNode)totalNode.textContent=String(mainStock).padStart(2,'0');
       const vals=card.querySelectorAll('.dashboard-status-item .status-value');
-      if(vals[0])vals[0].textContent=String(open).padStart(2,'0');
-      if(vals[1])vals[1].textContent=String(hold).padStart(2,'0');
-      if(vals[2])vals[2].textContent=String(retail).padStart(2,'0');
+      if(vals[0])vals[0].textContent=String(mainStock).padStart(2,'0');
+      if(vals[1])vals[1].textContent=String(open).padStart(2,'0');
+      if(vals[2])vals[2].textContent=String(allotted).padStart(2,'0');
+      if(vals[3])vals[3].textContent=String(hold).padStart(2,'0');
     }
   }
   async function loadVehicles(department='Personal') {
