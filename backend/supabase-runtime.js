@@ -1786,7 +1786,7 @@
     const body=$('retailRows'),section=$('view-reports');
     if(!body)return;
     const cards=section?.querySelectorAll('[data-retail-kpi]');
-    if(!has('retail_reports','view')){body.innerHTML='<tr><td colspan="9" class="empty">Vehicle Exit Reports permission required.</td></tr>';cards?.forEach(x=>x.textContent='—');return;}
+    if(!has('retail_reports','view')){body.innerHTML='<tr><td colspan="10" class="empty">Vehicle Exit Reports permission required.</td></tr>';cards?.forEach(x=>x.textContent='—');return;}
     try{
       const {start,end}=retailSelectedRange();
       const allowed=allowedDepartmentList();
