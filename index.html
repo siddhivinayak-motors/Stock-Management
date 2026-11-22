@@ -384,12 +384,27 @@ tbody tr:hover{background:#fcfcfd}tbody tr:last-child td{border-bottom:0}
 }
 #view-dashboard .department-kpi .dashboard-status-item .status-value{display:block;width:100%;margin:0;font-size:35px;line-height:1;font-weight:950;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
 #view-dashboard .department-kpi .dashboard-status-item .status-caption{display:block;width:100%;margin:0;font-size:14px;line-height:1.2;font-weight:850;letter-spacing:.1px}
-#view-dashboard .department-kpi .status-main{background:#164b36;border-color:#164b36;color:#62d6a0}
-#view-dashboard .department-kpi .status-main .status-caption{color:#d9f4e7}
-#view-dashboard .department-kpi .status-free{background:#173f70;border-color:#173f70;color:#79b9ff}
-#view-dashboard .department-kpi .status-free .status-caption{color:#e1efff}
-#view-dashboard .department-kpi .status-allotted,
-#view-dashboard .department-kpi .status-hold{background:#252525;border-color:#303030;color:#fff}
+/* Reuse the original V24 dashboard palette; only semantic labels changed */
+#view-dashboard .department-kpi .status-main{
+  background:linear-gradient(180deg,#f0fbf6,#e8f7f0);
+  border-color:#cdebdc;
+  color:#11845c;
+}
+#view-dashboard .department-kpi .status-free{
+  background:linear-gradient(180deg,#f3f6ff,#eaf0ff);
+  border-color:#d6e1fa;
+  color:#376fc1;
+}
+#view-dashboard .department-kpi .status-allotted{
+  background:linear-gradient(180deg,#f3f6ff,#eaf0ff);
+  border-color:#d6e1fa;
+  color:#376fc1;
+}
+#view-dashboard .department-kpi .status-hold{
+  background:linear-gradient(180deg,#fff8ed,#fff1df);
+  border-color:#f1dfc0;
+  color:#ad7018;
+}
 #view-dashboard .department-kpi .status-subtitle{display:block;font-size:10px;line-height:1.25;font-weight:650;color:inherit;opacity:.86}
 #view-dashboard .department-kpi .dashboard-status-item{
   min-width:0;
