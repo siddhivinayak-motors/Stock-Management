@@ -1683,7 +1683,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <div class="card" style="margin-top:16px"><div class="card-head"><div class="card-title">Upload History</div></div><div class="table-wrap"><table><thead><tr><th>File Name</th><th>Status</th><th>Imported</th><th>Skipped / Duplicate</th><th>Errors</th><th>Created At</th></tr></thead><tbody><tr><td colspan="6" class="empty">No import history yet.</td></tr></tbody></table></div></div>
 </section>
 <section class="view" id="view-reports">
- <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Vehicle Exit Reports</h1><div class="subtitle">Permanent history of Retail, Demo, Damage, Transfer Out and Other vehicle exits</div></div><button class="btn" id="retailRefresh" type="button">⟳ &nbsp;Refresh</button></div>
+ <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Vehicle Exit Reports</h1><div class="subtitle">Pending Exit classification and permanent history of vehicle exits</div></div><button class="btn" id="retailRefresh" type="button">⟳ &nbsp;Refresh</button></div>
  <div class="card retail-filter-card">
   <div class="card-body">
    <div class="retail-control-grid">
@@ -1695,7 +1695,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <label class="retail-field retail-date-field" id="retailToWrap" hidden><span>To Date</span><input id="retailTo" type="date"></label>
    </div>
    <div class="retail-control-grid retail-secondary-filters">
-    <label class="retail-field"><span>Exit Type</span><select id="retailExitType"><option value="">All Exit Types</option><option value="RETAIL">Retail</option><option value="DEMO">Demo</option><option value="DAMAGE">Damage</option><option value="TRANSFER_OUT">Transfer Out</option><option value="OTHER">Other</option></select></label>\n    <label class="retail-field"><span>Department</span><select id="retailDepartment"><option value="">All Accessible Departments</option><option value="Personal">Personal</option><option value="Commercial">Commercial</option><option value="EV">EV</option><option value="LLM">LLM</option></select></label>
+    <label class="retail-field"><span>Exit Type</span><select id="retailExitType"><option value="">All Exit Types</option><option value="PENDING_EXIT">Pending Exit</option><option value="RETAIL">Retail</option><option value="DEMO">Demo</option><option value="DAMAGE">Damage</option><option value="TRANSFER_OUT">Transfer Out</option><option value="OTHER">Other</option></select></label>\n    <label class="retail-field"><span>Department</span><select id="retailDepartment"><option value="">All Accessible Departments</option><option value="Personal">Personal</option><option value="Commercial">Commercial</option><option value="EV">EV</option><option value="LLM">LLM</option></select></label>
     <label class="retail-field"><span>Customer Name</span><input id="retailCustomer" type="search" placeholder="Search customer name"></label>
     <label class="retail-field"><span>Sales Executive</span><input id="retailExecutive" type="search" placeholder="Search executive name"></label>
     <div class="retail-period"><span>REPORT PERIOD</span><strong id="retailPeriod">Select a period</strong></div>
@@ -1704,7 +1704,8 @@ td,.data-table td{font-size:13px;line-height:1.45}
   </div>
  </div>
  <div class="retail-kpi-grid" aria-label="Vehicle exit report summary">
-  <div class="retail-kpi"><span>Total Exits</span><strong data-retail-kpi="total">00</strong><small>Selected period</small></div>
+  <div class="retail-kpi"><span>Total Exits</span><strong data-retail-kpi="total">00</strong><small>Classified exits</small></div>
+  <div class="retail-kpi"><span>Pending Exit</span><strong data-retail-kpi="pending">00</strong><small>Awaiting classification</small></div>
   <div class="retail-kpi"><span>Retail</span><strong data-retail-kpi="retail">00</strong><small>Delivered vehicles</small></div>
   <div class="retail-kpi"><span>Demo</span><strong data-retail-kpi="demo">00</strong><small>Demo movements</small></div>
   <div class="retail-kpi"><span>Damage</span><strong data-retail-kpi="damage">00</strong><small>Damage records</small></div>
@@ -1713,7 +1714,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
  </div>
  <div class="card retail-register-card">
   <div class="card-head retail-register-head"><div><div class="card-title">Permanent Vehicle Exit Register</div><div class="card-desc" id="retailRegisterDescription">Detailed retail records will appear here.</div></div><div class="retail-export-actions"><button class="btn" id="retailExportCsv" type="button">↓ Export Excel (CSV)</button><button class="btn" id="retailPrint" type="button">Print / PDF</button></div></div>
-  <div class="table-wrap retail-table-wrap"><table><thead><tr><th>Exit Date</th><th>Chassis Number</th><th>Vehicle Model</th><th>Variant</th><th>Department</th><th>Exit Type</th><th>Customer</th><th>Sales Executive</th><th>Reason / Destination</th></tr></thead><tbody id="retailRows"><tr><td colspan="9" class="empty">Apply filters to view vehicle exit history.</td></tr></tbody></table></div>
+  <div class="table-wrap retail-table-wrap"><table><thead><tr><th>Exit Date</th><th>Chassis Number</th><th>Vehicle Model</th><th>Variant</th><th>Department</th><th>Exit Type</th><th>Customer</th><th>Sales Executive</th><th>Reason / Destination</th><th>Action</th></tr></thead><tbody id="retailRows"><tr><td colspan="10" class="empty">Apply filters to view vehicle exit history.</td></tr></tbody></table></div>
  </div>
 </section>
 <section class="view" id="view-generic">
