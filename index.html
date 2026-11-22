@@ -950,11 +950,15 @@ td,.data-table td{font-size:13px;line-height:1.45}
 #view-dashboard .department-kpi .dashboard-status-item{min-height:112px;align-items:flex-start;justify-content:center;padding:15px 17px;gap:8px;text-align:left}
 #view-dashboard .department-kpi .dashboard-status-item .status-value{font-size:35px;line-height:1}
 #view-dashboard .department-kpi .dashboard-status-item .status-caption{font-size:14px;line-height:1.2}
-#view-dashboard .department-kpi .status-main{background:#164b36;border-color:#164b36;color:#62d6a0}
-#view-dashboard .department-kpi .status-main .status-caption{color:#d9f4e7}
-#view-dashboard .department-kpi .status-free{background:#173f70;border-color:#173f70;color:#79b9ff}
-#view-dashboard .department-kpi .status-free .status-caption{color:#e1efff}
-#view-dashboard .department-kpi .status-allotted,#view-dashboard .department-kpi .status-hold{background:#252525;border-color:#303030;color:#fff}
+/* Final dashboard theme override: preserve the original V24 soft palette */
+#view-dashboard .department-kpi .status-main{background:linear-gradient(180deg,#f0fbf6,#e8f7f0)!important;border-color:#cdebdc!important;color:#11845c!important}
+#view-dashboard .department-kpi .status-free{background:linear-gradient(180deg,#f3f6ff,#eaf0ff)!important;border-color:#d6e1fa!important;color:#376fc1!important}
+#view-dashboard .department-kpi .status-allotted{background:linear-gradient(180deg,#f3f6ff,#eaf0ff)!important;border-color:#d6e1fa!important;color:#376fc1!important}
+#view-dashboard .department-kpi .status-hold{background:linear-gradient(180deg,#fff8ed,#fff1df)!important;border-color:#f1dfc0!important;color:#ad7018!important}
+#view-dashboard .department-kpi .status-main .status-caption,
+#view-dashboard .department-kpi .status-free .status-caption,
+#view-dashboard .department-kpi .status-allotted .status-caption,
+#view-dashboard .department-kpi .status-hold .status-caption{color:inherit!important}
 #view-dashboard .department-kpi .status-subtitle{font-size:10px;line-height:1.25;font-weight:650;opacity:.86}
 @media(max-width:680px){#view-dashboard .department-kpi-grid{grid-template-columns:1fr}#view-dashboard .department-kpi .dashboard-status-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}#view-dashboard .department-kpi .dashboard-status-item{min-height:105px;padding:13px 14px}#view-dashboard .department-kpi .dashboard-status-item .status-value{font-size:32px}}
 </style>
