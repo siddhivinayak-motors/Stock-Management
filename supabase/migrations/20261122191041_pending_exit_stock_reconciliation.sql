@@ -295,7 +295,7 @@ begin
         ||jsonb_build_object('exit_type',v_type,'exit_date',p_exit_date,
           'reason',nullif(trim(coalesce(p_reason,'')),''),
           'destination',nullif(trim(coalesce(p_destination,'')),''),
-          'notes',nullif(trim(coalesce(p_notes),''))),
+          'notes',nullif(trim(coalesce(p_notes,'')),'')),
       vehicle_id=v_vehicle.id
   where id=p_exit_record_id
   returning * into v_exit;
