@@ -1797,7 +1797,7 @@
       const exitType=$('retailExitType')?.value||'';
       let rows=[],offset=0,chunk=1000;
       while(departments.length){
-        let q=db().from('vehicle_exit_records').select('*').gte('exit_date',start).lte('exit_date',end).in('department',departments).order('exit_date',{ascending:false}).order('created_at',{ascending:false}).range(offset,offset+chunk-1);
+        let q=db().from('vehicle_exit_records').select('*').or('exit_type.eq.PENDING_EXIT,and(exit_type.neq.PENDING_EXIT,exit_date.gte.'+start+',exit_date.lte.'+end+')').in('department',departments).order('exit_date',{ascending:false}).order('created_at',{ascending:false}).range(offset,offset+chunk-1);
         if(exitType)q=q.eq('exit_type',exitType);
         if(customer)q=q.ilike('customer_name','%'+customer.replace(/[%_]/g,'\\$&')+'%');
         if(executive)q=q.ilike('sc_name','%'+executive.replace(/[%_]/g,'\\$&')+'%');
