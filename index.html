@@ -1547,6 +1547,22 @@ td,.data-table td{font-size:13px;line-height:1.45}
   #view-stock #stockTable tbody tr:not([data-stock-id]) td{display:block!important}
 }
 </style>
+
+<style id="management-selected-row-highlight">
+/* Consistent pale-red selection feedback for operational management tables. */
+#quoteManagementRows > tr.management-row-selected > td,
+#otfManagementRows > tr.management-row-selected > td,
+#retailRows > tr.management-row-selected > td,
+#plRows > tr.management-row-selected > td{
+  background:#fff0f1!important;
+}
+#quoteManagementRows > tr.management-row-selected > td:first-child,
+#otfManagementRows > tr.management-row-selected > td:first-child,
+#retailRows > tr.management-row-selected > td:first-child,
+#plRows > tr.management-row-selected > td:first-child{
+  box-shadow:inset 3px 0 0 #e51e2a!important;
+}
+</style>
 </head>
 <body>
 <header class="topbar">

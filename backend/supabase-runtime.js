@@ -1890,6 +1890,23 @@
 
   // UI bindings for existing elements whose original handlers were demo-only.
   function installScreenHooks(){
+    // Highlight the full row when a user selects a record in management registers.
+    ['quoteManagementRows','otfManagementRows','retailRows','plRows'].forEach(id=>{
+      const body=$(id);
+      if(!body||body.dataset.rowSelectionBound==='1')return;
+      body.dataset.rowSelectionBound='1';
+      body.addEventListener('click',e=>{
+        if(e.target?.closest?.('button,a,input,select,textarea,label'))return;
+        const row=e.target?.closest?.('tr');
+        if(!row||!body.contains(row)||row.querySelector('.empty'))return;
+        body.querySelectorAll(':scope > tr.management-row-selected').forEach(r=>{
+          r.classList.remove('management-row-selected');
+          r.setAttribute('aria-selected','false');
+        });
+        row.classList.add('management-row-selected');
+        row.setAttribute('aria-selected','true');
+      });
+    });
     mapStockForm();
     const employeeSection=$('view-employees');
     const employeeStats=employeeSection?.querySelector('.stat-grid');
