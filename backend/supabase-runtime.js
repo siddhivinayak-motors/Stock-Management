@@ -1495,11 +1495,21 @@
       }catch(ex){$('svEmployeeError').textContent=ex.message;button.disabled=false;button.textContent='Create User';}
     };
   }
+  function canViewStockUploadHistory(){
+    const designation=String(currentProfile?.designation||'').trim().toLowerCase();
+    return !!currentProfile?.is_super_admin || ['manager','general manager','admin'].includes(designation) || has('common_excel_upload','view');
+  }
   async function loadImportHistory(){
-    if(!has('common_excel_upload','view'))return;
-    const rows=await call(db().from('stock_import_batches').select('*').order('created_at',{ascending:false}).limit(500));
-    const body=$('view-upload')?.querySelector('.card:last-child .table-wrap tbody');if(!body)return;
-    body.innerHTML=rows.length?rows.map(r=>'<tr><td>'+esc(r.file_name)+'</td><td><span class="pill green">Imported</span></td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td></tr>').join(''):'<tr><td colspan="6" class="empty">No import history yet.</td></tr>';
+    if(!canViewStockUploadHistory())return;
+    const rows=await call(db().from('stock_import_batches')
+      .select('id,file_name,department,imported_rows,skipped_rows,error_rows,created_by,created_at,uploader:profiles!stock_import_batches_created_by_fkey(full_name,designation)')
+      .order('created_at',{ascending:false}).limit(500));
+    const body=$('stockUploadHistoryRows');if(!body)return;
+    body.innerHTML=rows.length?rows.map(r=>{
+      const uploader=r.uploader?.full_name||r.uploader?.designation||'—';
+      const department=r.department||'—';
+      return '<tr><td>'+esc(r.file_name)+'</td><td>'+esc(department)+'</td><td>'+esc(uploader)+'</td><td><span class="pill green">Imported</span></td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td></tr>';
+    }).join(''):'<tr><td colspan="8" class="empty">No import history yet.</td></tr>';
   }
   // Department functions are inherited automatically from Department Access.
   const EMPLOYEE_MENU_GROUPS = [

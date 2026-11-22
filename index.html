@@ -1567,6 +1567,22 @@ td,.data-table td{font-size:13px;line-height:1.45}
   box-shadow:inset 3px 0 0 #e51e2a!important;
 }
 </style>
+<style id="stock-upload-layout-alignment">
+/* Common Excel Upload: keep Manager and Robin panels visually symmetrical. */
+#view-upload .stock-upload-split{align-items:stretch!important}
+#view-upload .stock-upload-pane{display:flex;flex-direction:column;min-width:0;height:100%}
+#view-upload .stock-upload-pane>.card:first-child{flex:0 0 auto}
+#view-upload .stock-upload-pane>.card:nth-child(2){flex:1 1 auto;display:flex;flex-direction:column;min-height:360px}
+#view-upload .stock-upload-pane>.card:nth-child(2)>.table-wrap{flex:1 1 auto;min-height:300px;overflow:auto}
+#view-upload .stock-upload-pane>.card:nth-child(2) .stock-review-scroll{max-height:100%;overflow:auto}
+#view-upload .stock-upload-history{width:100%}
+@media(max-width:760px){
+ #view-upload .stock-upload-split{grid-template-columns:minmax(0,1fr)!important}
+ #view-upload .stock-upload-pane{height:auto}
+ #view-upload .stock-upload-pane>.card:nth-child(2){min-height:260px}
+ #view-upload .stock-upload-pane>.card:nth-child(2)>.table-wrap{min-height:210px}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -1834,7 +1850,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
    <div class="card" style="margin-top:12px"><div class="card-head"><div class="card-title">Robin — Review Changes</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Chassis</th><th>Model</th><th>Variant</th><th>Segment</th><th>Department</th><th>Status</th><th>Decision</th></tr></thead><tbody id="robinStockRows"><tr><td colspan="7" class="empty">Upload Robin Excel and select Review &amp; Preview Changes.</td></tr></tbody></table></div></div>
   </div>
  </div>
- <div class="card" style="margin-top:16px"><div class="card-head"><div class="card-title">Upload History</div></div><div class="table-wrap"><table><thead><tr><th>File Name</th><th>Status</th><th>Imported</th><th>Skipped / Duplicate</th><th>Errors</th><th>Created At</th></tr></thead><tbody><tr><td colspan="6" class="empty">No import history yet.</td></tr></tbody></table></div></div>
+ <div class="card stock-upload-history" style="margin-top:16px"><div class="card-head"><div class="card-title">Upload History</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>File Name</th><th>Department</th><th>Uploaded By</th><th>Status</th><th>Imported</th><th>Skipped / Duplicate</th><th>Errors</th><th>Uploaded At</th></tr></thead><tbody id="stockUploadHistoryRows"><tr><td colspan="8" class="empty">Loading upload history…</td></tr></tbody></table></div></div>
 </section>
 <section class="view" id="view-reports">
  <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Vehicle Exit Reports</h1><div class="subtitle">Pending Exit classification and permanent history of vehicle exits</div></div><button class="btn" id="retailRefresh" type="button">⟳ &nbsp;Refresh</button></div>
