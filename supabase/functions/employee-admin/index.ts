@@ -215,6 +215,7 @@ Deno.serve(async (req: Request) => {
     }
     if (typeof patch.full_name === "string" && !patch.full_name) return json({ error: "Full name cannot be empty" }, 400);
     if (typeof patch.designation === "string" && (!Object.keys(ROLE_MODULES).includes(patch.designation) || patch.designation === "Super Admin")) return json({error:"Select a valid employee role"},400);
+    if (typeof patch.designation === "string" && !isRoot && (ROLE_LEVEL[patch.designation]??0) >= callerLevel) return json({error:"You can assign only designations below your own designation."},403);
     if (typeof patch.phone === "string" && patch.phone) {
       const digits=String(patch.phone).replace(/\D/g,"");
       const normalized=digits.length===12&&digits.startsWith("91")?digits.slice(2):digits.length===11&&digits.startsWith("0")?digits.slice(1):digits;
@@ -242,6 +243,21 @@ Deno.serve(async (req: Request) => {
     }
     const { error: updateError } = await adminClient.from("profiles").update(patch).eq("user_id", userId);
     if (updateError) return json({ error: updateError.message }, 400);
+    if (typeof patch.designation === "string") {
+      const canHaveEmployeeManagement = ["Admin","General Manager","Manager","HR"].includes(patch.designation);
+      if (canHaveEmployeeManagement) {
+        const employeeManagementRows = rolePermissionRows(patch.designation,userId,callerId,["employee_management"])
+          .map((row:any)=>({...row,actions:isRoot?["view","create","edit","delete","approve","manage_users","export","restore"]:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
+          .filter((row:any)=>row.actions.length>0);
+        if (employeeManagementRows.length) {
+          const {error:employeePermissionError}=await adminClient.from("employee_permissions").upsert(employeeManagementRows,{onConflict:"user_id,module"});
+          if (employeePermissionError) return json({error:"Profile updated but Employee Management access could not be synchronized: "+employeePermissionError.message},500);
+        }
+      } else {
+        const {error:employeePermissionError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId).eq("module","employee_management");
+        if (employeePermissionError) return json({error:"Profile updated but Employee Management access could not be removed: "+employeePermissionError.message},500);
+      }
+    }
     // Function permissions are managed only from the dedicated Permissions menu.
     if (body.password !== undefined && String(body.password).length > 0) {
       const newPassword = String(body.password);
