@@ -2299,7 +2299,7 @@
       nominee_relationship:otfValue('otfNomineeRelation')||null,nominee_age:otfValue('otfNomineeAge')?Number(otfValue('otfNomineeAge')):null,
       chassis_number:v.chassis_number,engine_number:v.engine_number,model:v.model,variant:v.variant,colour:v.colour,
       sales_person:q.sales_person||currentProfile?.full_name||'',
-      quotation_snapshot:(()=>{const quotationItems=(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0));const findOffer=pattern=>Number(quotationItems.find(x=>pattern.test(String(x.particulars||'')))?.amount||0);const subtotal=Math.max(0,Number(q.subtotal||0));const discount=Math.max(0,Number(q.discount||0));const savedTotal=Number(q.total);const total=q.total!==null&&q.total!==undefined&&q.total!==''&&Number.isFinite(savedTotal)?Math.max(0,savedTotal):Math.max(0,subtotal-discount);return {quote_number:q.quote_number,quote_date:q.quote_date,branch_address:q.branch_address||'',subtotal,discount,total,retail_offer:findOffer(/retail\s+offer/i),exchange_offer:findOffer(/exchange\s+offer/i),amount_words:q.amount_words||numberWordsIndian(total)||'',items:quotationItems.map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))};})(),
+      quotation_snapshot:(()=>{const quotationItems=(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0));const findOffer=pattern=>Number(quotationItems.find(x=>pattern.test(String(x.particulars||'')))?.amount||0);const subtotal=Math.max(0,Number(q.subtotal||0));const discount=Math.max(0,Number(q.discount||0));const total=Math.max(0,subtotal-discount);return {quote_number:q.quote_number,quote_date:q.quote_date,branch_address:q.branch_address||'',subtotal,discount,total,retail_offer:findOffer(/retail\s+offer/i),exchange_offer:findOffer(/exchange\s+offer/i),amount_words:numberWordsIndian(total)||'',items:quotationItems.map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))};})(),
       vehicle_snapshot:{status:v.status,stage:v.stage,seating:v.seating||'',manufacturing_year:v.manufacturing_year,mfg_year_label:v.mfg_year_label||'',oem_invoice_date:v.oem_invoice_date||null,place:v.place||'',external:!!v.external},
       exchange_details:{model:otfValue('otfExchangeModel'),registration:otfValue('otfExchangeReg'),manufacturing_year:otfValue('otfExchangeYear'),old_value:otfNumber('otfExchangeValue'),extra_support:otfNumber('otfExchangeSupport'),total_value:otfNumber('otfExchangeTotal')},
       accessories_details:otfCollectRows('.otf-accessory-row',[['item','[data-acc="item"]'],['part_number','[data-acc="part"]'],['amount','[data-acc="amount"]']]),
@@ -2312,7 +2312,7 @@
     const w=popup||window.open('','_blank','width=1000,height=760');
     if(!w){notify('Allow pop-ups to print the OTF Order Book.');return;}
     const q=order.quotation_snapshot||{},items=q.items||[],v=order.vehicle_snapshot||{},payments=order.payment_details||[],accessories=order.accessories_details||[],exchange=order.exchange_details||{};
-    const savedTotal=Number(q.total),qFinalTotal=q.total!==null&&q.total!==undefined&&q.total!==''&&Number.isFinite(savedTotal)?Math.max(0,savedTotal):Math.max(0,Number(q.subtotal||0)-Number(q.discount||0));
+    const qFinalTotal=Math.max(0,Number(q.subtotal||0)-Number(q.discount||0));
     const escHtml=x=>esc(x==null?'':String(x));
     const isOffer=x=>!!x.is_discount||/retail offer|exchange offer/i.test(String(x.particulars||''));
     const regularItems=items.filter(x=>!isOffer(x));
