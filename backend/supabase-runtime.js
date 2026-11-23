@@ -1118,7 +1118,7 @@
       const result=await call(db().rpc('sync_pratik_personal_ev_stock',{p_rows:pratikStockPreviewRows.map(({decision,...x})=>({...x,chassis_number:x.chassis})),p_file_name:pratikStockPreviewFile}));
       quotationStockCache.clear();pratikStockPreviewRows=[];pratikStockPreviewFile=null;
       $('pratikStockApply').disabled=true;
-      $('pratikStockSummary').textContent='Reconcile completed. Uploaded: '+result.uploaded_rows+' · New: '+result.new_rows+' · Updated: '+result.updated_rows+' · Retail Review: '+result.pending_exit_rows+'. Commercial and LLM unchanged.';
+      $('pratikStockSummary').textContent='Reconcile completed. Uploaded: '+result.uploaded_rows+' · New: '+result.new_rows+' · Updated: '+result.updated_rows+' · Pending Approval: '+result.pending_exit_rows+'. Commercial and LLM unchanged.';
       await renderStock();await loadImportHistory();notify('Manager Personal / EV stock synchronized.');
     } catch(e) {console.error(e);notify(e.message||'Stock sync failed.');}
   };
