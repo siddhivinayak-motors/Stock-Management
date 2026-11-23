@@ -1512,7 +1512,7 @@
   }
   function canViewStockUploadHistory(){
     const designation=String(currentProfile?.designation||'').trim().toLowerCase();
-    return !!currentProfile?.is_super_admin || ['admin','general manager','manager','hr'].includes(designation) && has('common_excel_upload','view');
+    return !!currentProfile?.is_super_admin || ['super admin','admin','general manager','manager','hr'].includes(designation) && has('common_excel_upload','view');
   }
   async function loadImportHistory(){
     if(!canViewStockUploadHistory())return;
