@@ -1535,7 +1535,7 @@
     if(!has('employee_management','manage_users')){notify('Manage Users permission required.');return;}
     if(!currentUser||profile.user_id===currentUser.id){notify('You cannot change your own permissions. Ask your superior.');return;}
     if(profile.is_super_admin){notify('Super Admin permissions cannot be changed.');return;}
-    const roleLevel={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Driver':10};
+    const roleLevel={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Receptionist':20,'Driver':10};
     const myRole=currentProfile?.is_super_admin?'Super Admin':String(currentProfile?.designation||'');
     if((roleLevel[profile.designation]??0)>=(roleLevel[myRole]??0)&&!currentProfile?.is_super_admin){notify('You can manage only employees below your designation.');return;}
     const canGrantAll=!!currentProfile?.is_super_admin||myRole==='Admin'||myRole==='General Manager';
