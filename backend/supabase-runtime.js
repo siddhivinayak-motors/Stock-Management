@@ -2100,6 +2100,7 @@
   const otfValue=id=>$(id)?.value?.trim()||'';
   const otfNumber=id=>Math.max(0,Number($(id)?.value||0)||0);
   const otfMoney=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  function otfQuotationAmounts(q={}){const subtotal=Math.max(0,Number(q.subtotal)||0),items=q.quotation_items||q.items||[];const itemDiscount=items.filter(x=>!!x.is_discount&&/retail offer|exchange offer/i.test(String(x.particulars||x.name||''))).reduce((sum,x)=>sum+Math.max(0,Number(x.amount)||0),0);const discount=itemDiscount>0?itemDiscount:Math.max(0,Number(q.discount)||0);const total=Math.max(0,subtotal-discount);return {...q,subtotal,discount,total,amountWords:numberWordsIndian(total)||''};}
   const otfDeptCode={Personal:'PV',EV:'EV',Commercial:'CV',LLM:'LV'};
   function otfSetStatus(message,isError=false){const el=$('otfFormStatus');if(el){el.textContent=message;el.style.color=isError?'#b4232c':'#64748b';}}
   function otfResetSelection(){
@@ -2135,7 +2136,7 @@
     otfMatches=rows.filter(q=>otfDigits(q.phone)===phone);
     const box=$('otfQuoteResults');
     if(!otfMatches.length){box.innerHTML='<div class="empty">No quotations found for this mobile number in '+esc(otfDepartment)+'.</div>';return;}
-    box.innerHTML='<div class="card-desc" style="margin:8px 0">Found '+otfMatches.length+' quotation(s). Select the exact quotation for this booking.</div><div style="display:grid;gap:8px">'+otfMatches.map((q,i)=>'<button type="button" class="btn" data-otf-quote-index="'+i+'" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;flex-wrap:wrap"><span><b>'+esc(q.quote_number)+'</b> · '+esc(q.customer_name)+' · '+esc([q.model,q.variant].filter(Boolean).join(' / '))+'</span><b>'+otfMoney(Math.max(0,Number(q.subtotal||0)-Number(q.discount||0)))+'</b></button>').join('')+'</div>';
+    box.innerHTML='<div class="card-desc" style="margin:8px 0">Found '+otfMatches.length+' quotation(s). Select the exact quotation for this booking.</div><div style="display:grid;gap:8px">'+otfMatches.map((q,i)=>'<button type="button" class="btn" data-otf-quote-index="'+i+'" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;flex-wrap:wrap"><span><b>'+esc(q.quote_number)+'</b> · '+esc(q.customer_name)+' · '+esc([q.model,q.variant].filter(Boolean).join(' / '))+'</span><b>'+otfMoney(otfQuotationAmounts(q).total)+'</b></button>').join('')+'</div>';
     box.querySelectorAll('[data-otf-quote-index]').forEach(btn=>btn.addEventListener('click',()=>selectOtfQuote(Number(btn.dataset.otfQuoteIndex))));
   }
   function otfEnsureSuggestionUi(){
@@ -2214,10 +2215,7 @@
   }
   function selectOtfQuote(index){
     const source=otfMatches[index];if(!source)return;
-    const subtotal=Math.max(0,Number(source.subtotal)||0),discount=Math.max(0,Number(source.discount)||0);
-    const savedTotal=Number(source.total);
-    const total=source.total!==null&&source.total!==undefined&&source.total!==''&&Number.isFinite(savedTotal)?Math.max(0,savedTotal):Math.max(0,subtotal-discount);
-    const q={...source,subtotal,discount,total,amountWords:source.amount_words||numberWordsIndian(total)||''};
+    const q=otfQuotationAmounts(source);
     q.amount_words=q.amountWords;
     otfSelectedQuote=q;otfVerifiedVehicle=null;
     if($('otfSelectedQuote')){$('otfSelectedQuote').hidden=false;$('otfSelectedQuote').textContent='Selected quotation: '+q.quote_number+' · '+q.customer_name+' · '+q.model+' / '+(q.variant||'')+' · Grand Total '+otfMoney(q.total)+'. Select a matching chassis suggestion or enter one manually.';}
@@ -2299,7 +2297,7 @@
       nominee_relationship:otfValue('otfNomineeRelation')||null,nominee_age:otfValue('otfNomineeAge')?Number(otfValue('otfNomineeAge')):null,
       chassis_number:v.chassis_number,engine_number:v.engine_number,model:v.model,variant:v.variant,colour:v.colour,
       sales_person:q.sales_person||currentProfile?.full_name||'',
-      quotation_snapshot:(()=>{const quotationItems=(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0));const findOffer=pattern=>Number(quotationItems.find(x=>pattern.test(String(x.particulars||'')))?.amount||0);const subtotal=Math.max(0,Number(q.subtotal||0));const discount=Math.max(0,Number(q.discount||0));const total=Math.max(0,subtotal-discount);return {quote_number:q.quote_number,quote_date:q.quote_date,branch_address:q.branch_address||'',subtotal,discount,total,retail_offer:findOffer(/retail\s+offer/i),exchange_offer:findOffer(/exchange\s+offer/i),amount_words:numberWordsIndian(total)||'',items:quotationItems.map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))};})(),
+      quotation_snapshot:(()=>{const quotationItems=(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0));const findOffer=label=>Number(quotationItems.find(x=>String(x.particulars||'').toUpperCase().includes(label))?.amount||0);const retailOffer=findOffer('RETAIL OFFER'),exchangeOffer=findOffer('EXCHANGE OFFER');const amounts=otfQuotationAmounts({...q,quotation_items:quotationItems});return {quote_number:q.quote_number,quote_date:q.quote_date,branch_address:q.branch_address||'',subtotal:amounts.subtotal,discount:amounts.discount,total:amounts.total,retail_offer:retailOffer,exchange_offer:exchangeOffer,amount_words:amounts.amountWords,items:quotationItems.map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))};})(),
       vehicle_snapshot:{status:v.status,stage:v.stage,seating:v.seating||'',manufacturing_year:v.manufacturing_year,mfg_year_label:v.mfg_year_label||'',oem_invoice_date:v.oem_invoice_date||null,place:v.place||'',external:!!v.external},
       exchange_details:{model:otfValue('otfExchangeModel'),registration:otfValue('otfExchangeReg'),manufacturing_year:otfValue('otfExchangeYear'),old_value:otfNumber('otfExchangeValue'),extra_support:otfNumber('otfExchangeSupport'),total_value:otfNumber('otfExchangeTotal')},
       accessories_details:otfCollectRows('.otf-accessory-row',[['item','[data-acc="item"]'],['part_number','[data-acc="part"]'],['amount','[data-acc="amount"]']]),
@@ -2312,7 +2310,7 @@
     const w=popup||window.open('','_blank','width=1000,height=760');
     if(!w){notify('Allow pop-ups to print the OTF Order Book.');return;}
     const q=order.quotation_snapshot||{},items=q.items||[],v=order.vehicle_snapshot||{},payments=order.payment_details||[],accessories=order.accessories_details||[],exchange=order.exchange_details||{};
-    const qFinalTotal=Math.max(0,Number(q.subtotal||0)-Number(q.discount||0));
+    const qFinalTotal=otfQuotationAmounts({...q,items}).total;
     const escHtml=x=>esc(x==null?'':String(x));
     const isOffer=x=>!!x.is_discount||/retail offer|exchange offer/i.test(String(x.particulars||''));
     const regularItems=items.filter(x=>!isOffer(x));
