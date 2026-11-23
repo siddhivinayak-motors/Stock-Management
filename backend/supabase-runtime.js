@@ -1136,7 +1136,7 @@
       pratikStockPreviewFile=file.name;
       $('pratikStockApply').disabled=false;
       $('pratikStockSummary').style.display='block';
-      $('pratikStockSummary').textContent='Review ready — database unchanged.\nRows: '+pratikStockPreviewRows.length+'\nPersonal: '+counts.Personal+' · EV: '+counts.EV+'\nNew: '+added+' · Updated: '+updated+' · Pending Exit: '+removed+'\nStages: '+Object.entries(st).map(([k,v])=>k+': '+v).join(' · ')+'\nCommercial and LLM: untouched.';
+      $('pratikStockSummary').textContent='Review ready — database unchanged.\nRows: '+pratikStockPreviewRows.length+'\nPersonal: '+counts.Personal+' · EV: '+counts.EV+'\nNew: '+added+' · Updated: '+updated+' · Retail Review: '+removed+'\nStages: '+Object.entries(st).map(([k,v])=>k+': '+v).join(' · ')+'\nCommercial and LLM: untouched.';
       $('pratikStockRows').innerHTML=pratikStockPreviewRows.slice(0,500).map(x=>'<tr><td>'+esc(x.sr_no??'—')+'</td><td>'+esc(x.chassis)+'</td><td>'+esc(x.model+' / '+x.variant)+'</td><td>'+esc(x.department)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.stage)+'</td><td>'+esc(x.decision)+'</td></tr>').join('');
     } catch(e) {
       console.error(e);pratikStockPreviewRows=[];pratikStockPreviewFile=null;
@@ -1147,11 +1147,11 @@
   window.pratikStockApply = async () => {
     try {
       if(!pratikStockPreviewRows.length||!pratikStockPreviewFile)throw new Error('Review STOCK worksheet first.');
-      if(!confirm('Reconcile Personal and EV stock from '+pratikStockPreviewRows.length+' STOCK rows? Matching chassis will update, new chassis will be added, and vehicles missing from this upload will move to Retail Register as Pending Exit. No vehicle records will be deleted. Commercial and LLM stay unchanged.'))return;
+      if(!confirm('Reconcile Personal and EV stock from '+pratikStockPreviewRows.length+' STOCK rows? Matching chassis will update, new chassis will be added, and vehicles missing from this upload will move to Retail Review for approval. No vehicle records will be deleted. Commercial and LLM stay unchanged.'))return;
       const result=await call(db().rpc('sync_pratik_personal_ev_stock',{p_rows:pratikStockPreviewRows.map(({decision,...x})=>({...x,chassis_number:x.chassis})),p_file_name:pratikStockPreviewFile}));
       quotationStockCache.clear();pratikStockPreviewRows=[];pratikStockPreviewFile=null;
       $('pratikStockApply').disabled=true;
-      $('pratikStockSummary').textContent='Reconcile completed. Uploaded: '+result.uploaded_rows+' · New: '+result.new_rows+' · Updated: '+result.updated_rows+' · Pending Exit: '+result.pending_exit_rows+'. Commercial and LLM unchanged.';
+      $('pratikStockSummary').textContent='Reconcile completed. Uploaded: '+result.uploaded_rows+' · New: '+result.new_rows+' · Updated: '+result.updated_rows+' · Retail Review: '+result.pending_exit_rows+'. Commercial and LLM unchanged.';
       await renderStock();await loadImportHistory();notify('Manager Personal / EV stock synchronized.');
     } catch(e) {console.error(e);notify(e.message||'Stock sync failed.');}
   };
