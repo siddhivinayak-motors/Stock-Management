@@ -156,6 +156,7 @@
     const roleKey=role.toLowerCase();
     // Backup & Restore is reserved for the unique Super Admin account.
     if(module==='backup_restore') return resetIsSuperAdmin();
+    if(module==='common_excel_upload'&&!['super admin','admin','general manager','manager','hr'].includes(roleKey)) return false;
     // Price List visibility follows the employee's explicitly saved module permission.
     // Treat the canonical Super Admin designation as a full-access identity too.
     // Some legacy profiles may have the designation but a false/null flag.
@@ -175,6 +176,10 @@
   function canRetailStock(){return canEditStockRole();}
   function canSubmitStockHoldRole(){return STOCK_HOLD_ROLES.has(String(currentProfile?.designation||''));}
   function canManageHolds(){return roleLevel()>=70;}
+  function canUploadAllCommonExcelDepartments(){
+    const role=String(currentProfile?.designation||'').trim().toLowerCase();
+    return !!currentProfile?.is_super_admin || ['super admin','admin','general manager','manager','hr'].includes(role);
+  }
   function allowedDepartmentList(){
     // Super Admin, Admin and General Manager have organization-wide department access.
     // Managers and all other employees remain limited to explicitly assigned departments.
@@ -1065,7 +1070,7 @@
       if(!file)throw new Error('Select Manager Excel file first.');
       if(!has('common_excel_upload','create'))throw new Error('Common Excel Upload permission required.');
       const allowed=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
-      const root=!!currentProfile?.is_super_admin;
+      const root=canUploadAllCommonExcelDepartments();
       if(!root&&(!allowed.has('personal')||!allowed.has('ev')))throw new Error('Login needs both Personal and EV department access.');
       if(!window.XLSX)throw new Error('Excel reader did not load. Reload the page.');
       const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
@@ -1150,7 +1155,7 @@
       for(let from=0;;from+=1000){const part=await call(db().from('vehicles').select('chassis_number,excel_number').range(from,from+999));existing.push(...part);if(part.length<1000)break;}
       const seenChassis=new Set(existing.map(x=>String(x.chassis_number||'').trim().toUpperCase()).filter(Boolean));
       const seenVin=new Set(existing.map(x=>String(x.excel_number||'').trim().toUpperCase()).filter(Boolean));
-      const allowedDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
+      const allowedDepartments=new Set((canUploadAllCommonExcelDepartments()?['Personal','EV','Commercial','LLM']:allowedDepartmentList()).map(x=>String(x).toLowerCase()));
       const mapSegment=segment=>{
         if(segment==='PERSONAL'||segment.startsWith('PERSONAL'))return 'Personal';
         if(segment==='BEV'||segment==='EV'||segment.includes('ELECTRIC'))return 'EV';
@@ -1507,7 +1512,7 @@
   }
   function canViewStockUploadHistory(){
     const designation=String(currentProfile?.designation||'').trim().toLowerCase();
-    return !!currentProfile?.is_super_admin || ['manager','general manager','admin'].includes(designation) || has('common_excel_upload','view');
+    return !!currentProfile?.is_super_admin || ['admin','general manager','manager','hr'].includes(designation) && has('common_excel_upload','view');
   }
   async function loadImportHistory(){
     if(!canViewStockUploadHistory())return;
