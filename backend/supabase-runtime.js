@@ -1061,7 +1061,7 @@
       const dt=v=>{if(v instanceof Date&&!isNaN(v))return v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0');if(typeof v==='number'&&v>0){const z=XLSX.SSF.parse_date_code(v);if(z)return new Date(Date.UTC(z.y,z.m-1,z.d)).toISOString().slice(0,10);}if(v){const d=new Date(v);if(!isNaN(d))return d.toISOString().slice(0,10);}return null;};
       const num=v=>{if(v===null||v===undefined||t(v)==='')return null;const n=Number(String(v).replace(/,/g,''));return Number.isFinite(n)?n:null;};
       const dept=m=>{const x=t(m).toUpperCase();return x==='BEV'||x.includes('EV')||x.includes('ELECTRIC')||/^BE\s*6\b/.test(x)?'EV':'Personal';};
-      const stages=new Set(['OPEN','HOLD','ALLOTED','DAMAGE','RETAIL','DEMO','TRANSFER_OUT','OTHER','BILLING DONE','DEALER','DAMO']);
+      const stages=new Set(['OPEN','HOLD','ALLOTED','DAMAGE','RETAIL','STOCK_OUT','DEMO','TRANSFER_OUT','OTHER','BILLING DONE','DEALER','DAMO']);
       const seen=new Set();let placeholderNo=0;
       pratikStockPreviewRows=raw.map((r,i)=>{
         const model=t(get(r,'MODEL','MODEL NAME','VEHICLE MODEL')),variant=t(get(r,'VARIENTS','VARIANTS','VARIANT'));
@@ -1070,7 +1070,7 @@
         const explicitDept=t(get(r,'DEPARTMENT','SEGMENT','SEGMENT CODE')).toUpperCase();
         const department=/\b(EV|BEV|ELECTRIC)\b/.test(explicitDept)||explicitDept.includes('ELECTRIC')? 'EV' : /PERSONAL/.test(explicitDept)?'Personal':dept(model);
         const rawStage=t(get(r,'STAGE')).toUpperCase();
-        const stageAliases={'IN TRANSIT':'OPEN','TRANSIT':'OPEN','RECEIVED':'OPEN','IN STOCK':'OPEN','AVAILABLE':'OPEN','ALLOTTED':'ALLOTED','ALLOCATED':'ALLOTED','DELIVERED':'RETAIL','RETAILED':'RETAIL','TRANSFER OUT':'TRANSFER_OUT','TRANSFER-OUT':'TRANSFER_OUT','BILLING':'BILLING DONE','BILLING COMPLETED':'BILLING DONE'};
+        const stageAliases={'IN TRANSIT':'OPEN','TRANSIT':'OPEN','RECEIVED':'OPEN','IN STOCK':'OPEN','AVAILABLE':'OPEN','ALLOTTED':'ALLOTED','ALLOCATED':'ALLOTED','DELIVERED':'RETAIL','RETAILED':'RETAIL','TRANSFER OUT':'TRANSFER_OUT','TRANSFER-OUT':'TRANSFER_OUT','STOCK OUT':'STOCK_OUT','STOCK-OUT':'STOCK_OUT','BILLING':'BILLING DONE','BILLING COMPLETED':'BILLING DONE'};
         const stage=stageAliases[rawStage]||rawStage||'OPEN';
         let decision='Ready';
         if(!model)decision='Review: Missing model';
