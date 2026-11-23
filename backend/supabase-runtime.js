@@ -1520,19 +1520,34 @@
   }
   function canViewStockUploadHistory(){
     const designation=String(currentProfile?.designation||'').trim().toLowerCase();
-    return !!currentProfile?.is_super_admin || ['super admin','admin','general manager','manager','hr'].includes(designation) && has('common_excel_upload','view');
+    if(currentProfile?.is_super_admin||designation==='super admin')return true;
+    return ['admin','general manager','manager'].includes(designation) && has('common_excel_upload','view');
   }
   async function loadImportHistory(){
-    if(!canViewStockUploadHistory())return;
-    const rows=await call(db().from('stock_import_batches')
-      .select('id,file_name,department,imported_rows,skipped_rows,error_rows,created_by,created_at,uploader:profiles!stock_import_batches_created_by_fkey(full_name,designation)')
-      .order('created_at',{ascending:false}).limit(500));
-    const body=$('stockUploadHistoryRows');if(!body)return;
-    body.innerHTML=rows.length?rows.map(r=>{
-      const uploader=r.uploader?.full_name||r.uploader?.designation||'—';
-      const department=r.department||'—';
-      return '<tr><td>'+esc(r.file_name)+'</td><td>'+esc(department)+'</td><td>'+esc(uploader)+'</td><td><span class="pill green">Imported</span></td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td></tr>';
-    }).join(''):'<tr><td colspan="8" class="empty">No import history yet.</td></tr>';
+    const panel=$('stockUploadHistoryPanel');
+    const body=$('stockUploadHistoryRows');
+    if(!canViewStockUploadHistory()){
+      if(panel)panel.hidden=true;
+      return;
+    }
+    if(panel)panel.hidden=false;
+    if(!body)return;
+    body.innerHTML='<tr><td colspan="8" class="empty">Loading upload history…</td></tr>';
+    try{
+      const rows=await call(db().from('stock_import_batches')
+        .select('id,file_name,department,imported_rows,skipped_rows,error_rows,created_by,created_at,uploader:profiles!stock_import_batches_created_by_fkey(full_name,designation)')
+        .order('created_at',{ascending:false}).limit(500));
+      body.innerHTML=rows.length?rows.map(r=>{
+        const uploader=r.uploader?.full_name||r.uploader?.designation||'—';
+        const department=r.department||'—';
+        const status=Number(r.error_rows||0)>0?'Completed with errors':Number(r.skipped_rows||0)>0?'Completed with skipped rows':'Completed';
+        return '<tr><td>'+esc(r.file_name)+'</td><td>'+esc(department)+'</td><td>'+esc(uploader)+'</td><td><span class="pill '+(Number(r.error_rows||0)>0?'red':'green')+'">'+esc(status)+'</span></td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td></tr>';
+      }).join(''):'<tr><td colspan="8" class="empty">No import history yet.</td></tr>';
+    }catch(error){
+      console.error('Excel upload history load failed:',error);
+      body.innerHTML='<tr><td colspan="8" class="empty">Unable to load upload history. Please refresh and try again.</td></tr>';
+      throw error;
+    }
   }
   // Department functions are inherited automatically from Department Access.
   const EMPLOYEE_MENU_GROUPS = [
