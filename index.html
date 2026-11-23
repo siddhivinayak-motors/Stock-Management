@@ -1821,6 +1821,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
 </section>
 <section class="view" id="view-upload">
  <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Excel Upload</h1><div class="subtitle">Separate stock upload and review for each responsible team</div></div><button class="btn" onclick="window.SVMBackend?.loadImportHistory?.()">⟳ &nbsp;Refresh</button></div>
+ <div class="card stock-upload-history" style="margin:14px 0"><div class="card-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div class="card-title">Excel Upload History</div><button class="btn" type="button" onclick="window.SVMBackend?.loadImportHistory?.()">⟳ &nbsp;Refresh History</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>File Name</th><th>Department</th><th>Uploaded By</th><th>Status</th><th>Imported</th><th>Skipped / Duplicate</th><th>Errors</th><th>Uploaded At</th></tr></thead><tbody id="stockUploadHistoryRows"><tr><td colspan="8" class="empty">Loading upload history…</td></tr></tbody></table></div></div>
  <div class="stock-upload-split" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px;align-items:start">
   <div class="stock-upload-pane">
    <div class="card" style="border:1px solid #d7e2f0"><div class="card-body">
@@ -1851,7 +1852,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
    <div class="card" style="margin-top:12px"><div class="card-head"><div class="card-title">Robin — Review Changes</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Chassis</th><th>Model</th><th>Variant</th><th>Segment</th><th>Department</th><th>Status</th><th>Decision</th></tr></thead><tbody id="robinStockRows"><tr><td colspan="7" class="empty">Upload Robin Excel and select Review &amp; Preview Changes.</td></tr></tbody></table></div></div>
   </div>
  </div>
- <div class="card stock-upload-history" style="margin-top:16px"><div class="card-head"><div class="card-title">Upload History</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>File Name</th><th>Department</th><th>Uploaded By</th><th>Status</th><th>Imported</th><th>Skipped / Duplicate</th><th>Errors</th><th>Uploaded At</th></tr></thead><tbody id="stockUploadHistoryRows"><tr><td colspan="8" class="empty">Loading upload history…</td></tr></tbody></table></div></div>
+
 </section>
 <section class="view" id="view-reports">
  <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Vehicle Exit Reports</h1><div class="subtitle">Pending Exit classification and permanent history of vehicle exits</div></div><button class="btn" id="retailRefresh" type="button">⟳ &nbsp;Refresh</button></div>
@@ -2680,6 +2681,6 @@ quoteDiscounts.addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=otf-payment-total-20261123a"></script>
+<script src="./backend/supabase-runtime.js?v=excel-upload-history-top-20261123a"></script>
 <script src="./backend/price-list-module.js?v=other-charges-columns-20261121c"></script>
 </body></html>
