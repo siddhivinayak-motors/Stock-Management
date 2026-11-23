@@ -801,9 +801,7 @@
     }
     const visibleQuotes=(quoteRecords||[]).map((q,i)=>({q,i})).filter(({q})=>!canUseQuotationCityFilter()||quotationCityFilter==='All'||String(q.creatorCity||'').trim().toLowerCase()===quotationCityFilter.toLowerCase());
     body.innerHTML=visibleQuotes.map(({q,i})=>{
-      const blocked=q.status==='PENDING'&&quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other));
-      const canReview=canReviewQuotationRecords() && has('quotation_management','approve');
-      const approval=q.status!=='PENDING'||!canReview?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>';
+      const approval='';
       const manage=(canDelete?'<button class="btn small danger" onclick="deleteSavedQuote('+i+')">Delete</button>':'')+(canEdit?'<button class="btn small" onclick="editSavedQuote('+i+')">Edit</button>':'');
       const statusClass='green';
       const createdAt=q.createdAt?new Date(q.createdAt):null;
