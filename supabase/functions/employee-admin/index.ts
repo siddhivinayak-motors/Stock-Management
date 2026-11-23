@@ -231,8 +231,12 @@ Deno.serve(async (req: Request) => {
       if (access.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Invalid department access" }, 400);
       const finalAccess = [...new Set(access)];
       if (!finalAccess.length) return json({error:"Select at least one department"},400);
-      if (!isOrgAdmin && finalAccess.some((d:string)=>!canManageDepartment(d))) return json({error:"You cannot assign access outside your own department."},403);
-      if (callerRole==="Manager" && finalAccess.some((d:string)=>!canManageDepartment(d))) return json({error:"A Manager can assign only departments in their own Department Access."},403);
+      const existingAccess = Array.isArray(target.department_access)&&target.department_access.length
+        ? target.department_access.map((d:string)=>String(d))
+        : [String(target.department||"")].filter(Boolean);
+      const departmentScopeChangedOutsideAuthority = [...new Set([...existingAccess,...finalAccess])]
+        .some((d:string)=>!canManageDepartment(d)&&existingAccess.includes(d)!==finalAccess.includes(d));
+      if (departmentScopeChangedOutsideAuthority) return json({error:"You cannot change department access outside your own department scope."},403);
       patch.department_access = finalAccess;
       patch.department = finalAccess[0];
     }
