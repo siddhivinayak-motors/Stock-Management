@@ -163,7 +163,7 @@
     if(currentProfile?.is_super_admin===true||roleKey==='super admin') return true;
     if(module==='stock_register'&&action==='view'&&
       ([...STOCK_EDIT_ROLES,...STOCK_HOLD_ROLES].some(x=>String(x).toLowerCase()===roleKey))) return true;
-    if(module==='retail_reports'&&action==='view'&&canRetailStock()) return true;
+    if(module==='retail_reports'&&action==='view') return has('stock_register','view')&&allowedDepartmentList().length>0;
     if(module==='stock_hold_management'&&action==='create'&&canSubmitStockHoldRole()) return true;
     if(module==='audit_history'&&action==='view'&&['Admin','General Manager'].includes(role)) return true;
     return (permissions.get(module)||[]).includes(action);
@@ -174,6 +174,7 @@
   const STOCK_HOLD_ROLES=new Set(['Executive','Reception','Driver']);
   function canEditStockRole(){return !!currentProfile?.is_super_admin||STOCK_EDIT_ROLES.has(String(currentProfile?.designation||''));}
   function canRetailStock(){return canEditStockRole();}
+  function canReviewRetail(){return !!currentProfile&&(currentProfile.is_super_admin===true||['Super Admin','Admin','General Manager','Manager'].includes(String(currentProfile.designation||'')));}
   function canSubmitStockHoldRole(){return STOCK_HOLD_ROLES.has(String(currentProfile?.designation||''));}
   function canManageHolds(){return roleLevel()>=70;}
   function canUploadAllCommonExcelDepartments(){
@@ -313,7 +314,7 @@
       'view-otf-order-book':'otf_management','view-otf-management':'otf_management',
       'view-upload':'common_excel_upload','view-stock-hold-central':'stock_hold_management',
       'view-price-list':'price_list_management','view-employees':'employee_management',
-      'view-audit':'audit_history','view-reports':'retail_reports','view-backup-restore':'backup_restore'
+      'view-audit':'audit_history','view-reports':'retail_reports','view-retail-review':'retail_reports','view-backup-restore':'backup_restore'
     };
     const allowedDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
     const departmentKeys={personal:'Personal',ev:'EV',commercial:'Commercial',llm:'LLM'};
@@ -328,7 +329,7 @@
       // Department-specific quotation-management pages use the same module gate.
       if(['personal-management','ev-management','commercial-management','llm-management'].includes(page))return 'quotation_management';
       if(page==='audit')return 'audit_history';
-      if(page==='reports')return 'retail_reports';
+      if(page==='reports'||page==='retail-review')return 'retail_reports';
       if(page==='backup-restore')return 'backup_restore';
       if(page==='dashboard')return 'dashboard';
       return null;
@@ -352,7 +353,8 @@
     document.querySelectorAll('[data-page]').forEach(item=>{
       if(item.closest('[data-sub]'))return;
       const module=pageModule(item.dataset.page||'');
-      item.style.display=(!module||has(module,'view'))?'':'none';
+      const retailReviewItem=item.dataset.page==='retail-review';
+      item.style.display=(!module||has(module,'view'))&&(!retailReviewItem||canReviewRetail())?'':'none';
     });
     document.querySelectorAll('[data-department]').forEach(card=>{
       const dept=String(card.dataset.department||'').toLowerCase();
@@ -1851,7 +1853,7 @@
       const exitType=$('retailExitType')?.value||'';
       let rows=[],offset=0,chunk=1000;
       while(departments.length){
-        let q=db().from('vehicle_exit_records').select('*').or('exit_type.eq.PENDING_EXIT,and(exit_type.neq.PENDING_EXIT,exit_date.gte.'+start+',exit_date.lte.'+end+')').in('department',departments).order('exit_date',{ascending:false}).order('created_at',{ascending:false}).range(offset,offset+chunk-1);
+        let q=db().from('vehicle_exit_records').select('*').gte('exit_date',start).lte('exit_date',end).neq('exit_type','PENDING_EXIT').in('department',departments).order('exit_date',{ascending:false}).order('created_at',{ascending:false}).range(offset,offset+chunk-1);
         if(exitType)q=q.eq('exit_type',exitType);
         if(customer)q=q.ilike('customer_name','%'+customer.replace(/[%_]/g,'\\$&')+'%');
         if(executive)q=q.ilike('sc_name','%'+executive.replace(/[%_]/g,'\\$&')+'%');
@@ -1873,6 +1875,34 @@
       notify(e.message||'Unable to load Vehicle Exit Reports.');
     }
   }
+
+  async function loadRetailReview(){
+    const body=$('retailReviewRows');if(!body)return;
+    if(!canReviewRetail()){body.innerHTML='<tr><td colspan="9" class="empty">Retail Review is available to Manager and above only.</td></tr>';return;}
+    body.innerHTML='<tr><td colspan="9" class="empty">Loading pending vehicles…</td></tr>';
+    try{
+      const rows=await call(db().rpc('list_missing_vehicle_reviews'));
+      retailReviewRows=rows||[];
+      const count=$('retailReviewCount');if(count)count.textContent=String(retailReviewRows.length);
+      body.innerHTML=retailReviewRows.length?retailReviewRows.map(v=>'<tr><td>'+esc(v.department||'—')+'</td><td>'+esc(v.chassis_number||'—')+'</td><td>'+esc((v.model||'')+' '+(v.variant||''))+'</td><td>'+esc(v.previous_stage||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.engine_number||'—')+'</td><td>'+esc(v.pending_since?new Date(v.pending_since).toLocaleString('en-IN'):'—')+'</td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" type="button" data-retail-review-action="RETURN_TO_STOCK" data-id="'+esc(v.id)+'">Return to Stock</button><button class="btn small primary" type="button" data-retail-review-action="APPROVE_RETAIL" data-id="'+esc(v.id)+'">Approve Retail</button></div></td></tr>').join(''):'<tr><td colspan="9" class="empty">No vehicles are waiting for Retail approval.</td></tr>';
+      const status=$('retailReviewStatus');if(status)status.textContent=retailReviewRows.length+' vehicle(s) awaiting decision.';
+    }catch(e){console.error(e);body.innerHTML='<tr><td colspan="9" class="empty">'+esc(e.message||'Unable to load Retail Review.')+'</td></tr>';notify(e.message||'Unable to load Retail Review.');}
+  }
+  async function resolveRetailReview(id,action){
+    if(!canReviewRetail())throw new Error('Only Manager and above can resolve Retail Review.');
+    const row=retailReviewRows.find(x=>String(x.id)===String(id));if(!row)throw new Error('Review record not found. Refresh and try again.');
+    const approve=action==='APPROVE_RETAIL';
+    const message=approve
+      ?'Approve '+row.chassis_number+' as RETAIL? It will move out of Main Stock and appear in Retail Reports for permitted users.'
+      :'Return '+row.chassis_number+' to Main Stock? Its previous stage and status will be restored.';
+    if(!confirm(message))return;
+    const result=await call(db().rpc('resolve_missing_vehicle_review',{p_exit_record_id:id,p_action:action}));
+    notify(approve?'Retail approved: '+row.chassis_number:'Returned to Main Stock: '+row.chassis_number);
+    await Promise.allSettled([loadRetailReview(),renderStock(),loadRetailReport()]);
+    return result;
+  }
+  let retailReviewRows=[];
+
   async function classifyRetailExit(record,details){
     if(!canRetailStock())throw new Error('Retail Register edit permission required.');
     const result=await call(db().rpc('classify_vehicle_exit',{
@@ -2031,6 +2061,16 @@
     const addButton=$('addVehicle');if(addButton){addButton.style.display=canManageStock()?'':'none';addButton.disabled=!canManageStock();}
     const newVehicleDept=$('stockDepartmentForNewVehicle');
     if(newVehicleDept){newVehicleDept.innerHTML=permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');newVehicleDept.value=permittedDepartments[0]||'';}
+    if($('retailReviewRows')&&!$('retailReviewRows').dataset.bound){
+      $('retailReviewRows').dataset.bound='1';
+      $('retailReviewRefresh')?.addEventListener('click',()=>loadRetailReview());
+      $('retailReviewRows').addEventListener('click',e=>{
+        const button=e.target?.closest?.('[data-retail-review-action]');if(!button)return;
+        button.disabled=true;
+        resolveRetailReview(button.dataset.id,button.dataset.retailReviewAction).catch(err=>notify(err.message)).finally(()=>{button.disabled=false;});
+      });
+      document.querySelector('[data-page="retail-review"]')?.addEventListener('click',()=>setTimeout(()=>loadRetailReview(),0));
+    }
     if($('retailReportType')&&!$('retailReportType').dataset.bound){
       $('retailReportType').dataset.bound='1';
       $('retailReportType').addEventListener('change',()=>{updateRetailFilterVisibility();});
@@ -2467,7 +2507,7 @@
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit,loadRetailReview};
     window.SVMBackend.loadOtfManagement=loadOtfManagement;
     window.dispatchEvent(new Event('svm:ready'));
   }
