@@ -1411,9 +1411,9 @@
     'Admin':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','audit_history','retail_reports','otf_management'],
     'General Manager':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','audit_history','retail_reports','otf_management'],
     'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','common_excel_upload','retail_reports','otf_management'],
-    'Accountant':['stock_register','retail_reports','common_excel_upload','otf_management'],
+    'Accountant':['stock_register','retail_reports','otf_management'],
     'HR':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','common_excel_upload','retail_reports','otf_management'], 
-    'DMS':['stock_register','retail_reports','common_excel_upload','otf_management'],
+    'DMS':['stock_register','retail_reports','otf_management'],
     'Executive':['dashboard','stock_register','stock_hold_management','quotation_management','retail_reports','otf_management'],
     'Reception':['dashboard','stock_register','stock_hold_management','quotation_management','retail_reports','otf_management'],
     'Driver':['stock_register','stock_hold_management','quotation_management','otf_management']
