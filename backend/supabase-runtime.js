@@ -314,7 +314,7 @@
       'view-otf-order-book':'otf_management','view-otf-management':'otf_management',
       'view-upload':'common_excel_upload','view-stock-hold-central':'stock_hold_management',
       'view-price-list':'price_list_management','view-employees':'employee_management',
-      'view-audit':'audit_history','view-reports':'retail_reports','view-retail-review':'retail_reports','view-backup-restore':'backup_restore'
+      'view-audit':'audit_history','view-reports':'retail_reports','view-backup-restore':'backup_restore'
     };
     const allowedDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
     const departmentKeys={personal:'Personal',ev:'EV',commercial:'Commercial',llm:'LLM'};
@@ -329,7 +329,7 @@
       // Department-specific quotation-management pages use the same module gate.
       if(['personal-management','ev-management','commercial-management','llm-management'].includes(page))return 'quotation_management';
       if(page==='audit')return 'audit_history';
-      if(page==='reports'||page==='retail-review')return 'retail_reports';
+      if(page==='reports')return 'retail_reports';
       if(page==='backup-restore')return 'backup_restore';
       if(page==='dashboard')return 'dashboard';
       return null;
@@ -353,8 +353,7 @@
     document.querySelectorAll('[data-page]').forEach(item=>{
       if(item.closest('[data-sub]'))return;
       const module=pageModule(item.dataset.page||'');
-      const retailReviewItem=item.dataset.page==='retail-review';
-      item.style.display=(!module||has(module,'view'))&&(!retailReviewItem||canReviewRetail())?'':'none';
+      item.style.display=(!module||has(module,'view'))?'':'none';
     });
     document.querySelectorAll('[data-department]').forEach(card=>{
       const dept=String(card.dataset.department||'').toLowerCase();
@@ -1104,7 +1103,7 @@
       pratikStockPreviewFile=file.name;
       $('pratikStockApply').disabled=false;
       $('pratikStockSummary').style.display='block';
-      $('pratikStockSummary').textContent='Review ready — database unchanged.\nRows: '+pratikStockPreviewRows.length+'\nPersonal: '+counts.Personal+' · EV: '+counts.EV+'\nNew: '+added+' · Updated: '+updated+' · Retail Review: '+removed+'\nStages: '+Object.entries(st).map(([k,v])=>k+': '+v).join(' · ')+'\nCommercial and LLM: untouched.';
+      $('pratikStockSummary').textContent='Review ready — database unchanged.\nRows: '+pratikStockPreviewRows.length+'\nPersonal: '+counts.Personal+' · EV: '+counts.EV+'\nNew: '+added+' · Updated: '+updated+' · Pending Approval: '+removed+'\nStages: '+Object.entries(st).map(([k,v])=>k+': '+v).join(' · ')+'\nCommercial and LLM: untouched.';
       $('pratikStockRows').innerHTML=pratikStockPreviewRows.slice(0,500).map(x=>'<tr><td>'+esc(x.sr_no??'—')+'</td><td>'+esc(x.chassis)+'</td><td>'+esc(x.model+' / '+x.variant)+'</td><td>'+esc(x.department)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.stage)+'</td><td>'+esc(x.decision)+'</td></tr>').join('');
     } catch(e) {
       console.error(e);pratikStockPreviewRows=[];pratikStockPreviewFile=null;
@@ -1115,7 +1114,7 @@
   window.pratikStockApply = async () => {
     try {
       if(!pratikStockPreviewRows.length||!pratikStockPreviewFile)throw new Error('Review STOCK worksheet first.');
-      if(!confirm('Reconcile Personal and EV stock from '+pratikStockPreviewRows.length+' STOCK rows? Matching chassis will update, new chassis will be added, and vehicles missing from this upload will move to Retail Review for approval. No vehicle records will be deleted. Commercial and LLM stay unchanged.'))return;
+      if(!confirm('Reconcile Personal and EV stock from '+pratikStockPreviewRows.length+' STOCK rows? Matching chassis will update, new chassis will be added, and vehicles missing from this upload will move to Pending Approval for approval. No vehicle records will be deleted. Commercial and LLM stay unchanged.'))return;
       const result=await call(db().rpc('sync_pratik_personal_ev_stock',{p_rows:pratikStockPreviewRows.map(({decision,...x})=>({...x,chassis_number:x.chassis})),p_file_name:pratikStockPreviewFile}));
       quotationStockCache.clear();pratikStockPreviewRows=[];pratikStockPreviewFile=null;
       $('pratikStockApply').disabled=true;
@@ -1782,7 +1781,7 @@
     }
   });
   window.resetAllExceptEmployees=window.openOperationalResetDialog;
-  let retailReportRows=[];
+  let retailReportRows=[],retailApprovedReportRows=[],retailPendingRows=[];
   function retailDateISO(date){return [date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');}
   function retailAddDays(iso,days){const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+days);return retailDateISO(d);}
   function retailSelectedRange(){
@@ -1802,15 +1801,24 @@
   }
   function renderRetailRows(rows){
     const body=$('retailRows');if(!body)return;
-    const typeLabel={PENDING_EXIT:'Pending Exit',RETAIL:'Retail',DEMO:'Demo',DAMAGE:'Damage',TRANSFER_OUT:'Transfer Out',OTHER:'Other'};
-    const canEdit=canRetailStock();
-    body.innerHTML=rows.length?rows.map(v=>'<tr><td>'+esc(v.exit_date||'—')+'</td><td>'+esc(v.chassis_number||'—')+'</td><td>'+esc(v.model||'—')+'</td><td>'+esc(v.variant||'—')+'</td><td>'+esc(v.department||'—')+'</td><td><span class="pill '+(v.exit_type==='RETAIL'?'green':v.exit_type==='PENDING_EXIT'?'orange':'')+'">'+esc(typeLabel[v.exit_type]||v.exit_type||'—')+'</span></td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.reason||v.destination||'—')+'</td><td>'+(canEdit?'<button type="button" class="btn small retail-classify-btn" data-retail-edit="'+esc(v.id)+'">'+(v.exit_type==='PENDING_EXIT'?'Classify':'Edit')+'</button>':'—')+'</td></tr>').join(''):'<tr><td colspan="10" class="empty">No vehicle exit records found for the selected filters.</td></tr>';
+    const typeLabel={PENDING_EXIT:'Pending Approval',RETAIL:'Retail',STOCK_OUT:'Stock Out',DEMO:'Demo',DAMAGE:'Damage',TRANSFER_OUT:'Transfer Out',OTHER:'Other'};
+    const canEdit=canRetailStock(),canApprove=canReviewRetail();
+    body.innerHTML=rows.length?rows.map(v=>{
+      const pending=v.approval_status==='PENDING'||v.exit_type==='PENDING_EXIT';
+      const type=pending?'PENDING_EXIT':v.exit_type;
+      const action=pending&&canApprove
+        ?'<div style="display:flex;gap:5px;flex-wrap:wrap"><button type="button" class="btn small" data-retail-pending-edit="'+esc(v.id)+'">Edit</button><button type="button" class="btn small primary" data-retail-pending-approve="'+esc(v.id)+'">Approve</button><button type="button" class="btn small" data-retail-pending-deny="'+esc(v.id)+'">Deny</button></div>'
+        :(!pending&&canEdit?'<button type="button" class="btn small" data-retail-edit="'+esc(v.id)+'">Edit</button>':'—');
+      const date=pending?(v.proposed_exit_date||v.exit_date||'—'):(v.exit_date||'—');
+      const reason=pending?(v.proposed_reason||v.reason||'Approval required'):(v.reason||v.destination||'—');
+      return '<tr'+(pending?' class="retail-pending-row"':'')+'><td>'+esc(date)+'</td><td>'+esc(v.chassis_number||'—')+'</td><td>'+esc(v.model||'—')+'</td><td>'+esc(v.variant||'—')+'</td><td>'+esc(v.department||'—')+'</td><td><span class="pill '+(pending?'orange':type==='RETAIL'?'green':'')+'">'+esc(typeLabel[type]||type||'—')+'</span>'+(pending?'<div style="font-size:10px;color:#a36516;margin-top:4px">Not approved · Excluded from Retail</div>':'')+'</td><td>'+esc(pending?(v.proposed_customer_name||v.customer_name||'—'):(v.customer_name||'—'))+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(reason)+'</td><td>'+action+'</td></tr>';
+    }).join(''):'<tr><td colspan="10" class="empty">No vehicle exit records found for the selected filters.</td></tr>';
   }
   async function loadRetailReport(){
     const body=$('retailRows'),section=$('view-reports');
     if(!body)return;
     const cards=section?.querySelectorAll('[data-retail-kpi]');
-    if(!has('retail_reports','view')){body.innerHTML='<tr><td colspan="10" class="empty">Vehicle Exit Reports permission required.</td></tr>';cards?.forEach(x=>x.textContent='—');return;}
+    if(!has('retail_reports','view')){body.innerHTML='<tr><td colspan="10" class="empty">Retail Register permission required.</td></tr>';cards?.forEach(x=>x.textContent='—');return;}
     try{
       const {start,end}=retailSelectedRange();
       const allowed=allowedDepartmentList();
@@ -1819,57 +1827,83 @@
       const customer=String($('retailCustomer')?.value||'').trim();
       const executive=String($('retailExecutive')?.value||'').trim();
       const exitType=$('retailExitType')?.value||'';
-      let rows=[],offset=0,chunk=1000;
+      let approved=[],offset=0,chunk=1000;
       while(departments.length){
-        let q=db().from('vehicle_exit_records').select('*').gte('exit_date',start).lte('exit_date',end).neq('exit_type','PENDING_EXIT').in('department',departments).order('exit_date',{ascending:false}).order('created_at',{ascending:false}).range(offset,offset+chunk-1);
+        let q=db().from('vehicle_exit_records').select('*')
+          .eq('approval_status','APPROVED')
+          .in('exit_type',['RETAIL','STOCK_OUT','DEMO','DAMAGE','TRANSFER_OUT','OTHER'])
+          .gte('exit_date',start).lte('exit_date',end)
+          .in('department',departments)
+          .order('exit_date',{ascending:false}).order('created_at',{ascending:false})
+          .range(offset,offset+chunk-1);
         if(exitType)q=q.eq('exit_type',exitType);
         if(customer)q=q.ilike('customer_name','%'+customer.replace(/[%_]/g,'\\$&')+'%');
         if(executive)q=q.ilike('sc_name','%'+executive.replace(/[%_]/g,'\\$&')+'%');
-        const part=await call(q);rows.push(...part);if(part.length<chunk)break;offset+=chunk;
+        const part=await call(q);approved.push(...part);if(part.length<chunk)break;offset+=chunk;
       }
-      retailReportRows=rows;
-      const count=type=>rows.filter(v=>v.exit_type===type).length;
+      let pending=[];
+      if(canReviewRetail()&&departments.length){
+        const reviewRows=await call(db().rpc('list_missing_vehicle_reviews'));
+        pending=(reviewRows||[]).filter(v=>
+          departments.includes(v.department)&&
+          (!customer||String(v.proposed_customer_name||v.customer_name||'').toLowerCase().includes(customer.toLowerCase()))&&
+          (!executive||String(v.sc_name||'').toLowerCase().includes(executive.toLowerCase()))&&
+          (!exitType||String(v.proposed_exit_type||'RETAIL')===exitType)
+        ).map(v=>({...v,exit_type:'PENDING_EXIT',approval_status:'PENDING',
+          exit_date:v.proposed_exit_date||String(v.pending_since||'').slice(0,10),
+          reason:v.proposed_reason||null,destination:v.proposed_destination||null,
+          customer_name:v.proposed_customer_name||v.customer_name}));
+      }
+      retailApprovedReportRows=approved;
+      retailPendingRows=pending;
+      retailReportRows=[...approved,...pending].sort((a,b)=>String(b.exit_date||b.pending_since||'').localeCompare(String(a.exit_date||a.pending_since||'')));
+      const count=type=>approved.filter(v=>v.exit_type===type).length;
       const set=(key,value)=>{const el=section?.querySelector('[data-retail-kpi="'+key+'"]');if(el)el.textContent=String(value).padStart(2,'0');};
-      set('total',rows.filter(v=>v.exit_type!=='PENDING_EXIT').length);set('retail',count('RETAIL'));set('demo',count('DEMO'));set('damage',count('DAMAGE'));set('transfer',count('TRANSFER_OUT'));set('other',count('OTHER'));
-      renderRetailRows(rows);
+      set('total',approved.length);set('retail',count('RETAIL'));set('stockout',count('STOCK_OUT'));
+      set('demo',count('DEMO'));set('damage',count('DAMAGE'));set('transfer',count('TRANSFER_OUT'));set('other',count('OTHER'));
+      renderRetailRows(retailReportRows);
       const fmt=x=>{const d=new Date(x+'T12:00:00');return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});};
       const period=$('retailPeriod');if(period)period.textContent=fmt(start)+' – '+fmt(end);
-      const desc=$('retailRegisterDescription');if(desc)desc.textContent=rows.length+' vehicle exits · '+start+' to '+end+' · Permanent Supabase history';
-      const status=$('retailReportStatus');if(status)status.textContent=rows.length+' matching exit record'+(rows.length===1?'':'s');
+      const desc=$('retailRegisterDescription');if(desc)desc.textContent=approved.length+' approved records · '+start+' to '+end+' · Pending approvals are excluded from totals, reports and print.';
+      const status=$('retailReportStatus');if(status)status.textContent=approved.length+' approved record(s)'+(canReviewRetail()?' · '+pending.length+' awaiting approval':'');
     }catch(e){
-      console.error('Vehicle Exit report load failed:',e);
-      body.innerHTML='<tr><td colspan="9" class="empty">'+esc(e.message||'Unable to load vehicle exit records.')+'</td></tr>';
-      const status=$('retailReportStatus');if(status)status.textContent=e.message||'Unable to load report';
-      notify(e.message||'Unable to load Vehicle Exit Reports.');
+      console.error('Retail Register load failed:',e);
+      body.innerHTML='<tr><td colspan="10" class="empty">'+esc(e.message||'Unable to load Retail Register.')+'</td></tr>';
+      const status=$('retailReportStatus');if(status)status.textContent=e.message||'Unable to load register';
+      notify(e.message||'Unable to load Retail Register.');
     }
   }
-
-  async function loadRetailReview(){
-    const body=$('retailReviewRows');if(!body)return;
-    if(!canReviewRetail()){body.innerHTML='<tr><td colspan="9" class="empty">Retail Review is available to Manager and above only.</td></tr>';return;}
-    body.innerHTML='<tr><td colspan="9" class="empty">Loading pending vehicles…</td></tr>';
-    try{
-      const rows=await call(db().rpc('list_missing_vehicle_reviews'));
-      retailReviewRows=rows||[];
-      const count=$('retailReviewCount');if(count)count.textContent=String(retailReviewRows.length);
-      body.innerHTML=retailReviewRows.length?retailReviewRows.map(v=>'<tr><td>'+esc(v.department||'—')+'</td><td>'+esc(v.chassis_number||'—')+'</td><td>'+esc((v.model||'')+' '+(v.variant||''))+'</td><td>'+esc(v.previous_stage||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.engine_number||'—')+'</td><td>'+esc(v.pending_since?new Date(v.pending_since).toLocaleString('en-IN'):'—')+'</td><td><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn small" type="button" data-retail-review-action="RETURN_TO_STOCK" data-id="'+esc(v.id)+'">Return to Stock</button><button class="btn small primary" type="button" data-retail-review-action="APPROVE_RETAIL" data-id="'+esc(v.id)+'">Approve Retail</button></div></td></tr>').join(''):'<tr><td colspan="9" class="empty">No vehicles are waiting for Retail approval.</td></tr>';
-      const status=$('retailReviewStatus');if(status)status.textContent=retailReviewRows.length+' vehicle(s) awaiting decision.';
-    }catch(e){console.error(e);body.innerHTML='<tr><td colspan="9" class="empty">'+esc(e.message||'Unable to load Retail Review.')+'</td></tr>';notify(e.message||'Unable to load Retail Review.');}
-  }
-  async function resolveRetailReview(id,action){
-    if(!canReviewRetail())throw new Error('Only Manager and above can resolve Retail Review.');
-    const row=retailReviewRows.find(x=>String(x.id)===String(id));if(!row)throw new Error('Review record not found. Refresh and try again.');
-    const approve=action==='APPROVE_RETAIL';
-    const message=approve
-      ?'Approve '+row.chassis_number+' as RETAIL? It will move out of Main Stock and appear in Retail Reports for permitted users.'
-      :'Return '+row.chassis_number+' to Main Stock? Its previous stage and status will be restored.';
-    if(!confirm(message))return;
-    const result=await call(db().rpc('resolve_missing_vehicle_review',{p_exit_record_id:id,p_action:action}));
-    notify(approve?'Retail approved: '+row.chassis_number:'Returned to Main Stock: '+row.chassis_number);
-    await Promise.allSettled([loadRetailReview(),renderStock(),loadRetailReport()]);
-    return result;
-  }
   let retailReviewRows=[];
+  async function openRetailPendingEditDialog(record){
+    if(!canReviewRetail())throw new Error('Only Manager and above can edit pending approvals.');
+    const old=$('svRetailPendingEditDialog');if(old)old.remove();
+    const wrap=document.createElement('div');wrap.id='svRetailPendingEditDialog';
+    wrap.style.cssText='position:fixed;inset:0;z-index:100006;background:#15202dcc;display:grid;place-items:center;padding:14px';
+    const val=record.proposed_exit_type||'RETAIL';
+    const field=(label,name,value='',type='text')=>'<label style="display:block;font-size:13px;font-weight:650;color:#344054">'+label+'<input class="field" name="'+name+'" type="'+type+'" value="'+esc(value||'')+'" style="width:100%;margin-top:5px"></label>';
+    wrap.innerHTML='<form id="svRetailPendingEditForm" style="width:min(620px,100%);max-height:92vh;overflow:auto;background:#fff;padding:21px;border-radius:14px;color:#253140"><h2 style="font-size:19px;margin:0 0 5px">Edit Pending Approval</h2><p style="font-size:12px;color:#64748b;margin:0 0 14px">Vehicle: <b>'+esc(record.chassis_number||'')+'</b> · '+esc(record.model||'')+' '+esc(record.variant||'')+' · '+esc(record.department||'')+' · Previous Stage: '+esc(record.previous_stage||'—')+'</p><label style="display:block;font-size:13px;font-weight:650">Classification<select class="field" name="exit_type" id="svRetailPendingType" required style="width:100%;margin-top:5px"><option value="RETAIL" '+(val==='RETAIL'?'selected':'')+'>Retail</option><option value="STOCK_OUT" '+(val==='STOCK_OUT'?'selected':'')+'>Stock Out</option><option value="DEMO" '+(val==='DEMO'?'selected':'')+'>Demo</option><option value="DAMAGE" '+(val==='DAMAGE'?'selected':'')+'>Damage</option><option value="TRANSFER_OUT" '+(val==='TRANSFER_OUT'?'selected':'')+'>Transfer Out</option><option value="OTHER" '+(val==='OTHER'?'selected':'')+'>Other</option></select></label><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px">'+field('Exit Date','exit_date',record.proposed_exit_date||record.exit_date||new Date().toISOString().slice(0,10),'date')+field('Customer Name','customer_name',record.proposed_customer_name||record.customer_name||'')+field('Destination / Branch','destination',record.proposed_destination||'')+'</div><label style="display:block;font-size:13px;font-weight:650;margin-top:11px">Reason / Reference <textarea class="field" name="reason" id="svRetailPendingReason" rows="2" style="width:100%;margin-top:5px">'+esc(record.proposed_reason||'')+'</textarea></label><label style="display:block;font-size:13px;font-weight:650;margin-top:10px">Additional Notes <textarea class="field" name="notes" rows="2" style="width:100%;margin-top:5px">'+esc(record.proposed_notes||'')+'</textarea></label><div id="svRetailPendingEditError" style="color:#c51c2a;font-size:12px;margin:9px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svRetailPendingCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Save</button></div></form>';
+    document.body.appendChild(wrap);
+    const type=$('svRetailPendingType'),reason=$('svRetailPendingReason');
+    const sync=()=>{reason.required=type.value!=='RETAIL'&&type.value!=='';};type.addEventListener('change',sync);sync();
+    $('svRetailPendingCancel').onclick=()=>wrap.remove();
+    $('svRetailPendingEditForm').onsubmit=async e=>{
+      e.preventDefault();const button=e.target.querySelector('button[type=submit]');button.disabled=true;button.textContent='Saving…';
+      try{
+        const v=Object.fromEntries(new FormData(e.target).entries());
+        await call(db().rpc('update_missing_vehicle_review',{p_exit_record_id:record.id,p_exit_type:v.exit_type,p_exit_date:v.exit_date,p_reason:v.reason||null,p_destination:v.destination||null,p_customer_name:v.customer_name||null,p_notes:v.notes||null}));
+        wrap.remove();await loadRetailReport();notify('Pending approval details saved. It is still hidden from regular users and print.');
+      }catch(ex){$('svRetailPendingEditError').textContent=ex.message||'Could not save pending approval.';button.disabled=false;button.textContent='Save';}
+    };
+  }
+  async function resolveRetailPending(id,action){
+    if(!canReviewRetail())throw new Error('Only Manager and above can approve or deny pending Retail records.');
+    const row=retailPendingRows.find(x=>String(x.id)===String(id));if(!row)throw new Error('Pending approval not found. Refresh and try again.');
+    const approve=action==='APPROVE';
+    if(!confirm(approve?'Approve '+row.chassis_number+' as '+(row.proposed_exit_type||'RETAIL')+'? It will become visible in the Retail Register and approved reports.':'Deny '+row.chassis_number+'? Its previous Main Stock stage and status will be restored.'))return;
+    await call(db().rpc('resolve_missing_vehicle_review',{p_exit_record_id:id,p_action:action}));
+    await Promise.allSettled([renderStock(),loadRetailReport()]);
+    notify(approve?'Approved: '+row.chassis_number:'Denied and returned to Main Stock: '+row.chassis_number);
+  }
 
   async function classifyRetailExit(record,details){
     if(!canRetailStock())throw new Error('Retail Register edit permission required.');
@@ -1890,9 +1924,10 @@
     const old=$('svRetailClassifyDialog');if(old)old.remove();
     const wrap=document.createElement('div');wrap.id='svRetailClassifyDialog';
     wrap.style.cssText='position:fixed;inset:0;z-index:100006;background:#15202dcc;display:grid;place-items:center;padding:14px';
-    const val=record.exit_type==='PENDING_EXIT'?'':record.exit_type;
+    if(record.approval_status==='PENDING'||record.exit_type==='PENDING_EXIT')return openRetailPendingEditDialog(record);
+    const val=record.exit_type;
     const field=(label,name,value='',type='text')=>'<label style="display:block;font-size:13px;font-weight:650;color:#344054">'+label+'<input class="field" name="'+name+'" type="'+type+'" value="'+esc(value||'')+'" style="width:100%;margin-top:5px"></label>';
-    wrap.innerHTML='<form id="svRetailClassifyForm" style="width:min(620px,100%);max-height:92vh;overflow:auto;background:#fff;padding:21px;border-radius:14px;color:#253140"><h2 style="font-size:19px;margin:0 0 5px">'+(record.exit_type==='PENDING_EXIT'?'Classify Pending Exit':'Edit Exit Classification')+'</h2><p style="font-size:12px;color:#64748b;margin:0 0 14px">Vehicle: <b>'+esc(record.chassis_number||'')+'</b> · '+esc(record.model||'')+' '+esc(record.variant||'')+' · '+esc(record.department||'')+'</p><label style="display:block;font-size:13px;font-weight:650">Where did the vehicle go?<select class="field" name="exit_type" id="svRetailExitType" required style="width:100%;margin-top:5px"><option value="">Select classification</option><option value="RETAIL" '+(val==='RETAIL'?'selected':'')+'>Retail</option><option value="DAMAGE" '+(val==='DAMAGE'?'selected':'')+'>Damage</option><option value="DEMO" '+(val==='DEMO'?'selected':'')+'>Demo</option><option value="TRANSFER_OUT" '+(val==='TRANSFER_OUT'?'selected':'')+'>Transfer Out</option><option value="OTHER" '+(val==='OTHER'?'selected':'')+'>Other</option></select></label><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px">'+field('Exit Date','exit_date',record.exit_date||new Date().toISOString().slice(0,10),'date')+field('Customer Name','customer_name',record.customer_name||'')+field('Destination / Branch','destination',record.destination||'')+'</div><label style="display:block;font-size:13px;font-weight:650;margin-top:11px">Reason / Reference <textarea class="field" name="reason" id="svRetailExitReason" rows="2" style="width:100%;margin-top:5px">'+esc(record.reason||'')+'</textarea></label><label style="display:block;font-size:13px;font-weight:650;margin-top:10px">Additional Notes <textarea class="field" name="notes" rows="2" style="width:100%;margin-top:5px">'+esc(record.vehicle_snapshot?.notes||'')+'</textarea></label><div id="svRetailClassifyError" style="color:#c51c2a;font-size:12px;margin:9px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svRetailClassifyCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Save Classification</button></div></form>';
+    wrap.innerHTML='<form id="svRetailClassifyForm" style="width:min(620px,100%);max-height:92vh;overflow:auto;background:#fff;padding:21px;border-radius:14px;color:#253140"><h2 style="font-size:19px;margin:0 0 5px">'+(record.exit_type==='PENDING_EXIT'?'Classify Pending Exit':'Edit Exit Classification')+'</h2><p style="font-size:12px;color:#64748b;margin:0 0 14px">Vehicle: <b>'+esc(record.chassis_number||'')+'</b> · '+esc(record.model||'')+' '+esc(record.variant||'')+' · '+esc(record.department||'')+'</p><label style="display:block;font-size:13px;font-weight:650">Where did the vehicle go?<select class="field" name="exit_type" id="svRetailExitType" required style="width:100%;margin-top:5px"><option value="">Select classification</option><option value="RETAIL" '+(val==='RETAIL'?'selected':'')+'>Retail</option><option value="STOCK_OUT" '+(val==='STOCK_OUT'?'selected':'')+'>Stock Out</option><option value="DAMAGE" '+(val==='DAMAGE'?'selected':'')+'>Damage</option><option value="DEMO" '+(val==='DEMO'?'selected':'')+'>Demo</option><option value="TRANSFER_OUT" '+(val==='TRANSFER_OUT'?'selected':'')+'>Transfer Out</option><option value="OTHER" '+(val==='OTHER'?'selected':'')+'>Other</option></select></label><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px">'+field('Exit Date','exit_date',record.exit_date||new Date().toISOString().slice(0,10),'date')+field('Customer Name','customer_name',record.customer_name||'')+field('Destination / Branch','destination',record.destination||'')+'</div><label style="display:block;font-size:13px;font-weight:650;margin-top:11px">Reason / Reference <textarea class="field" name="reason" id="svRetailExitReason" rows="2" style="width:100%;margin-top:5px">'+esc(record.reason||'')+'</textarea></label><label style="display:block;font-size:13px;font-weight:650;margin-top:10px">Additional Notes <textarea class="field" name="notes" rows="2" style="width:100%;margin-top:5px">'+esc(record.vehicle_snapshot?.notes||'')+'</textarea></label><div id="svRetailClassifyError" style="color:#c51c2a;font-size:12px;margin:9px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svRetailClassifyCancel" class="btn">Cancel</button><button type="submit" class="btn primary">Save Classification</button></div></form>';
     document.body.appendChild(wrap);
     const type=$('svRetailExitType'),reason=$('svRetailExitReason');
     const sync=()=>{reason.required=type.value!=='RETAIL'&&type.value!=='';};
@@ -1910,10 +1945,10 @@
     };
   }
   function exportRetailCsv(){
-    if(!retailReportRows.length){notify('There are no vehicle exit records to export.');return;}
+    if(!retailApprovedReportRows.length){notify('There are no approved vehicle exit records to export.');return;}
     const cols=[['Exit Date','exit_date'],['Chassis Number','chassis_number'],['Vehicle Model','model'],['Variant','variant'],['Department','department'],['Exit Type','exit_type'],['Customer','customer_name'],['Sales Executive','sc_name'],['Reason','reason'],['Destination','destination']];
     const quote=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
-    const csv='\uFEFF'+[cols.map(x=>quote(x[0])).join(','),...retailReportRows.map(row=>cols.map(c=>quote(row[c[1]]||'')).join(','))].join('\\r\\n');
+    const csv='\uFEFF'+[cols.map(x=>quote(x[0])).join(','),...retailApprovedReportRows.map(row=>cols.map(c=>quote(row[c[1]]||'')).join(','))].join('\\r\\n');
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Siddhivinayak-Vehicle-Exit-Report-'+retailDateISO(new Date())+'.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
   }
@@ -2029,23 +2064,18 @@
     const addButton=$('addVehicle');if(addButton){addButton.style.display=canManageStock()?'':'none';addButton.disabled=!canManageStock();}
     const newVehicleDept=$('stockDepartmentForNewVehicle');
     if(newVehicleDept){newVehicleDept.innerHTML=permittedDepartments.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');newVehicleDept.value=permittedDepartments[0]||'';}
-    if($('retailReviewRows')&&!$('retailReviewRows').dataset.bound){
-      $('retailReviewRows').dataset.bound='1';
-      $('retailReviewRefresh')?.addEventListener('click',()=>loadRetailReview());
-      $('retailReviewRows').addEventListener('click',e=>{
-        const button=e.target?.closest?.('[data-retail-review-action]');if(!button)return;
-        button.disabled=true;
-        resolveRetailReview(button.dataset.id,button.dataset.retailReviewAction).catch(err=>notify(err.message)).finally(()=>{button.disabled=false;});
-      });
-      document.querySelector('[data-page="retail-review"]')?.addEventListener('click',()=>setTimeout(()=>loadRetailReview(),0));
-    }
     if($('retailReportType')&&!$('retailReportType').dataset.bound){
       $('retailReportType').dataset.bound='1';
       $('retailReportType').addEventListener('change',()=>{updateRetailFilterVisibility();});
       $('applyRetailMonth')?.addEventListener('click',e=>{e.preventDefault();loadRetailReport();});
       $('retailRefresh')?.addEventListener('click',e=>{e.preventDefault();loadRetailReport();});
       $('retailClearFilters')?.addEventListener('click',()=>{const today=retailDateISO(new Date());$('retailReportType').value='monthly';if($('retailExitType'))$('retailExitType').value='';$('retailDailyDate').value=today;$('retailWeekStart').value=today;$('retailMonth').value=today.slice(0,7);$('retailFrom').value=today;$('retailTo').value=today;$('retailDepartment').value='';$('retailCustomer').value='';$('retailExecutive').value='';updateRetailFilterVisibility();loadRetailReport();});
-      $('retailRows')?.addEventListener('click',e=>{const b=e.target?.closest?.('[data-retail-edit]');if(!b)return;const row=retailReportRows.find(x=>String(x.id)===String(b.dataset.retailEdit));if(row)openRetailClassificationDialog(row);});
+      $('retailRows')?.addEventListener('click',e=>{
+        const edit=e.target?.closest?.('[data-retail-edit]');if(edit){const row=retailReportRows.find(x=>String(x.id)===String(edit.dataset.retailEdit));if(row)openRetailClassificationDialog(row);return;}
+        const pendingEdit=e.target?.closest?.('[data-retail-pending-edit]');if(pendingEdit){const row=retailPendingRows.find(x=>String(x.id)===String(pendingEdit.dataset.retailPendingEdit));if(row)openRetailPendingEditDialog(row).catch(err=>notify(err.message));return;}
+        const approve=e.target?.closest?.('[data-retail-pending-approve]');if(approve){approve.disabled=true;resolveRetailPending(approve.dataset.retailPendingApprove,'APPROVE').catch(err=>notify(err.message)).finally(()=>{approve.disabled=false;});return;}
+        const deny=e.target?.closest?.('[data-retail-pending-deny]');if(deny){deny.disabled=true;resolveRetailPending(deny.dataset.retailPendingDeny,'DENY').catch(err=>notify(err.message)).finally(()=>{deny.disabled=false;});}
+      });
       $('retailExportCsv')?.addEventListener('click',exportRetailCsv);
       $('retailPrint')?.addEventListener('click',()=>{window.print();});
       ['retailCustomer','retailExecutive'].forEach(id=>$(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')loadRetailReport();}));
@@ -2474,7 +2504,7 @@
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit,loadRetailReview};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit};
     window.SVMBackend.loadOtfManagement=loadOtfManagement;
     window.dispatchEvent(new Event('svm:ready'));
   }
