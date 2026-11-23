@@ -1541,7 +1541,8 @@
         const uploader=r.uploader?.full_name||r.uploader?.designation||'—';
         const department=r.department||'—';
         const status=Number(r.error_rows||0)>0?'Completed with errors':Number(r.skipped_rows||0)>0?'Completed with skipped rows':'Completed';
-        return '<tr><td>'+esc(r.file_name)+'</td><td>'+esc(department)+'</td><td>'+esc(uploader)+'</td><td><span class="pill '+(Number(r.error_rows||0)>0?'red':'green')+'">'+esc(status)+'</span></td><td>'+Number(r.imported_rows||0)+'</td><td>'+Number(r.skipped_rows||0)+'</td><td>'+Number(r.error_rows||0)+'</td><td>'+new Date(r.created_at).toLocaleString()+'</td></tr>';
+        const uploadedAt=new Date(r.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+        return '<tr><td class="history-file">'+esc(r.file_name)+'</td><td class="history-dept">'+esc(department)+'</td><td class="history-user">'+esc(uploader)+'</td><td class="history-date">'+esc(uploadedAt)+'</td><td class="history-count">'+Number(r.imported_rows||0)+'</td><td class="history-count">'+Number(r.skipped_rows||0)+'</td><td class="history-count">'+Number(r.error_rows||0)+'</td><td class="history-status"><span class="pill '+(Number(r.error_rows||0)>0?'red':'green')+'">'+esc(status)+'</span></td></tr>';
       }).join(''):'<tr><td colspan="8" class="empty">No import history yet.</td></tr>';
     }catch(error){
       console.error('Excel upload history load failed:',error);
