@@ -630,9 +630,9 @@
   async function loadVehicles(department='Personal') {
     if(!has('stock_register','view')) throw new Error('No stock view permission.');
     const allowed=allowedDepartmentList();
-    if(department==='All') return allowed.length?call(db().from('vehicles').select('*').in('department',allowed).order('created_at',{ascending:false})):[];
+    if(department==='All') return allowed.length?call(db().from('vehicles').select('*').in('department',allowed).neq('stage','PENDING_EXIT').order('created_at',{ascending:false})):[];
     if(!allowed.some(x=>String(x).toLowerCase()===String(department).toLowerCase())) throw new Error('You do not have access to this department.');
-    return call(db().from('vehicles').select('*').eq('department',department).order('created_at',{ascending:false}));
+    return call(db().from('vehicles').select('*').eq('department',department).neq('stage','PENDING_EXIT').order('created_at',{ascending:false}));
   }
   async function saveVehicle(data) {
     if(!has('stock_register','create')) throw new Error('No stock create permission.');
