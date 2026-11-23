@@ -2121,7 +2121,7 @@
     const formIds=['otfCustomerName','otfCustomerPhone','otfEnquiryNumber','otfCustomerId','otfInvoiceNumber','otfCustomerGstin','otfAadhaar','otfPan','otfEmail','otfAddress','otfCity','otfDistrict','otfHpa','otfBookingAmount','otfDob','otfAnniversary','otfNominee','otfNomineeRelation','otfNomineeAge','otfExchangeModel','otfExchangeReg','otfExchangeYear','otfExchangeValue','otfExchangeSupport','otfExchangeTotal'];
     formIds.forEach(id=>{if($(id))$(id).value=id==='otfBookingAmount'?'0':'';});
     if($('otfBookingDate')){const d=new Date();$('otfBookingDate').value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-    if($('otfPayments'))$('otfPayments').innerHTML='';
+    if($('otfPayments'))$('otfPayments').innerHTML='';updateOtfPaymentTotal();
     if($('otfAccessories'))$('otfAccessories').innerHTML='';
     otfSetStatus('Select a quotation and verify the chassis number before saving.');
 
