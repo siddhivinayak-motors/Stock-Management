@@ -43,7 +43,7 @@ function rolePermissionRows(role: string, userId: string, grantedBy: string, sel
   } else if (role === "Driver") {
     Object.assign(map,{stock_register:view,stock_hold_management:["view","create"],price_list_management:view,quotation_management:["view","edit"],otf_management:view});
   }
-  return selected.filter(m=>ALL_MODULES.includes(m)).map(module=>({
+  return selected.filter(m=>ALL_MODULES.includes(m) && (m!=="common_excel_upload" || ["Admin","General Manager","Manager","HR"].includes(role))).map(module=>({
     user_id:userId,module,actions:map[module]||view,granted_by:grantedBy
   }));
 }
