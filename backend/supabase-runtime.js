@@ -1862,7 +1862,7 @@
       retailReportRows=rows;
       const count=type=>rows.filter(v=>v.exit_type===type).length;
       const set=(key,value)=>{const el=section?.querySelector('[data-retail-kpi="'+key+'"]');if(el)el.textContent=String(value).padStart(2,'0');};
-      set('total',rows.filter(v=>v.exit_type!=='PENDING_EXIT').length);set('pending',count('PENDING_EXIT'));set('retail',count('RETAIL'));set('demo',count('DEMO'));set('damage',count('DAMAGE'));set('transfer',count('TRANSFER_OUT'));set('other',count('OTHER'));
+      set('total',rows.filter(v=>v.exit_type!=='PENDING_EXIT').length);set('retail',count('RETAIL'));set('demo',count('DEMO'));set('damage',count('DAMAGE'));set('transfer',count('TRANSFER_OUT'));set('other',count('OTHER'));
       renderRetailRows(rows);
       const fmt=x=>{const d=new Date(x+'T12:00:00');return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});};
       const period=$('retailPeriod');if(period)period.textContent=fmt(start)+' – '+fmt(end);
