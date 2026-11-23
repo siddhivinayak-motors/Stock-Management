@@ -2135,7 +2135,7 @@
     otfMatches=rows.filter(q=>otfDigits(q.phone)===phone);
     const box=$('otfQuoteResults');
     if(!otfMatches.length){box.innerHTML='<div class="empty">No quotations found for this mobile number in '+esc(otfDepartment)+'.</div>';return;}
-    box.innerHTML='<div class="card-desc" style="margin:8px 0">Found '+otfMatches.length+' quotation(s). Select the exact quotation for this booking.</div><div style="display:grid;gap:8px">'+otfMatches.map((q,i)=>'<button type="button" class="btn" data-otf-quote-index="'+i+'" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;flex-wrap:wrap"><span><b>'+esc(q.quote_number)+'</b> · '+esc(q.customer_name)+' · '+esc([q.model,q.variant].filter(Boolean).join(' / '))+'</span><b>'+otfMoney(q.total)+'</b></button>').join('')+'</div>';
+    box.innerHTML='<div class="card-desc" style="margin:8px 0">Found '+otfMatches.length+' quotation(s). Select the exact quotation for this booking.</div><div style="display:grid;gap:8px">'+otfMatches.map((q,i)=>'<button type="button" class="btn" data-otf-quote-index="'+i+'" style="display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;flex-wrap:wrap"><span><b>'+esc(q.quote_number)+'</b> · '+esc(q.customer_name)+' · '+esc([q.model,q.variant].filter(Boolean).join(' / '))+'</span><b>'+otfMoney(Math.max(0,Number(q.subtotal||0)-Number(q.discount||0)))+'</b></button>').join('')+'</div>';
     box.querySelectorAll('[data-otf-quote-index]').forEach(btn=>btn.addEventListener('click',()=>selectOtfQuote(Number(btn.dataset.otfQuoteIndex))));
   }
   function otfEnsureSuggestionUi(){
