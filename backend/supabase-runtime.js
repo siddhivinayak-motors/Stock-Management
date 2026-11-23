@@ -1864,7 +1864,7 @@
       renderRetailRows(retailReportRows);
       const fmt=x=>{const d=new Date(x+'T12:00:00');return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});};
       const period=$('retailPeriod');if(period)period.textContent=fmt(start)+' – '+fmt(end);
-      const desc=$('retailRegisterDescription');if(desc)desc.textContent=approved.length+' approved records · '+start+' to '+end+' · Pending approvals are excluded from totals, reports and print.';
+      const desc=$('retailRegisterDescription');if(desc)desc.textContent=approved.length+' approved records · '+start+' to '+end+'';
       const status=$('retailReportStatus');if(status)status.textContent=approved.length+' approved record(s)'+(canReviewRetail()?' · '+pending.length+' awaiting approval':'');
     }catch(e){
       console.error('Retail Register load failed:',e);
@@ -1873,7 +1873,6 @@
       notify(e.message||'Unable to load Retail Register.');
     }
   }
-  let retailReviewRows=[];
   async function openRetailPendingEditDialog(record){
     if(!canReviewRetail())throw new Error('Only Manager and above can edit pending approvals.');
     const old=$('svRetailPendingEditDialog');if(old)old.remove();
