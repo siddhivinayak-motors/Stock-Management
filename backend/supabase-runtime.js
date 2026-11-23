@@ -764,7 +764,7 @@
     total:Number(row.total||0),subtotal:Number(row.subtotal||0),discount:Number(row.discount||0),
     amountWords:row.amount_words||'',terms:Array.isArray(row.terms)?row.terms:[],
     bank:row.bank_details&&typeof row.bank_details==='object'?row.bank_details:{},
-    status:String(row.status||'Pending').toUpperCase(),approvedBy:row.approved_by||null,approvedAt:row.approved_at||null,prints:Number(row.print_count||0),
+    status:'APPROVED',approvedBy:null,approvedAt:null,prints:Number(row.print_count||0),
     date:row.quote_date,items:(row.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0)).map(x=>({name:x.particulars,amount:Number(x.amount||0),discount:!!x.is_discount||/discount|\\bless\\b/i.test(String(x.particulars||'')),custom:!!x.is_custom}))
   });
   const sameQuoteKey=(a,b)=>
@@ -805,14 +805,14 @@
       const canReview=canReviewQuotationRecords() && has('quotation_management','approve');
       const approval=q.status!=='PENDING'||!canReview?'':blocked?'<span class="pill red" title="An identical quotation is already approved">Already Registered</span><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>':'<button class="btn small" onclick="approveQuote('+i+')">Approve</button><button class="btn small danger" onclick="denyQuote('+i+')">Deny</button>';
       const manage=(canDelete?'<button class="btn small danger" onclick="deleteSavedQuote('+i+')">Delete</button>':'')+(canEdit?'<button class="btn small" onclick="editSavedQuote('+i+')">Edit</button>':'');
-      const statusClass=q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red';
+      const statusClass='green';
       const createdAt=q.createdAt?new Date(q.createdAt):null;
       const dateTimeLabel=createdAt&&!Number.isNaN(createdAt.getTime())?createdAt.toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Kolkata'}):'—';
-      return '<tr><td class="strong" data-label="Quotation No.">'+esc(q.no)+'</td><td data-label="Customer">'+esc(q.customer)+'</td><td class="qm-mobile" data-label="Mobile No.">'+esc(q.phone||'—')+'</td><td class="qm-vehicle" data-label="Vehicle">'+esc(q.vehicle)+'</td><td class="qm-date" data-label="Date & Time" title="'+esc(q.createdAt||'')+'">'+esc(dateTimeLabel)+'</td><td class="qm-department" data-label="Department">'+esc(q.department||'')+'</td><td data-label="Created By">'+esc(q.by)+'</td><td class="qm-discount" data-label="Discount">'+money(q.discount||0)+'</td><td class="qm-grand" data-label="Grand Total">'+money(q.total)+'</td><td data-label="Status"><span class="pill '+statusClass+'">'+esc(q.status)+'</span></td><td data-label="Print Count"><b>'+Number(q.prints||0)+'</b></td><td data-label="Action"><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+manage+approval+'</div></td></tr>';
+      return '<tr><td class="strong" data-label="Quotation No.">'+esc(q.no)+'</td><td data-label="Customer">'+esc(q.customer)+'</td><td class="qm-mobile" data-label="Mobile No.">'+esc(q.phone||'—')+'</td><td class="qm-vehicle" data-label="Vehicle">'+esc(q.vehicle)+'</td><td class="qm-date" data-label="Date & Time" title="'+esc(q.createdAt||'')+'">'+esc(dateTimeLabel)+'</td><td class="qm-department" data-label="Department">'+esc(q.department||'')+'</td><td data-label="Created By">'+esc(q.by)+'</td><td class="qm-discount" data-label="Discount">'+money(q.discount||0)+'</td><td class="qm-grand" data-label="Grand Total">'+money(q.total)+'</td><td data-label="Status"><span class="pill '+statusClass+'">ACTIVE</span></td><td data-label="Print Count"><b>'+Number(q.prints||0)+'</b></td><td data-label="Action"><div class="qm-action"><button class="btn small" onclick="printSavedQuote('+i+')">Print</button>'+manage+approval+'</div></td></tr>';
     }).join('')||'<tr><td colspan="12" class="empty">No quotations found for the selected city.</td></tr>';
     $('qmTotal').textContent=visibleQuotes.length;
-    $('qmPending').textContent=visibleQuotes.filter(({q})=>q.status==='PENDING').length;
-    $('qmApproved').textContent=visibleQuotes.filter(({q})=>q.status==='APPROVED').length;
+    $('qmPending').textContent='0';
+    $('qmApproved').textContent=visibleQuotes.length;
     $('qmPrints').textContent=visibleQuotes.reduce((sum,{q})=>sum+Number(q.prints||0),0);
   };
   let quotationRealtimeChannel=null, quoteRealtimeDebounce=null;
@@ -953,7 +953,7 @@
           sales_person:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
           email:q.email,branch_address:q.branchAddress,helpline:q.helpline,pan:q.pan,gstin:q.gstin,
           subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:numberWordsIndian(q.total)||'',
-          terms:q.terms||[],bank_details:q.bank||{},status:'Pending',approved_by:null,approved_at:null,
+          terms:q.terms||[],bank_details:q.bank||{},status:'Approved',approved_by:null,approved_at:null,
           updated_by:currentUser.id,updated_at:new Date().toISOString()
         };
         // RLS can legitimately return zero updated rows; .single() turns that into
@@ -982,6 +982,8 @@
       if(upsertError)throw upsertError;
       const saved=upsertResult?.row;
       if(!saved?.id)throw new Error('Quotation save returned no record. Please refresh and try again.');
+      const activated=await call(db().from('quotations').update({status:'Approved',approved_by:null,approved_at:null,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',saved.id).select('id').single());
+      if(!activated?.id)throw new Error('Quotation saved but could not be activated. Refresh and retry before using it in OTF.');
       q.no=saved.quote_number;
       if($('quoteNumber'))$('quoteNumber').textContent=saved.quote_number;
       const updatedExisting=!!upsertResult.updated_existing;
@@ -1018,38 +1020,6 @@
   window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; savedQuotationFormFingerprint=null; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Save updates the latest matching customer and vehicle quotation. Print opens the latest saved version.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('printQuote'))$('printQuote').textContent='Print Quotation';})(window.resetQuotationForm);
   window.saveRecords = () => {}; // Quotation records now live in Supabase, not localStorage.
   window.loadDepartmentQuotes = () => { reloadQuoteList().catch(e=>{console.error(e);notify(e.message);}); };
-  window.approveQuote = async (i) => {
-    try{
-      const q=quoteRecords[i];if(!q?.id) return;
-      if(!canReviewQuotationRecords() || !has('quotation_management','approve')) throw new Error('Only Manager, General Manager, Admin and Super Admin can approve quotations.');
-      if(quoteRecords.some(other=>other.id!==q.id&&other.status==='APPROVED'&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું quotation પહેલેથી APPROVED છે. આ duplicate quotation approve નહીં થાય.');
-      const approvedDiscountTotal=(q.items||[]).filter(x=>x.discount&&/retail|exchange/i.test(String(x.name||''))).reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);
-      const approvedTotal=Math.max(0,Number(q.subtotal||0)-approvedDiscountTotal);
-      const {data,error}=await db().from('quotations').update({status:'Approved',discount:approvedDiscountTotal,total:approvedTotal,amount_words:numberWordsIndian(approvedTotal),approved_by:currentUser.id,approved_at:new Date().toISOString(),updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',q.id).eq('status','Pending').select('id');
-      if(error)throw error;
-      if(!data?.length)throw new Error('Quotation is not pending or was already approved.');
-      await audit('quotation_management','approve','Approved quotation','quotation',q.id);
-      await reloadQuoteList();notify('Quotation approved.');
-    }catch(e){notify(e.message);}
-  };
-  window.denyQuote = async (i) => {
-    try{
-      const q=quoteRecords[i];if(!q?.id) return;
-      if(!canReviewQuotationRecords() || !has('quotation_management','approve')) throw new Error('Only Manager, General Manager, Admin and Super Admin can deny quotations.');
-      if(q.status!=='PENDING') throw new Error('Only pending quotations can be denied.');
-      const reason=prompt('Deny quotation '+q.no+'. Enter a reason (optional):','');
-      if(reason===null) return;
-      if(!confirm('Are you sure you want to mark quotation '+q.no+' as DENIED?')) return;
-      const {data,error}=await db().from('quotations')
-        .update({status:'Denied',updated_by:currentUser.id,updated_at:new Date().toISOString()})
-        .eq('id',q.id).eq('status','Pending').select('id');
-      if(error) throw error;
-      if(!data?.length) throw new Error('Quotation is no longer pending. Refresh and try again.');
-      await audit('quotation_management','deny','Denied quotation','quotation',q.id,{quote_number:q.no,reason:reason.trim()});
-      await reloadQuoteList();
-      notify('Quotation marked as Denied.');
-    }catch(e){notify(e.message);}
-  };
   window.printSavedQuote = async (i) => {
     try{
       const q=quoteRecords[i];if(!q) return;
@@ -2156,7 +2126,7 @@
   const otfValue=id=>$(id)?.value?.trim()||'';
   const otfNumber=id=>Math.max(0,Number($(id)?.value||0)||0);
   const otfMoney=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-  function otfQuotationAmounts(q={}){const subtotal=Math.max(0,Number(q.subtotal)||0),items=q.quotation_items||q.items||[];const status=String(q.status||'').trim().toUpperCase();const discountApproved=!status||status==='APPROVED';const itemDiscount=discountApproved?items.filter(x=>!!x.is_discount&&/retail offer|exchange offer/i.test(String(x.particulars||x.name||''))).reduce((sum,x)=>sum+Math.max(0,Number(x.amount)||0),0):0;const discount=discountApproved?(itemDiscount>0?itemDiscount:Math.max(0,Number(q.discount)||0)):0;const total=Math.max(0,subtotal-discount);return {...q,subtotal,discount,total,amountWords:numberWordsIndian(total)||''};}
+  function otfQuotationAmounts(q={}){const subtotal=Math.max(0,Number(q.subtotal)||0),items=q.quotation_items||q.items||[];const itemDiscount=items.filter(x=>(!!x.is_discount||/retail offer|exchange offer/i.test(String(x.particulars||x.name||'')))).reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);const discount=itemDiscount>0?itemDiscount:Math.max(0,Number(q.discount)||0);const total=Math.max(0,subtotal-discount);return {...q,subtotal,discount,total,amountWords:numberWordsIndian(total)||''};}
   const otfDeptCode={Personal:'PV',EV:'EV',Commercial:'CV',LLM:'LV'};
   function otfSetStatus(message,isError=false){const el=$('otfFormStatus');if(el){el.textContent=message;el.style.color=isError?'#b4232c':'#64748b';}}
   function otfResetSelection(){
@@ -2365,7 +2335,7 @@
       nominee_relationship:otfValue('otfNomineeRelation')||null,nominee_age:otfValue('otfNomineeAge')?Number(otfValue('otfNomineeAge')):null,
       chassis_number:v.chassis_number,engine_number:v.engine_number,model:v.model,variant:v.variant,colour:v.colour,
       sales_person:q.sales_person||currentProfile?.full_name||'',
-      quotation_snapshot:(()=>{const quotationItems=(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0));const findOffer=label=>Number(quotationItems.find(x=>String(x.particulars||'').toUpperCase().includes(label))?.amount||0);const retailOffer=findOffer('RETAIL OFFER'),exchangeOffer=findOffer('EXCHANGE OFFER');const amounts=otfQuotationAmounts({...q,quotation_items:quotationItems});return {quote_number:q.quote_number,quote_date:q.quote_date,status:q.status||null,branch_address:q.branch_address||'',subtotal:amounts.subtotal,discount:amounts.discount,total:amounts.total,retail_offer:retailOffer,exchange_offer:exchangeOffer,amount_words:amounts.amountWords,items:quotationItems.map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))};})(),
+      quotation_snapshot:(()=>{const quotationItems=(q.quotation_items||[]).sort((a,b)=>Number(a.line_no||0)-Number(b.line_no||0));const findOffer=label=>Number(quotationItems.find(x=>String(x.particulars||'').toUpperCase().includes(label))?.amount||0);const retailOffer=findOffer('RETAIL OFFER'),exchangeOffer=findOffer('EXCHANGE OFFER');const amounts=otfQuotationAmounts({...q,quotation_items:quotationItems});return {quote_number:q.quote_number,quote_date:q.quote_date,status:'Approved',branch_address:q.branch_address||'',subtotal:amounts.subtotal,discount:amounts.discount,total:amounts.total,retail_offer:retailOffer,exchange_offer:exchangeOffer,amount_words:amounts.amountWords,items:quotationItems.map(x=>({particulars:x.particulars,amount:Number(x.amount||0),is_discount:!!x.is_discount}))};})(),
       vehicle_snapshot:{status:v.status,stage:v.stage,seating:v.seating||'',manufacturing_year:v.manufacturing_year,mfg_year_label:v.mfg_year_label||'',oem_invoice_date:v.oem_invoice_date||null,place:v.place||'',external:!!v.external},
       exchange_details:{model:otfValue('otfExchangeModel'),registration:otfValue('otfExchangeReg'),manufacturing_year:otfValue('otfExchangeYear'),old_value:otfNumber('otfExchangeValue'),extra_support:otfNumber('otfExchangeSupport'),total_value:otfNumber('otfExchangeTotal')},
       accessories_details:otfCollectRows('.otf-accessory-row',[['item','[data-acc="item"]'],['part_number','[data-acc="part"]'],['amount','[data-acc="amount"]']]),
@@ -2383,8 +2353,7 @@
     const isOffer=x=>!!x.is_discount||/retail offer|exchange offer/i.test(String(x.particulars||''));
     const regularItems=items.filter(x=>!isOffer(x));
     const offerAmount=(kind)=>{const saved=kind==='retail'?q.retail_offer:q.exchange_offer;if(saved!==null&&saved!==undefined&&saved!=='')return Math.max(0,Number(saved)||0);const pattern=kind==='retail'?/retail\s+offer/i:/exchange\s+offer/i;return Math.max(0,Number(items.find(x=>pattern.test(String(x.particulars||'')))?.amount||0));};
-    const discountAllowed=!q.status||String(q.status).trim().toUpperCase()==='APPROVED';
-    const retailOffer=discountAllowed?offerAmount('retail'):0,exchangeOffer=discountAllowed?offerAmount('exchange'):0;
+    const retailOffer=offerAmount('retail'),exchangeOffer=offerAmount('exchange');
     const rows=regularItems.map(x=>'<tr><td>'+escHtml(x.particulars)+'</td><td class="num">'+otfMoney(x.amount)+'</td></tr>').join('');
     const paymentTotal=otfPaymentTotal(payments);
     const payRows=(payments.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escHtml(x.type)+'</td><td>'+escHtml(x.date)+'</td><td class="num">'+otfMoney(x.amount)+'</td><td>'+escHtml(x.mode)+'</td></tr>').join('')||'<tr><td colspan="5">—</td></tr>')+'<tr class="payment-total-row"><td colspan="3" style="text-align:right;font-weight:bold">TOTAL PAYMENT RECEIVED</td><td class="num" style="font-weight:bold">'+otfMoney(paymentTotal)+'</td><td></td></tr>';
