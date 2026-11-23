@@ -15,7 +15,7 @@ const ROLE_MODULES: Record<string,string[]> = {
   "General Manager": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","audit_history","retail_reports"],
   "Manager": ["dashboard","stock_register","stock_hold_management","quotation_management","otf_management","employee_management","common_excel_upload","retail_reports"],
   "Accountant": ["stock_register","retail_reports","common_excel_upload","quotation_management","otf_management"],
-  "HR": ["stock_register","stock_hold_management","retail_reports","common_excel_upload","quotation_management","otf_management"],
+  "HR": ["stock_register","stock_hold_management","retail_reports","common_excel_upload","quotation_management","otf_management","employee_management"],
   "DMS": ["stock_register","retail_reports","common_excel_upload","quotation_management","otf_management"],
   "Executive": ["dashboard","stock_register","stock_hold_management","quotation_management","retail_reports","otf_management"],
   "Reception": ["dashboard","stock_register","stock_hold_management","quotation_management","retail_reports","otf_management"],
@@ -23,7 +23,8 @@ const ROLE_MODULES: Record<string,string[]> = {
 };
 const ALL_MODULES = ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","audit_history","retail_reports"];
 function rolePermissionRows(role: string, userId: string, grantedBy: string, selectedModules?: string[]) {
-  const selected = selectedModules || [];
+  const employeeManagementRoles = new Set(["Admin","General Manager","Manager","HR"]);
+  const selected = [...new Set([...(selectedModules || []), ...(employeeManagementRoles.has(role) ? ["employee_management"] : [])])];
   const full = ["view","create","edit","delete","approve","manage_users","export","restore"];
   const view = ["view"];
   const map: Record<string,string[]> = {};
@@ -34,7 +35,7 @@ function rolePermissionRows(role: string, userId: string, grantedBy: string, sel
   } else if (role === "Accountant") {
     Object.assign(map,{stock_register:view,price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view});
   } else if (role === "HR") {
-    Object.assign(map,{stock_register:view,stock_hold_management:["view","create"],price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view});
+    Object.assign(map,{stock_register:view,stock_hold_management:["view","create"],price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view,employee_management:["view","create","edit","delete","manage_users"]});
   } else if (role === "DMS") {
     Object.assign(map,{stock_register:view,price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view});
   } else if (role === "Executive" || role === "Reception") {
@@ -85,7 +86,7 @@ Deno.serve(async (req: Request) => {
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON body" }, 400); }
   const action = String(body.action || "");
   const isRoot = profile.is_super_admin === true;
-  const employeeManagerRole = isRoot || ["Admin","General Manager","Manager"].includes(String(profile.designation||""));
+  const employeeManagerRole = isRoot || ["Admin","General Manager","Manager","HR"].includes(String(profile.designation||""));
   const allowed = isRoot || (employeeManagerRole && (
     (action === "create_employee" && canCreateResult.data === true)
     || (action === "update_employee" && canEditResult.data === true)
@@ -149,9 +150,11 @@ Deno.serve(async (req: Request) => {
     if (!isRoot && targetLevel >= callerLevel) return json({ error: "You can create only employees below your own designation." }, 403);
     if (!departments.length || departments.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Select valid department access" }, 400);
     const selectedWorkspaceModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
+    const employeeManagementRoles = new Set(["Admin","General Manager","Manager","HR"]);
+    if (selectedWorkspaceModules.includes("employee_management") && !employeeManagementRoles.has(role)) return json({error:"Employee Management can be assigned only to Admin, General Manager, Manager, or HR."},403);
     if (selectedWorkspaceModules.some(m => !ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
     // Department access automatically includes stock register, stock hold and quotation functions.
-    const selectedModules = [...new Set([...selectedWorkspaceModules,...(departments.length?["stock_register","stock_hold_management","quotation_management","otf_management",...(canGrantModule("dashboard")?["dashboard"]:[])]:[])])];
+    const selectedModules = [...new Set([...selectedWorkspaceModules,...(employeeManagementRoles.has(role)?["employee_management"]:[]),...(departments.length?["stock_register","stock_hold_management","quotation_management","otf_management",...(canGrantModule("dashboard")?["dashboard"]:[])]:[])])];
     const forbiddenModules = selectedModules.filter(m => !canGrantModule(m));
     if (forbiddenModules.length) return json({error:"You cannot grant permissions you do not have: "+forbiddenModules.join(", ")},403);
     const selectedShortcuts = Array.isArray(body.dashboard_shortcuts) ? [...new Set(body.dashboard_shortcuts.map(String))] : [];
@@ -284,9 +287,11 @@ Deno.serve(async (req: Request) => {
     if(requestedShortcuts.includes("audit")&&!canGrantModule("audit_history"))return json({error:"You cannot grant Audit History shortcut."},403);
     if (!canManageTargetDepartments(target)) return json({error:"You can change permissions only for employees in your assigned department."},403);
     const targetLevel=ROLE_LEVEL[String(target.designation||"")]??0;
-    if(!isRoot && targetLevel<=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
+    if(!isRoot && targetLevel>=callerLevel) return json({error:"You can manage permissions only for employees below your own designation. Your own and higher-level permissions cannot be changed."},403);
     const requestedModules = Array.isArray(body.modules) ? [...new Set(body.modules.map(String))] : [];
-    const selected = [...new Set([...requestedModules,...(requestedDepartments.length?["stock_register","stock_hold_management","quotation_management","otf_management"]:[]),...(requestedDepartments.length&&canGrantModule("dashboard")?["dashboard"]:[])])];
+    const employeeManagementRoles = new Set(["Admin","General Manager","Manager","HR"]);
+    if (requestedModules.includes("employee_management") && !employeeManagementRoles.has(String(target.designation||""))) return json({error:"Employee Management is not available to this designation."},403);
+    const selected = [...new Set([...requestedModules,...(employeeManagementRoles.has(String(target.designation||""))?["employee_management"]:[]),...(requestedDepartments.length?["stock_register","stock_hold_management","quotation_management","otf_management"]:[]),...(requestedDepartments.length&&canGrantModule("dashboard")?["dashboard"]:[])])];
     if(selected.some(m=>!ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
     const forbidden=selected.filter((m:string)=>!canGrantModule(m));
     if(forbidden.length) return json({error:"You cannot grant permissions you do not have: "+forbidden.join(", ")},403);
