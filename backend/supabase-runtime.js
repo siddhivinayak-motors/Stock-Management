@@ -1097,7 +1097,7 @@
       const old=new Set(existing.map(x=>String(x.chassis_number||'').toUpperCase()));
       const added=pratikStockPreviewRows.filter(x=>!old.has(x.chassis)).length;
       const updated=pratikStockPreviewRows.length-added;
-      const removed=existing.filter(x=>!incoming.has(String(x.chassis_number||'').toUpperCase())&&!['RETAIL','DEMO','DAMAGE','TRANSFER_OUT','OTHER','PENDING_EXIT'].includes(String(x.stage||'').toUpperCase())).length;
+      const removed=existing.filter(x=>!incoming.has(String(x.chassis_number||'').toUpperCase())&&!['RETAIL','STOCK_OUT','DEMO','DAMAGE','TRANSFER_OUT','OTHER','PENDING_EXIT'].includes(String(x.stage||'').toUpperCase())).length;
       const counts={Personal:pratikStockPreviewRows.filter(x=>x.department==='Personal').length,EV:pratikStockPreviewRows.filter(x=>x.department==='EV').length};
       const st={};pratikStockPreviewRows.forEach(x=>st[x.stage]=(st[x.stage]||0)+1);
       pratikStockPreviewFile=file.name;
