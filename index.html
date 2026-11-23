@@ -1852,7 +1852,22 @@ td,.data-table td{font-size:13px;line-height:1.45}
    <div class="card" style="margin-top:12px"><div class="card-head"><div class="card-title">Robin — Review Changes</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Chassis</th><th>Model</th><th>Variant</th><th>Segment</th><th>Department</th><th>Status</th><th>Decision</th></tr></thead><tbody id="robinStockRows"><tr><td colspan="7" class="empty">Upload Robin Excel and select Review &amp; Preview Changes.</td></tr></tbody></table></div></div>
   </div>
  </div>
- <div id="stockUploadHistoryPanel" class="card stock-upload-history" style="margin:14px 0" hidden><div class="card-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div class="card-title">Excel Upload History</div><button class="btn" type="button" onclick="window.SVMBackend?.loadImportHistory?.()">⟳ &nbsp;Refresh History</button></div><div class="table-wrap"><table class="data-table"><thead><tr><th>File Name</th><th>Department</th><th>Uploaded By</th><th>Status</th><th>Imported</th><th>Skipped / Duplicate</th><th>Errors</th><th>Uploaded At</th></tr></thead><tbody id="stockUploadHistoryRows"><tr><td colspan="8" class="empty">Loading upload history…</td></tr></tbody></table></div></div>
+ <div id="stockUploadHistoryPanel" class="card stock-upload-history" style="margin:14px 0" hidden>
+ <style>
+  #stockUploadHistoryPanel .stock-history-scroll{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #stockUploadHistoryPanel .stock-history-table{width:100%;min-width:1120px;table-layout:auto}
+  #stockUploadHistoryPanel .stock-history-table th,#stockUploadHistoryPanel .stock-history-table td{padding:12px 14px;white-space:nowrap;vertical-align:middle}
+  #stockUploadHistoryPanel .stock-history-table .history-file{min-width:240px;white-space:normal;overflow-wrap:anywhere}
+  #stockUploadHistoryPanel .stock-history-table .history-dept{min-width:145px}
+  #stockUploadHistoryPanel .stock-history-table .history-user{min-width:175px}
+  #stockUploadHistoryPanel .stock-history-table .history-date{min-width:205px;font-variant-numeric:tabular-nums}
+  #stockUploadHistoryPanel .stock-history-table .history-count{min-width:105px;text-align:center}
+  #stockUploadHistoryPanel .stock-history-table .history-status{min-width:185px}
+  @media(max-width:700px){#stockUploadHistoryPanel .stock-history-table{min-width:1050px}#stockUploadHistoryPanel .stock-history-table th,#stockUploadHistoryPanel .stock-history-table td{padding:10px 12px}}
+ </style>
+ <div class="card-head" style="display:flex;align-items:center;justify-content:space-between;gap:12px"><div class="card-title">Excel Upload History</div><button class="btn" type="button" onclick="window.SVMBackend?.loadImportHistory?.()">⟳ &nbsp;Refresh History</button></div>
+ <div class="stock-history-scroll"><table class="data-table stock-history-table"><thead><tr><th>File Name</th><th>Department</th><th>Uploaded By</th><th>Uploaded At</th><th>Imported</th><th>Skipped / Duplicate</th><th>Errors</th><th>Status</th></tr></thead><tbody id="stockUploadHistoryRows"><tr><td colspan="8" class="empty">Loading upload history…</td></tr></tbody></table></div>
+</div>
 </section>
 <section class="view" id="view-reports">
  <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Vehicle Exit Reports</h1><div class="subtitle">Pending Exit classification and permanent history of vehicle exits</div></div><button class="btn" id="retailRefresh" type="button">⟳ &nbsp;Refresh</button></div>
