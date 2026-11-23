@@ -1407,19 +1407,27 @@
     'General Manager':['dashboard','stock_register','stock_hold_management','price_list_management','quotation_management','employee_management','common_excel_upload','audit_history','retail_reports','otf_management'],
     'Manager':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','common_excel_upload','retail_reports','otf_management'],
     'Accountant':['stock_register','retail_reports','common_excel_upload','otf_management'],
-    'HR':['dashboard','stock_register','stock_hold_management','quotation_management','common_excel_upload','retail_reports','otf_management'],
+    'HR':['dashboard','stock_register','stock_hold_management','quotation_management','employee_management','common_excel_upload','retail_reports','otf_management'], 
     'DMS':['stock_register','retail_reports','common_excel_upload','otf_management'],
     'Executive':['dashboard','stock_register','stock_hold_management','quotation_management','retail_reports','otf_management'],
     'Reception':['dashboard','stock_register','stock_hold_management','quotation_management','retail_reports','otf_management'],
     'Driver':['stock_register','stock_hold_management','quotation_management','otf_management']
   };
+  const EMPLOYEE_ROLE_LEVEL_UI={'Super Admin':100,'Admin':90,'General Manager':80,'Manager':70,'Accountant':60,'HR':50,'DMS':40,'Executive':30,'Reception':20,'Receptionist':20,'Driver':10};
+  function canManageEmployeeTarget(profile){
+    if(!profile||profile.is_super_admin||profile.user_id===currentUser?.id)return false;
+    if(currentProfile?.is_super_admin)return true;
+    const viewerLevel=EMPLOYEE_ROLE_LEVEL_UI[String(currentProfile?.designation||'').trim()]??0;
+    const targetLevel=EMPLOYEE_ROLE_LEVEL_UI[String(profile.designation||'').trim()]??0;
+    return viewerLevel>0&&targetLevel>0&&targetLevel<viewerLevel;
+  }
   const MODULE_LABELS_UI={dashboard:'Dashboard',stock_register:'Stock Register',stock_hold_management:'Stock Hold Management',price_list_management:'Price List',quotation_management:'Quotation',otf_management:'OTF Management',employee_management:'Employee Management',common_excel_upload:'Excel Upload',backup_restore:'Backup & Restore',audit_history:'Audit History',retail_reports:'Retail Reports'};
   function moduleAccessMarkup(role,selected=[]){
     const allowed=ROLE_MODULES_UI[role]||[];
     return '<fieldset style="border:1px solid #dce2e9;border-radius:8px;padding:10px;margin-top:12px"><legend style="font-size:13px;font-weight:700">Function Access</legend><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">'+allowed.map(m=>'<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="module_access" value="'+m+'" '+(selected.includes(m)?'checked':'')+'>'+MODULE_LABELS_UI[m]+'</label>').join('')+'</div><small style="color:#718096;display:block;margin-top:8px">Only selected functions will appear in this employee login.</small></fieldset>';
   }
   async function editEmployeeDialog(profile){
-    if(profile.is_super_admin){notify('Super Admin profile cannot be edited here.');return;}
+    if(!canManageEmployeeTarget(profile)){notify('You can manage only employees below your designation.');return;}
     const old=$('svEmployeeDialog');if(old)old.remove();
     const wrap=document.createElement('div');wrap.id='svEmployeeDialog';
     wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
@@ -1476,6 +1484,8 @@
     wrap.innerHTML='<form id="svEmployeeForm" style="width:min(760px,100%);max-height:94vh;overflow:auto;background:#fff;padding:18px;border-radius:14px;color:#253140"><div style="font-size:20px;font-weight:850;margin-bottom:14px">Create Employee Login</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px"><label>Full Name<input required name="full_name" class="field" autocomplete="off"></label><label>Email<input required type="email" name="email" class="field" autocomplete="off"></label><label>Mobile Number<input type="tel" inputmode="numeric" autocomplete="tel" maxlength="16" name="phone" class="field" placeholder="10-digit mobile number (copy/paste supported)"></label><label>City<select required name="city" class="field"><option value="">Select City</option><option>Bhavnagar</option><option>Amreli</option><option>Botad</option><option>Rajula</option></select></label><label>Password<input required type="password" name="password" class="field" minlength="6" autocomplete="new-password"></label><label>Designation / Role<select required name="designation" id="svNewRole" class="field"><option value="">Select role</option>'+roles.map(x=>'<option value="'+x+'">'+x+'</option>').join('')+'</select></label></div><section style="border:1px solid #e1e6ed;border-radius:10px;padding:12px;margin:12px 0"><h3 style="margin:0 0 10px;font-size:14px">Department Access</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">'+deptRows+'</div></section><div id="svCreateModulePermissions">'+moduleRows+'</div>'+dashboardRows+'<div style="font-size:12px;color:#718096;margin-top:8px">Selected departments automatically include all four department functions. Workspace modules and Dashboard Quick Access are assigned separately. Change Password is always available.</div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Create User</button></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
+    const syncEmployeeManagementOption=()=>{const role=$('svNewRole')?.value||'';const checkbox=wrap.querySelector('input[name="module_access"][value="employee_management"]');if(checkbox){const allowed=['Admin','General Manager','Manager','HR'].includes(role);const label=checkbox.closest('label');if(label)label.style.display=allowed?'':'none';if(!allowed)checkbox.checked=false;}};
+    $('svNewRole')?.addEventListener('change',syncEmployeeManagementOption);syncEmployeeManagementOption();
     const newEmployeeCity=$('svEmployeeForm').elements.namedItem('city');
     if(String(currentProfile?.designation||'')==='Manager'&&newEmployeeCity){
       newEmployeeCity.value=currentProfile.city||'';
@@ -1530,7 +1540,7 @@
     if((roleLevel[profile.designation]??0)>=(roleLevel[myRole]??0)&&!currentProfile?.is_super_admin){notify('You can manage only employees below your designation.');return;}
     const canGrantAll=!!currentProfile?.is_super_admin||myRole==='Admin'||myRole==='General Manager';
     const canGrantOperational=myRole==='Manager'||myRole==='HR';
-    const grantable=new Set(EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])).filter(m=>m!=='audit_history'||canGrantAll).filter(m=>canGrantAll||canGrantOperational));
+    const grantable=new Set(EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])).filter(m=>m!=='audit_history'||canGrantAll).filter(m=>canGrantAll||canGrantOperational).filter(m=>m!=='employee_management'||['Admin','General Manager','Manager','HR'].includes(String(profile.designation||''))));
     const [currentRows]=await Promise.all([call(db().from('employee_permissions').select('module').eq('user_id',profile.user_id))]);
     const selected=new Set(currentRows.map(x=>x.module));
     const departments=['Personal','EV','Commercial','LLM'];
@@ -1569,6 +1579,7 @@
     }
     const section=$('view-employees');if(!section)return;
     rows=rows.filter(p=>!p.deleted_at);
+    rows=rows.filter(p=>p.user_id===currentUser?.id||canManageEmployeeTarget(p));
     const designationFilter=section.querySelector('#svEmployeeDesignationFilter')?.value||'';
     const cityFilter=section.querySelector('#svEmployeeCityFilter')?.value||'';
     if(String(currentProfile?.designation||'').trim()==='Manager'){
@@ -1601,8 +1612,8 @@
     if(table) table.innerHTML=rows.length?rows.map(p=>{
       const designation=p.is_super_admin?'Super Admin':(p.designation||'—');
       const access=p.is_super_admin?'Personal · EV · Commercial · LLM':((p.department_access?.length?p.department_access:[p.department].filter(Boolean)).join(' · ')||'—');
-      const canEditThis=has('employee_management','edit')&&!p.is_super_admin&&p.user_id!==currentUser.id;
-      const canManageThis=has('employee_management','manage_users')&&!p.is_super_admin&&p.user_id!==currentUser.id;
+      const canEditThis=has('employee_management','edit')&&canManageEmployeeTarget(p);
+      const canManageThis=has('employee_management','manage_users')&&canManageEmployeeTarget(p);
       return '<tr><td>'+(canEditThis?'<button type="button" class="btn small" data-edit="'+esc(p.user_id)+'" style="padding:2px 0;background:transparent;border:0;color:#26384d;text-decoration:underline;font-weight:750">'+esc(p.full_name||'—')+'</button>':esc(p.full_name||'—'))+'</td><td>'+esc(p.email||'—')+'</td><td>'+esc(p.phone||'—')+'</td><td>'+esc(designation==='Reception'?'Receptionist':designation)+'</td><td>'+esc(p.city||'—')+'</td><td>'+esc(access)+'</td><td><span class="pill '+(p.status==='active'?'green':'red')+'">'+esc(p.status||'inactive')+'</span></td><td>'+(canManageThis?'<button type="button" class="btn small" data-permissions="'+esc(p.user_id)+'">Permissions</button>':'—')+'</td></tr>';
     }).join(''):'<tr><td colspan="7" class="empty">No employees yet.</td></tr>';
     table?.querySelectorAll('[data-edit]').forEach(btn=>btn.addEventListener('click',()=>{
