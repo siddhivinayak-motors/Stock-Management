@@ -2186,13 +2186,13 @@ function renumberCharges(){[...charges.querySelectorAll('.charge-row'),...quoteD
 function saveRecords(){try{localStorage.setItem(quoteStoreKey,JSON.stringify(quoteRecords))}catch(e){}}
 function renderQuoteManagement(){
  const body=document.getElementById('quoteManagementRows');if(!body)return;
- body.innerHTML=quoteRecords.map((q,i)=>`<tr><td class="strong">${q.no}</td><td>${q.customer}</td><td>${q.vehicle}</td><td>${q.by}</td><td>${money(q.total)}</td><td><span class="pill ${q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red'}">${q.status}</span></td><td><b>${q.prints}</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote(${i})">Print</button>${q.status==='PENDING'?`<button class="btn small" onclick="approveQuote(${i})">Approve</button>`:''}</div></td></tr>`).join('');
+ body.innerHTML=quoteRecords.map((q,i)=>`<tr><td class="strong">${q.no}</td><td>${q.customer}</td><td>${q.vehicle}</td><td>${q.by}</td><td>${money(q.total)}</td><td><span class="pill green">ACTIVE</span></td><td><b>${q.prints}</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote(${i})">Print</button></div></td></tr>`).join('');
  document.getElementById('qmTotal').textContent=quoteRecords.length;
- document.getElementById('qmPending').textContent=quoteRecords.filter(q=>q.status==='PENDING').length;
- document.getElementById('qmApproved').textContent=quoteRecords.filter(q=>q.status==='APPROVED').length;
+ document.getElementById('qmPending').textContent='0';
+ document.getElementById('qmApproved').textContent=quoteRecords.length;
  document.getElementById('qmPrints').textContent=quoteRecords.reduce((s,q)=>s+(q.prints||0),0);
 }
-function approveQuote(i){quoteRecords[i].status='APPROVED';saveRecords();renderQuoteManagement();toast('Approval recorded')}
+function approveQuote(){}
 function printSavedQuote(i){const q=quoteRecords[i];q.prints=(q.prints||0)+1;saveRecords();renderQuoteManagement();printQuoteDocument(q)}
 function getQuotePayload(){
  const totals=calc();
@@ -2238,7 +2238,7 @@ function getQuotePayload(){
   helpline:v('qHelpline')||'9925139389',pan:v('qPan')||'AAMCS1007J',
   gstin:v('qGstin')||'24AAMCS1007J1ZI',by:'',total:totals.total,
   subtotal:totals.subtotal,discount:totals.discount,amountWords,terms,bank,
-  status:'PENDING',prints:0,date:quoteDate,items
+  status:'APPROVED',prints:0,date:quoteDate,items
  };
 }
 function printQuoteDocumentPaper(q){
@@ -2519,14 +2519,14 @@ function getQuotePayload(){
  });
  const v=id=>document.getElementById(id)?.value.trim()||'';
  const branchDetails=window.svmGetQuoteBranchDetails?.(window.SVMBackend?.profile?.city)||{};
- return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,variant:v('qVariant'),colour:v('qColour'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:branchDetails.terms||['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:branchDetails.bank_details||{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar',micr:'364002005'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'PENDING',prints:0,items};
+ return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,variant:v('qVariant'),colour:v('qColour'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:branchDetails.terms||['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:branchDetails.bank_details||{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar',micr:'364002005'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'APPROVED',prints:0,items};
 }
 function renderQuoteManagement(){
  const body=document.getElementById('quoteManagementRows');if(!body)return;
- body.innerHTML=(quoteRecords||[]).map((q,i)=>`<tr><td class="strong">${esc(q.no)}</td><td>${esc(q.customer)}</td><td class="qm-mobile">${esc(q.phone||'—')}</td><td>${esc(q.vehicle)}</td><td>${esc(q.dateTime||q.date||'—')}</td><td>${esc(q.department||currentQuoteDepartment)}</td><td>${esc(q.by)}</td><td>${money(q.total)}</td><td><span class="pill ${q.status==='APPROVED'?'green':q.status==='PENDING'?'orange':'red'}">${esc(q.status)}</span></td><td><b>${q.prints||0}</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote(${i})">Print</button>${q.status==='PENDING'?`<button class="btn small" onclick="approveQuote(${i})">Approve</button>`:''}</div></td></tr>`).join('')||'<tr><td colspan="11">No quotations saved for '+esc(currentQuoteDepartment)+'.</td></tr>';
+ body.innerHTML=(quoteRecords||[]).map((q,i)=>`<tr><td class="strong">${esc(q.no)}</td><td>${esc(q.customer)}</td><td class="qm-mobile">${esc(q.phone||'—')}</td><td>${esc(q.vehicle)}</td><td>${esc(q.dateTime||q.date||'—')}</td><td>${esc(q.department||currentQuoteDepartment)}</td><td>${esc(q.by)}</td><td>${money(q.total)}</td><td><span class="pill green">ACTIVE</span></td><td><b>${q.prints||0}</b></td><td><div class="qm-action"><button class="btn small" onclick="printSavedQuote(${i})">Print</button></div></td></tr>`).join('')||'<tr><td colspan="11">No quotations saved for '+esc(currentQuoteDepartment)+'.</td></tr>';
  document.getElementById('qmTotal').textContent=quoteRecords.length;
- document.getElementById('qmPending').textContent=quoteRecords.filter(q=>q.status==='PENDING').length;
- document.getElementById('qmApproved').textContent=quoteRecords.filter(q=>q.status==='APPROVED').length;
+ document.getElementById('qmPending').textContent='0';
+ document.getElementById('qmApproved').textContent=quoteRecords.length;
  document.getElementById('qmPrints').textContent=quoteRecords.reduce((a,q)=>a+(q.prints||0),0);
  const title=document.querySelector('#view-quotation-management h1');if(title)title.textContent=currentQuoteDepartment+' — Quotation Management';
 }
@@ -2714,6 +2714,6 @@ quoteDiscounts.addEventListener('change',calc);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.1"></script>
-<script src="./backend/supabase-runtime.js?v=retail-review-20261123d"></script>
+<script src="./backend/supabase-runtime.js?v=quotation-no-approval-20261123a"></script>
 <script src="./backend/price-list-module.js?v=other-charges-columns-20261121c"></script>
 </body></html>
