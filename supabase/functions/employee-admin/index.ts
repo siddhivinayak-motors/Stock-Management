@@ -14,9 +14,9 @@ const ROLE_MODULES: Record<string,string[]> = {
   "Admin": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","audit_history","retail_reports"],
   "General Manager": ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","audit_history","retail_reports"],
   "Manager": ["dashboard","stock_register","stock_hold_management","quotation_management","otf_management","employee_management","common_excel_upload","retail_reports"],
-  "Accountant": ["stock_register","retail_reports","common_excel_upload","quotation_management","otf_management"],
+  "Accountant": ["stock_register","retail_reports","quotation_management","otf_management"],
   "HR": ["stock_register","stock_hold_management","retail_reports","common_excel_upload","quotation_management","otf_management","employee_management"],
-  "DMS": ["stock_register","retail_reports","common_excel_upload","quotation_management","otf_management"],
+  "DMS": ["stock_register","retail_reports","quotation_management","otf_management"],
   "Executive": ["dashboard","stock_register","stock_hold_management","quotation_management","retail_reports","otf_management"],
   "Reception": ["dashboard","stock_register","stock_hold_management","quotation_management","retail_reports","otf_management"],
   "Driver": ["stock_register","stock_hold_management","quotation_management","otf_management"]
@@ -33,11 +33,11 @@ function rolePermissionRows(role: string, userId: string, grantedBy: string, sel
   } else if (role === "Manager") {
     Object.assign(map,{dashboard:view,stock_register:["view","create","edit","delete","export"],stock_hold_management:["view","create","approve"],quotation_management:["view","create","edit","approve","export"],otf_management:["view","create","edit","approve","delete","export"],employee_management:["view","create","edit","delete","manage_users"],common_excel_upload:["view","create"],price_list_management:view});
   } else if (role === "Accountant") {
-    Object.assign(map,{stock_register:view,price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view});
+    Object.assign(map,{stock_register:view,price_list_management:view,retail_reports:view,quotation_management:["view","edit"],otf_management:view});
   } else if (role === "HR") {
     Object.assign(map,{stock_register:view,stock_hold_management:["view","create"],price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view,employee_management:["view","create","edit","delete","manage_users"]});
   } else if (role === "DMS") {
-    Object.assign(map,{stock_register:view,price_list_management:view,retail_reports:view,common_excel_upload:["view","create"],quotation_management:["view","edit"],otf_management:view});
+    Object.assign(map,{stock_register:view,price_list_management:view,retail_reports:view,quotation_management:["view","edit"],otf_management:view});
   } else if (role === "Executive" || role === "Reception") {
     Object.assign(map,{dashboard:view,stock_register:view,stock_hold_management:["view","create"],quotation_management:["view","create","edit"],price_list_management:view,retail_reports:view,otf_management:["view","create","edit"]});
   } else if (role === "Driver") {
