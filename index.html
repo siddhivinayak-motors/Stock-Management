@@ -1644,6 +1644,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <button class="nav-item" data-page="price-list"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4zM8 8h8M8 12h5M8 16h8"/><path d="M16 11v4"/></svg>Price List</button>
  <button class="nav-item" data-page="employees"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v1"/></svg>Employee Management</button>
  <button class="nav-item" data-page="audit"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/><path d="m3 7 2-2m14 0 2 2"/></svg>Audit History</button>
+ <button class="nav-item" data-page="retail-review"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v14H4zM8 9h8M8 13h5M8 17h8"/></svg>Retail Review</button>
  <button class="nav-item" data-page="reports"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V5M4 20h17M8 16v-4m5 4V7m5 9v-7"/></svg>Retail Reports</button>
  <button class="nav-item" data-page="upload"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/></svg>Common Excel Upload</button>
  <button class="nav-item" data-page="password"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>Change Password</button>
@@ -1904,6 +1905,24 @@ td,.data-table td{font-size:13px;line-height:1.45}
   <div class="table-wrap retail-table-wrap"><table><thead><tr><th>Exit Date</th><th>Chassis Number</th><th>Vehicle Model</th><th>Variant</th><th>Department</th><th>Exit Type</th><th>Customer</th><th>Sales Executive</th><th>Reason / Destination</th><th>Action</th></tr></thead><tbody id="retailRows"><tr><td colspan="10" class="empty">Apply filters to view vehicle exit history.</td></tr></tbody></table></div>
  </div>
 </section>
+<section class="view" id="view-retail-review">
+ <div class="page-head">
+  <div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Retail Review</h1><div class="subtitle">Vehicles missing from the latest authoritative STOCK upload. Approve Retail or return to Main Stock.</div></div>
+  <button class="btn" id="retailReviewRefresh" type="button">⟳ &nbsp;Refresh</button>
+ </div>
+ <div class="retail-kpi-grid" style="grid-template-columns:minmax(180px,260px);margin-bottom:14px">
+  <div class="retail-kpi"><span>Pending Approval</span><strong id="retailReviewCount">00</strong><small>Not yet included in Retail Reports</small></div>
+ </div>
+ <div class="card">
+  <div class="card-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div class="card-title">Missing Vehicles — Decision Required</div><span id="retailReviewStatus" role="status">Loading…</span></div>
+  <div class="table-wrap">
+   <table class="data-table" style="min-width:1180px">
+    <thead><tr><th>Department</th><th>Chassis Number</th><th>Model / Variant</th><th>Previous Stage</th><th>Customer</th><th>Sales Consultant</th><th>Engine Number</th><th>Pending Since</th><th>Decision</th></tr></thead>
+    <tbody id="retailReviewRows"><tr><td colspan="9" class="empty">Loading pending vehicles…</td></tr></tbody>
+   </table>
+  </div>
+ </div>
+</section>
 <section class="view" id="view-generic">
  <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1 id="genericTitle">Workspace</h1><div class="subtitle">Live operational workspace</div></div><button class="btn" onclick="toast('View refreshed')">⟳ &nbsp;Refresh</button></div>
  <div class="card"><div class="card-body"><div class="card-title" id="genericCardTitle">Workspace</div><p class="card-desc">This screen is a visual starter template. Connect this module to your existing application data and permissions to enable its live workflow.</p><div class="empty">Select a module from the navigation to continue.</div></div></div>
@@ -2028,7 +2047,7 @@ brandHome.addEventListener('pointerleave',()=>{
  brandHome.style.setProperty('--brand-y','50%');
 });
 
-const pageNames={'dashboard':'Dashboard','stock-personal':'Personal Stock Register','stock-ev':'EV Stock Register','stock-commercial':'Commercial Stock Register','stock-llm':'LLM Stock Register','quotation':'Quotation','quotation-management':'Quotation Management','otf-personal':'Personal OTF Order Book','otf-ev':'EV OTF Order Book','otf-commercial':'Commercial OTF Order Book','otf-llm':'LLM OTF Order Book','otf-order-book':'OTF Order Book','hold':'Hold Management','ev-quotation':'EV Quotation','ev-management':'EV Quotation Management','ev-hold':'EV Hold Management','commercial-quotation':'Commercial Quotation','commercial-management':'Commercial Quotation Management','commercial-hold':'Commercial Hold Management','llm-quotation':'LLM Quotation','llm-management':'LLM Quotation Management','llm-hold':'LLM Hold Management','price-list':'Price List','employees':'Employee Management','order-history':'Order History','audit':'Audit History','reports':'Retail Reports','upload':'Common Excel Upload','password':'Change Password','backup-restore':'Backup & Restore','stock-hold-central':'Central Stock Hold Management','audit':'Audit History','demo':'Demo Register','total':'Total Quotations','backup':'Backup & Restore','settings':'System Settings'};
+const pageNames={'dashboard':'Dashboard','stock-personal':'Personal Stock Register','stock-ev':'EV Stock Register','stock-commercial':'Commercial Stock Register','stock-llm':'LLM Stock Register','quotation':'Quotation','quotation-management':'Quotation Management','otf-personal':'Personal OTF Order Book','otf-ev':'EV OTF Order Book','otf-commercial':'Commercial OTF Order Book','otf-llm':'LLM OTF Order Book','otf-order-book':'OTF Order Book','hold':'Hold Management','ev-quotation':'EV Quotation','ev-management':'EV Quotation Management','ev-hold':'EV Hold Management','commercial-quotation':'Commercial Quotation','commercial-management':'Commercial Quotation Management','commercial-hold':'Commercial Hold Management','llm-quotation':'LLM Quotation','llm-management':'LLM Quotation Management','llm-hold':'LLM Hold Management','price-list':'Price List','employees':'Employee Management','order-history':'Order History','audit':'Audit History','reports':'Retail Reports','retail-review':'Retail Review','upload':'Common Excel Upload','password':'Change Password','backup-restore':'Backup & Restore','stock-hold-central':'Central Stock Hold Management','audit':'Audit History','demo':'Demo Register','total':'Total Quotations','backup':'Backup & Restore','settings':'System Settings'};
 pageNames['backup-restore']='Backup & Restore';pageNames['stock-hold-central']='Central Stock Hold Management';pageNames['price-list']='Price List Management';pageNames['ev-quotation']='EV Quotation';pageNames['commercial-quotation']='Commercial Quotation';pageNames['llm-quotation']='LLM Quotation';pageNames['ev-management']='EV Quotation Management';pageNames['commercial-management']='Commercial Quotation Management';pageNames['llm-management']='LLM Quotation Management';
 let currentQuoteDepartment='Personal';
 function showPage(page){
