@@ -1,4 +1,4 @@
-const CACHE_NAME = "siddhivinayak-stock-pwa-v76";
+const CACHE_NAME = "siddhivinayak-stock-pwa-v77";
 const APP_SHELL = [
   "./",
   "./index.html",
