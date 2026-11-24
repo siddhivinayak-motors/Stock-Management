@@ -406,7 +406,7 @@
       if(firstVisible){const p=firstVisible.dataset.page;if(p)window.showPage?.(p);}
       else document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='view-password'));
     }
-    await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit(),loadImportHistory()]);
+    await Promise.allSettled([loadHolds(),loadPriceLists(),loadEmployees(),loadAudit()]);
     authReady=true;
   }
   async function signOut() { await audit('dashboard','logout','Employee signed out','auth_session',currentUser?.id||null); await db().auth.signOut(); sessionLoginRecordedFor=null; location.reload(); }
@@ -1525,33 +1525,49 @@
     if(currentProfile?.is_super_admin||designation==='super admin')return true;
     return ['admin','general manager','manager'].includes(designation) && has('common_excel_upload','view');
   }
-  async function loadImportHistory(){
-    const panel=$('stockUploadHistoryPanel');
-    const body=$('stockUploadHistoryRows');
-    if(!canViewStockUploadHistory()){
-      if(panel)panel.hidden=true;
-      return;
-    }
-    if(panel)panel.hidden=false;
-    if(!body)return;
-    body.innerHTML='<tr><td colspan="8" class="empty">Loading upload history…</td></tr>';
+  const IMPORT_HISTORY_PAGE_SIZE=50;
+  let importHistoryOffset=0,importHistoryHasMore=true,importHistoryLoading=false;
+  function renderImportHistoryRows(rows,append=false){
+    const body=$('stockUploadHistoryRows');if(!body)return;
+    const html=rows.map(r=>{
+      const uploader=r.uploader?.full_name||r.uploader?.designation||'—';
+      const department=r.department||'—';
+      const status=Number(r.error_rows||0)>0?'Completed with errors':Number(r.skipped_rows||0)>0?'Completed with skipped rows':'Completed';
+      const uploadedAt=new Date(r.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+      return '<tr><td class="history-file">'+esc(r.file_name)+'</td><td class="history-dept">'+esc(department)+'</td><td class="history-user">'+esc(uploader)+'</td><td class="history-date">'+esc(uploadedAt)+'</td><td class="history-count">'+Number(r.imported_rows||0)+'</td><td class="history-count">'+Number(r.skipped_rows||0)+'</td><td class="history-count">'+Number(r.error_rows||0)+'</td><td class="history-status"><span class="pill '+(Number(r.error_rows||0)>0?'red':'green')+'">'+esc(status)+'</span></td></tr>';
+    }).join('');
+    if(append)body.insertAdjacentHTML('beforeend',html);
+    else body.innerHTML=html||'<tr><td colspan="8" class="empty">No import history yet.</td></tr>';
+  }
+  function syncImportHistoryMoreButton(){
+    const button=$('stockUploadHistoryMore');if(!button)return;
+    button.hidden=!importHistoryHasMore;button.disabled=importHistoryLoading;
+    button.textContent=importHistoryLoading?'Loading…':'Load More History';
+  }
+  async function loadImportHistory(reset=true){
+    const panel=$('stockUploadHistoryPanel'),body=$('stockUploadHistoryRows');
+    if(!canViewStockUploadHistory()){if(panel)panel.hidden=true;return;}
+    if(panel)panel.hidden=false;if(!body||importHistoryLoading)return;
+    if(reset){importHistoryOffset=0;importHistoryHasMore=true;}
+    if(!importHistoryHasMore&&!reset)return;
+    importHistoryLoading=true;
+    if(reset)body.innerHTML='<tr><td colspan="8" class="empty">Loading recent upload history…</td></tr>';
+    syncImportHistoryMoreButton();
     try{
+      const from=importHistoryOffset,to=from+IMPORT_HISTORY_PAGE_SIZE-1;
       const rows=await call(db().from('stock_import_batches')
         .select('id,file_name,department,imported_rows,skipped_rows,error_rows,created_by,created_at,uploader:profiles!stock_import_batches_created_by_fkey(full_name,designation)')
-        .order('created_at',{ascending:false}).limit(500));
-      body.innerHTML=rows.length?rows.map(r=>{
-        const uploader=r.uploader?.full_name||r.uploader?.designation||'—';
-        const department=r.department||'—';
-        const status=Number(r.error_rows||0)>0?'Completed with errors':Number(r.skipped_rows||0)>0?'Completed with skipped rows':'Completed';
-        const uploadedAt=new Date(r.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
-        return '<tr><td class="history-file">'+esc(r.file_name)+'</td><td class="history-dept">'+esc(department)+'</td><td class="history-user">'+esc(uploader)+'</td><td class="history-date">'+esc(uploadedAt)+'</td><td class="history-count">'+Number(r.imported_rows||0)+'</td><td class="history-count">'+Number(r.skipped_rows||0)+'</td><td class="history-count">'+Number(r.error_rows||0)+'</td><td class="history-status"><span class="pill '+(Number(r.error_rows||0)>0?'red':'green')+'">'+esc(status)+'</span></td></tr>';
-      }).join(''):'<tr><td colspan="8" class="empty">No import history yet.</td></tr>';
+        .order('created_at',{ascending:false}).range(from,to));
+      renderImportHistoryRows(rows,!reset);
+      importHistoryOffset+=rows.length;importHistoryHasMore=rows.length===IMPORT_HISTORY_PAGE_SIZE;
     }catch(error){
       console.error('Excel upload history load failed:',error);
-      body.innerHTML='<tr><td colspan="8" class="empty">Unable to load upload history. Please refresh and try again.</td></tr>';
+      if(reset)body.innerHTML='<tr><td colspan="8" class="empty">Unable to load upload history. Please refresh and try again.</td></tr>';
+      else notify('Could not load more upload history: '+(error.message||error));
       throw error;
-    }
+    }finally{importHistoryLoading=false;syncImportHistoryMoreButton();}
   }
+  window.loadMoreImportHistory=()=>loadImportHistory(false).catch(e=>console.error(e));
   // Department functions are inherited automatically from Department Access.
   const EMPLOYEE_MENU_GROUPS = [
     {title:'Workspace',items:[
