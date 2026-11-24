@@ -2112,7 +2112,20 @@
         if(p.startsWith('stock-')&&!p.startsWith('stock-hold-'))renderStock();
         if(p.startsWith('stock-hold-')||p==='stock-hold-central')window.holdRender();
         if(p==='reports')loadRetailReport();
-        if(p==='otf-management')loadOtfManagement(otfManagementDepartment).catch(e=>notify(e.message));
+        if(p.startsWith('otf-management-')){
+          const otfDeptByPage={'otf-management-personal':'Personal','otf-management-ev':'EV','otf-management-commercial':'Commercial','otf-management-llm':'LLM'};
+          const department=otfDeptByPage[p]||otfManagementDepartment;
+          otfManagementDepartment=department;
+          if($('otfManagementDepartment'))$('otfManagementDepartment').value=department;
+          if($('otfManagementTitle'))$('otfManagementTitle').textContent=department+' — OTF Management';
+          loadOtfManagement(department).catch(e=>{
+            console.error('OTF Management load failed:',e);
+            const body=$('otfManagementRows');
+            if(body)body.innerHTML='<tr><td colspan="11" class="empty">Unable to load OTF records: '+esc(e.message||'Please refresh and try again.')+'</td></tr>';
+            if($('otfManagementCount'))$('otfManagementCount').textContent='Load Error';
+            notify('OTF Management: '+(e.message||'Could not load records.'));
+          });
+        }
       },0);
     },false);
     const originalOpen=window.openDepartmentStock;
