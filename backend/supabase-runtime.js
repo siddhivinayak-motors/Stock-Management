@@ -2437,7 +2437,7 @@ th{background:#f0f2f4;font-weight:700}
 .totals .amount-words{display:block;color:#087b42;font-size:9.5px;font-weight:700;margin-top:5px;line-height:1.25}
 .quote-payment-layout+h2,.accessories-heading{margin-top:5mm}
 .note{border:1px solid #777;padding:6px;margin-top:7px;font-weight:bold;font-size:10.5px;break-inside:avoid;page-break-inside:avoid}
-.sign{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20mm;min-height:18mm;break-inside:avoid;page-break-inside:avoid}
+.sign{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:6mm;min-height:16mm;break-inside:avoid;page-break-inside:avoid}
 .sign div{border-top:1px solid #222;padding-top:5px;text-align:center;font-size:10px}
 .small{font-size:9px;color:#444;line-height:1.25}
 .keep{break-inside:avoid;page-break-inside:avoid}
