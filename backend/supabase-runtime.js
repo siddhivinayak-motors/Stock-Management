@@ -244,7 +244,8 @@
       executives.filter(p=>{
         const assigned=Array.isArray(p.department_access)&&p.department_access.length?p.department_access:[p.department].filter(Boolean);
         const departmentOk=assigned.some(d=>String(d).trim().toLowerCase()===String(department||'').trim().toLowerCase());
-        const cityOk=role!=='manager'||String(p.city||'').trim().toLowerCase()===String(currentProfile.city||'').trim().toLowerCase();
+        const allowedCities=[currentProfile.city,...(Array.isArray(currentProfile.city_access)?currentProfile.city_access:[])].map(x=>String(x||'').trim().toLowerCase()).filter(Boolean);
+        const cityOk=role!=='manager'||allowedCities.includes(String(p.city||'').trim().toLowerCase());
         return departmentOk&&cityOk;
       }).forEach(p=>{if(!people.some(x=>x.user_id===p.user_id))people.push(p);});
     }
