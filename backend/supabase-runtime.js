@@ -231,10 +231,37 @@
   }
   let quotationPickerBound = false;
   const quoteSearchNorm = value => String(value || '').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+  const QUOTATION_ASSIGNMENT_ROLES = new Set(['Manager','General Manager','Admin','Super Admin']);
+  const canAssignQuotationSales = () => !!currentProfile && (currentProfile.is_super_admin===true || QUOTATION_ASSIGNMENT_ROLES.has(String(currentProfile.designation||'')));
+  async function refreshQuotationSalesConsultants(department=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal'), preferredUserId=null) {
+    const select=$('qSalesPerson'); if(!select||!currentUser||!currentProfile)return;
+    const keepId=preferredUserId||select.dataset.preferredUserId||select.value||currentUser.id;
+    const self={user_id:currentUser.id,full_name:currentProfile.full_name||currentUser.email,phone:currentProfile.phone||''};
+    const people=[self];
+    if(canAssignQuotationSales()){
+      const executives=await call(db().from('profiles').select('user_id,full_name,phone,designation,department,department_access,city,status,deleted_at').eq('designation','Executive').eq('status','active').is('deleted_at',null).order('full_name'));
+      const role=String(currentProfile.designation||'').toLowerCase();
+      executives.filter(p=>{
+        const assigned=Array.isArray(p.department_access)&&p.department_access.length?p.department_access:[p.department].filter(Boolean);
+        const departmentOk=assigned.some(d=>String(d).trim().toLowerCase()===String(department||'').trim().toLowerCase());
+        const cityOk=role!=='manager'||String(p.city||'').trim().toLowerCase()===String(currentProfile.city||'').trim().toLowerCase();
+        return departmentOk&&cityOk;
+      }).forEach(p=>{if(!people.some(x=>x.user_id===p.user_id))people.push(p);});
+    }
+    select.innerHTML=people.map(p=>'<option value="'+esc(p.user_id)+'" data-phone="'+esc(p.phone||'')+'">'+esc(p.full_name||p.user_id)+'</option>').join('');
+    select.disabled=!canAssignQuotationSales();
+    select.dataset.preferredUserId='';
+    select.value=people.some(p=>p.user_id===keepId)?keepId:currentUser.id;
+    const mobile=$('qSalesMobile');if(mobile)mobile.value=select.selectedOptions[0]?.dataset.phone||self.phone||'';
+    if(!select.dataset.salesChangeBound){
+      select.dataset.salesChangeBound='1';
+      select.addEventListener('change',()=>{const m=$('qSalesMobile');if(m)m.value=select.selectedOptions[0]?.dataset.phone||'';});
+    }
+  }
   async function setupQuotationVehiclePicker() {
     const model=$('qVehicle'),variant=$('qVariant'),colour=$('qColour'),box=$('qPriceSuggestions');
     if(!model||!variant||!colour||!box)return;
-    if($('qSalesPerson'))$('qSalesPerson').value=currentProfile?.full_name||currentUser?.email||'';
+    await refreshQuotationSalesConsultants(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal');
     if(quotationPickerBound)return;
     quotationPickerBound=true;
     const fields=[model,variant,colour],hide=()=>{box.hidden=true;};
@@ -278,12 +305,12 @@
         }).filter(Boolean).sort((a,b)=>b._searchScore-a._searchScore||String(a.vehicle||'').localeCompare(String(b.vehicle||''))||String(a.variant||'').localeCompare(String(b.variant||''))||String(a.colour||'').localeCompare(String(b.colour||'')));
         if(!matches.length){box.innerHTML='<div class="q-stock-empty">No matching Model / Variant / Colour found in the accessible department Price Lists.</div>';return;}
         box.innerHTML='<div class="q-stock-count">'+matches.length+' Price List match(es) · All permitted departments</div>'+matches.slice(0,100).map((row,i)=>'<button type="button" class="q-stock-option" data-quote-price-index="'+i+'"><span class="q-stock-main"><b>'+esc(row.vehicle||'—')+'</b><span>'+esc(row.variant||'Variant not listed')+' · '+esc(row.colour||'Colour not listed')+'</span></span><span class="q-stock-meta"><small>'+esc(row.department||'PRICE LIST')+'</small></span></button>').join('')+(matches.length>100?'<div class="q-stock-count">Showing first 100 matches. Add more model, variant or colour text to narrow the list.</div>':'');
-        box.querySelectorAll('[data-quote-price-index]').forEach(button=>button.addEventListener('click',()=>{
+        box.querySelectorAll('[data-quote-price-index]').forEach(button=>button.addEventListener('click',async()=>{
           const row=matches[Number(button.dataset.quotePriceIndex)];if(!row)return;
           if(typeof window.setQuotationDepartment==='function')window.setQuotationDepartment(row.department);
+          await refreshQuotationSalesConsultants(row.department);
           model.value=row.vehicle||'';lastModelValue=model.value;variant.value=row.variant||'';colour.value=row.colour||'';
           if($('qCarDesc'))$('qCarDesc').value='';
-          if($('qSalesPerson'))$('qSalesPerson').value=currentProfile?.full_name||currentUser?.email||'';
           hide();
           if(typeof window.quoteApplyPriceList==='function')window.quoteApplyPriceList(row);else if(typeof quoteAutoFillPrice==='function')quoteAutoFillPrice();
           if(typeof notify==='function')notify('Quotation switched to '+row.department+' · '+(row.vehicle||'')+' / '+(row.variant||''));
@@ -726,7 +753,7 @@
       helpline:QUOTE_COMPANY_DEFAULTS.helplines.join(' / '),pan:QUOTE_COMPANY_DEFAULTS.pan,gstin:QUOTE_COMPANY_DEFAULTS.gstin,
       subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:numberWordsIndian(q.total)||'',
       terms:q.terms||QUOTE_COMPANY_DEFAULTS.terms,bank_details:q.bank||QUOTE_COMPANY_DEFAULTS.bank_details,
-      created_by:currentUser.id,updated_by:currentUser.id
+      created_by:q.salesConsultantId||currentUser.id,created_by_name:q.salesPerson||currentProfile?.full_name||currentUser.email,updated_by:currentUser.id
     }).select().single());
     if(q.items?.length) await call(db().from('quotation_items').insert(q.items.map((x,i)=>({quotation_id:row.id,line_no:i+1,particulars:x.particulars||x.name||'',amount:Number(x.amount||0),is_discount:!!(x.discount??x.isDiscount)||/discount|\\bless\\b/i.test(String(x.name||x.particulars||'')),is_custom:!!x.custom}))));
     await audit('quotation_management','create','Saved quotation','quotation',row.id,{quote_number:row.quote_number});
@@ -757,7 +784,7 @@
     address:row.address||'',customerGstin:row.customer_gstin||'',salesMobile:row.sales_mobile||'',vehicleNos:String(row.vehicle_count??1),hypo:row.hypo||'',
     model:row.model||'',variant:row.variant||'',colour:row.colour||'',
     vehicle:[row.model,row.variant].filter(Boolean).join(' · '),createdAt:row.created_at||null,
-    salesPerson:row.sales_person||'',by:row.created_by_name||(row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'—'),
+    salesPerson:row.sales_person||'',salesConsultantId:row.created_by||'',createdBy:row.created_by||'',by:row.created_by_name||row.sales_person||(row.created_by===currentUser?.id?(currentProfile?.full_name||currentUser.email):'—'),
     contactPerson:row.contact_person||'',contactMobile:row.contact_mobile||'',email:row.email||'',
     branchAddress:row.branch_address||'',helpline:row.helpline||'',pan:row.pan||'',gstin:row.gstin||'',
     total:Number(row.total||0),subtotal:Number(row.subtotal||0),discount:Number(row.discount||0),
@@ -776,6 +803,7 @@
   const QUOTATION_MANAGER_ROLES = new Set(['Manager','General Manager','Admin']);
   const canReviewQuotationRecords = () => !!currentProfile?.is_super_admin || QUOTATION_MANAGER_ROLES.has(String(currentProfile?.designation||''));
   const canEditQuotationRecords = () => has('quotation_management','edit');
+  const canChangeQuotationSalesConsultant = () => canAssignQuotationSales();
   const canDeleteQuotationRecords = () => canReviewQuotationRecords();
   let quotationCityFilter='All';
   const canUseQuotationCityFilter=()=>!!currentProfile?.is_super_admin || ['Admin','General Manager'].includes(String(currentProfile?.designation||''));
@@ -843,19 +871,21 @@
     if(typeof renderQuoteManagement==='function') renderQuoteManagement();
     if(typeof updateQuoteNumber==='function') updateQuoteNumber();
   }
-  window.editSavedQuote = (i) => {
+  window.editSavedQuote = async (i) => {
     try {
       const q=quoteRecords[i];
       if(!q?.id) throw new Error('Quotation record not found.');
       if(!canEditQuotationRecords()) throw new Error('You do not have quotation edit permission.');
       editingQuotationId=q.id;
       currentQuoteDepartment=q.department||'Personal';
+      await refreshQuotationSalesConsultants(currentQuoteDepartment,q.salesConsultantId||q.createdBy||currentUser.id);
       if(typeof showPage==='function') showPage('quotation');
       const set=(id,v)=>{const el=$(id);if(el)el.value=v??'';};
       set('qCustomer',q.customer);set('qPhone',q.phone);set('qDate',q.date);
       set('qAddress',q.address);set('qCustomerGSTIN',q.customerGstin);set('qSalesMobile',q.salesMobile);set('qVehicleNos',q.vehicleNos||1);set('qHypo',q.hypo);
       set('qVehicle',q.model);set('qVariant',q.variant);set('qColour',q.colour);
-      set('qSalesPerson',q.salesPerson);
+      if($('qSalesPerson'))$('qSalesPerson').value=q.salesConsultantId||q.createdBy||currentUser.id;
+      if($('qSalesMobile'))$('qSalesMobile').value=q.salesMobile||$('qSalesPerson')?.selectedOptions[0]?.dataset.phone||'';
       set('qContactPerson',q.contactPerson);set('qContactMobile',q.contactMobile);
       set('qEmail',q.email);set('qBranchAddress',q.branchAddress);set('qHelpline',q.helpline);
       set('qPan',q.pan);set('qGstin',q.gstin);
@@ -941,13 +971,15 @@
       const model=$('qVehicle').value.trim(),variant=$('qVariant').value.trim();
       if(editingQuotationId){
         if(!canEditQuotationRecords()) throw new Error('You do not have quotation edit permission.');
+        const existing=quoteRecords.find(other=>other.id===editingQuotationId);
+        if(!canChangeQuotationSalesConsultant() && String(q.salesConsultantId||currentUser.id)!==String(existing?.createdBy||currentUser.id)) throw new Error('Only Manager, General Manager, Admin and Super Admin can change the Sales Consultant.');
         const id=editingQuotationId;
         if(quoteRecords.some(other=>other.id!==id&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું બીજું quotation પહેલેથી નોંધાયેલું છે. Duplicate quotation તરીકે ફેરફાર સેવ નહીં થાય.');
         const payload={
           quote_date:q.date||new Date().toISOString().slice(0,10),
           customer_name:q.customer,phone:q.phone,address:q.address,customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,vehicle_count:Number(q.vehicleNos||1),
           hypo:q.hypo,model,variant,colour:q.colour,
-          sales_person:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
+          sales_person:q.salesPerson,created_by:canChangeQuotationSalesConsultant()?(q.salesConsultantId||currentUser.id):(q.createdBy||currentUser.id),created_by_name:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
           email:q.email,branch_address:q.branchAddress,helpline:q.helpline,pan:q.pan,gstin:q.gstin,
           subtotal:q.subtotal,discount:q.discount,total:q.total,amount_words:numberWordsIndian(q.total)||'',
           terms:q.terms||[],bank_details:q.bank||{},status:'Approved',approved_by:null,approved_at:null,
@@ -2563,7 +2595,7 @@ th{background:#f0f2f4;font-weight:700}
     const logout=$('logoutBtn');if(logout){logout.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();signOut().catch(err=>notify(err.message));},true);}
     // holdRender already queries and renders Supabase directly; do not wrap it via loadHolds (would recurse).
     window.holdDecision=(id,decision)=>decideHold(id,decision).catch(e=>notify(e.message));
-    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,audit};
+    window.SVMBackend={client:()=>db(),get user(){return currentUser;},get profile(){return currentProfile;},has,signOut,changeOwnPassword,loadVehicles,saveVehicle,updateVehicle,markVehicleRetail,deleteVehicle,saveQuotation,loadQuotations,publishPriceList,loadPriceLists,loadEmployees,refreshEmployees:renderEmployees,loadAudit,loadImportHistory,loadQuoteCompanySettings,applyQuoteCompanyDetails,refreshQuotationSalesConsultants,audit};
     window.SVMBackend.loadOtfManagement=loadOtfManagement;
     window.dispatchEvent(new Event('svm:ready'));
   }
