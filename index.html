@@ -1720,7 +1720,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
     <div id="qPriceSuggestions" class="q-stock-suggestions" hidden role="listbox" aria-label="Matching Price List vehicles"></div>
     <label>Variant<input id="qVariant" placeholder="Type variant, e.g. BS6.0" autocomplete="off"></label>
     <label>Colour<input id="qColour" placeholder="Type colour or code, e.g. WH" autocomplete="off"></label>
-    <label>Sales Consultant Name<input id="qSalesPerson" placeholder="Auto-filled from logged-in employee" readonly aria-readonly="true"></label>
+    <label>Sales Consultant Name<select id="qSalesPerson" aria-label="Sales Consultant"><option value="">Loading employee list…</option></select></label>
     <label>Sales Consultant Mobile<input id="qSalesMobile" placeholder="Auto-filled from employee profile" readonly aria-readonly="true"></label>
    </div>
    <div class="q-section-heading">03 · PRICE DETAILS</div>
@@ -2503,8 +2503,11 @@ function getQuotePayload(){
   items.push({name,amount,discount:true,custom:false});
  });
  const v=id=>document.getElementById(id)?.value.trim()||'';
+ const salesSelect=document.getElementById('qSalesPerson');
+ const salesPerson=salesSelect?.selectedOptions?.[0]?.textContent?.trim()||'';
+ const salesConsultantId=salesSelect?.value||'';
  const branchDetails=window.svmGetQuoteBranchDetails?.(window.SVMBackend?.profile?.city)||{};
- return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,variant:v('qVariant'),colour:v('qColour'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:v('qSalesPerson')||'Not specified',salesPerson:v('qSalesPerson'),pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:branchDetails.terms||['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:branchDetails.bank_details||{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar',micr:'364002005'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'APPROVED',prints:0,items};
+ return {no:document.getElementById('quoteNumber').textContent,department:currentQuoteDepartment,customer,phone,address:v('qAddress'),vehicleNos:v('qVehicleNos'),date:savedAt.date,dateTime:savedAt.dateTime,createdAt:savedAt.createdAt,hypo:v('qHypo'),model,variant:v('qVariant'),colour:v('qColour'),vehicle:model+(v('qVariant')?' · '+v('qVariant'):''),by:salesPerson||'Not specified',salesPerson,salesConsultantId,pan:v('qPan'),gstin:v('qGstin'),contactPerson:v('qContactPerson'),contactMobile:v('qContactMobile'),email:v('qEmail'),branchAddress:v('qBranchAddress'),helpline:v('qHelpline'),terms:branchDetails.terms||['All payments in favour of SIDDHIVINAYAK MOTORS PVT. LTD.','Kindly insist for receipt of all payments made.','Subject to availability of stock & colour.','Price prevailing at the time of delivery shall be applicable.','Prices are subject to change without any notice.','Subject to Bhavnagar Jurisdiction.'],bank:branchDetails.bank_details||{accountName:'SIDDHIVINAYAK MOTORS PVT. LTD.',bank:'State Bank of India',account:'33349775105',ifsc:'SBIN0060231',branch:'Chitra, Bhavnagar',micr:'364002005'},total:totals.total,subtotal:totals.subtotal,discount:totals.discount,amountWords:numberWordsIndian(totals.total),status:'APPROVED',prints:0,items};
 }
 function renderQuoteManagement(){
  const body=document.getElementById('quoteManagementRows');if(!body)return;
@@ -2528,7 +2531,7 @@ function resetQuotationForm(){
  window.selectedStockQuoteVehicle=null;
  ['qCustomer','qPhone','qAddress','qCustomerGSTIN','qVehicleNos','qHypo','qVehicle','qVariant','qColour','qContactPerson','qContactMobile','qSalesMobile'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
  setQuotationDateTime();
- const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';const salesMobile=document.getElementById('qSalesMobile');if(salesMobile)salesMobile.value=window.SVMBackend?.profile?.phone||'';
+ const sales=document.getElementById('qSalesPerson');if(sales)sales.value=window.SVMBackend?.profile?.user_id||window.SVMBackend?.user?.id||'';const salesMobile=document.getElementById('qSalesMobile');if(salesMobile)salesMobile.value=window.SVMBackend?.profile?.phone||'';
  const priceSuggestions=document.getElementById('qPriceSuggestions');if(priceSuggestions){priceSuggestions.hidden=true;priceSuggestions.innerHTML='';}
  charges.innerHTML=defaultQuoteChargeMarkup;quoteDiscounts.innerHTML=defaultQuoteDiscountMarkup;renumberCharges();
  const priceStatus=document.getElementById('qPriceListStatus');if(priceStatus)priceStatus.textContent='Select a vehicle and variant to check the Price List.';
@@ -2546,6 +2549,7 @@ function setQuotationDepartment(department){
  if(!allowed.includes(department))return false;
  currentQuoteDepartment=department;
  loadDepartmentQuotes();
+ window.SVMBackend?.refreshQuotationSalesConsultants?.(department)?.catch?.(error=>console.warn('Sales Consultant list refresh failed:',error));
  const title=document.getElementById('quotationPageTitle');if(title)title.textContent=department+' — Quotation';
  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===({Personal:'quotation',EV:'ev-quotation',Commercial:'commercial-quotation',LLM:'llm-quotation'}[department])));
  updateQuoteNumber();renderQuoteManagement();return true;
@@ -2561,7 +2565,7 @@ window.startQuotationFromStock=async function(vehicle){
  document.getElementById('qVehicle').value=vehicle.model||'';
  document.getElementById('qVariant').value=vehicle.variant||'';
  document.getElementById('qColour').value=vehicle.colour||'';
- document.getElementById('qSalesPerson').value=window.SVMBackend?.profile?.full_name||window.SVMBackend?.user?.email||'';
+ document.getElementById('qSalesPerson').value=window.SVMBackend?.profile?.user_id||window.SVMBackend?.user?.id||'';
  document.getElementById('qSalesMobile').value=window.SVMBackend?.profile?.phone||'';
  document.getElementById('quotationPageTitle').textContent=currentQuoteDepartment+' — Quotation';
  updateQuoteNumber();
