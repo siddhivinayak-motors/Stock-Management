@@ -2472,7 +2472,6 @@ th{background:#f0f2f4;font-weight:700}
 .quote-payment-layout .totals{margin:5px 0 0;width:100%;max-width:100%;font-weight:bold;font-size:10.5px}
 .quotation-breakup-table,.payment-details-table{width:100%!important;max-width:100%!important;table-layout:fixed!important;margin:3px 0 0!important}
 .quotation-breakup-table th,.quotation-breakup-table td{padding:5px 6px;font-size:10.5px;white-space:normal}
-body[data-department="EV"] .quotation-breakup-table th,body[data-department="EV"] .quotation-breakup-table td{padding-top:2px;padding-bottom:2px;font-size:9.5px;line-height:1.1}
 .quotation-breakup-table th:first-child,.quotation-breakup-table td:first-child{width:65%;white-space:normal}
 .quotation-breakup-table th:last-child,.quotation-breakup-table td:last-child{width:35%;text-align:right;white-space:nowrap}
 .payment-details-table th,.payment-details-table td{padding:5px 4px;font-size:10px;white-space:normal;overflow-wrap:anywhere}
