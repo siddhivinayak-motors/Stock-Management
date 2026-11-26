@@ -87,9 +87,9 @@
       /* Commercial and LMM only: widen the model field and show its full name on up to two lines on desktop. */
       @media(min-width:1201px){
         #stockTable.stock-register-commercial-lmm th:nth-child(3),#stockTable.stock-register-commercial-lmm td:nth-child(3){width:16%!important}
-        #stockTable.stock-register-commercial-lmm th:nth-child(4),#stockTable.stock-register-commercial-lmm td:nth-child(4){width:11%!important}
-        #stockTable.stock-register-commercial-lmm td.stock-model-cell{white-space:normal!important;overflow:hidden!important;overflow-wrap:anywhere;word-break:normal;line-height:1.25;vertical-align:middle}
-        #stockTable.stock-register-commercial-lmm td.stock-model-cell .stock-model-text{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.25;max-height:2.5em}
+        #stockTable.stock-register-commercial-lmm th:nth-child(4),#stockTable.stock-register-commercial-lmm td:nth-child(4){width:9%!important}
+        #stockTable.stock-register-commercial-lmm tbody td.stock-model-cell{white-space:normal!important;overflow:hidden!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.25!important;vertical-align:middle}
+        #stockTable.stock-register-commercial-lmm tbody td.stock-model-cell .stock-model-text{display:block!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.25!important;max-height:2.5em;overflow:hidden}
       }
     `;
     document.head.appendChild(style);
@@ -1399,7 +1399,7 @@
     if(!$('stockTable')) return;
     try{
       const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
-      $('stockTable').classList.toggle('stock-register-commercial-lmm',dept==='Commercial'||dept==='LMM');
+      $('stockTable').classList.toggle('stock-register-commercial-lmm',/commercial|lmm/i.test(String(dept||'')));
       const canEdit=canEditStockRole(),canRetail=canRetailStock(),canDelete=canEditStockRole()&&has('stock_register','delete');
       const deptFilter=$('stockDepartmentFilter');
       const selectedDept=dept==='All'?(deptFilter?.value||'All Accessible Departments'):dept;
@@ -1856,6 +1856,7 @@
   window.holdDecision = (id,decision) => decideHold(id,decision).catch(e=>notify(e.message));
   window.openDepartmentStock = (department) => {
     currentStockDepartment=department||'Personal';
+    const stockTable=$('stockTable');if(stockTable)stockTable.classList.toggle('stock-register-commercial-lmm',/commercial|lmm/i.test(String(currentStockDepartment)));
     const deptFilter=$('stockDepartmentFilter');if(deptFilter){deptFilter.value='All Accessible Departments';deptFilter.style.display='none';}
     const deptPicker=$('stockDepartmentForNewVehicle');if(deptPicker){deptPicker.value=currentStockDepartment;deptPicker.disabled=true;}
     if($('stockPageTitle'))$('stockPageTitle').textContent=currentStockDepartment+' — Stock Register';
