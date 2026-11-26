@@ -1,9 +1,10 @@
-const CACHE_NAME = "siddhivinayak-stock-pwa-v86";
+const CACHE_NAME = "siddhivinayak-stock-pwa-v87";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./assets/mahindra-logos.png",
+  "./assets/mahindra-quotation-logo.png",
+  "./assets/siddhivinayak-motors-logo.png",
   "./icons/app-icon.svg",
   "./icons/app-icon-v2.png",
   "./icons/siddhivinayak-premium.svg",
