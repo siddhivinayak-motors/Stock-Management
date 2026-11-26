@@ -1168,8 +1168,10 @@
     const department=sheetName==='UV VEHICLES'?'Commercial':sheetName==='LMM VEHICLES'?'LMM':'';
     if(!department) throw new Error('Wrong Tally worksheet. Use UV VEHICLES for Commercial or LMM VEHICLES for LMM.');
     const matrix=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true});
-    const headerIndex=matrix.findIndex(row=>robinCellText(row?.[0]).toUpperCase()==='PARTICULARS' && row.some(v=>robinCellText(v).toUpperCase()==='CLOSING BALANCE'));
-    if(headerIndex<0) throw new Error('Tally Closing Balance header was not found. No data changed.');
+    const headerIndex=matrix.findIndex(row=>robinCellText(row?.[0]).toUpperCase()==='PARTICULARS');
+    if(headerIndex<0) throw new Error('Tally Particulars header was not found. No data changed.');
+    const closingBalanceIndex=matrix.findIndex((row,index)=>index>=headerIndex && row.some(v=>robinCellText(v).toUpperCase()==='CLOSING BALANCE'));
+    if(closingBalanceIndex<0) throw new Error('Tally Closing Balance column was not found below the Particulars header. No data changed.');
     const dateRange=matrix.slice(0,headerIndex).flat().map(robinCellText).find(x=>/\d{1,2}-[A-Za-z]{3}-\d{2}\s+to\s+\d{1,2}-[A-Za-z]{3}-\d{2}/i.test(x));
     if(!dateRange) throw new Error('Tally report period is missing. No data changed.');
     const grand=matrix.find(row=>robinCellText(row?.[0]).toUpperCase()==='GRAND TOTAL');
