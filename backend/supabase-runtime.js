@@ -1530,7 +1530,8 @@
   function canDeleteImportHistoryRow(row){
     const designation=String(currentProfile?.designation||'').trim().toLowerCase();
     const roleAllowed=!!currentProfile?.is_super_admin||designation==='super admin'||['admin','general manager','manager'].includes(designation);
-    return roleAllowed&&canViewStockUploadHistory()&&allowedDepartmentList().some(d=>String(d).toLowerCase()===String(row?.department||'').toLowerCase());
+    const isSuperAdmin=!!currentProfile?.is_super_admin||designation==='super admin';
+    return roleAllowed&&canViewStockUploadHistory()&&(isSuperAdmin||allowedDepartmentList().some(d=>String(d).toLowerCase()===String(row?.department||'').toLowerCase()));
   }
   async function deleteImportHistoryRecord(id,fileName,department,button){
     try{
