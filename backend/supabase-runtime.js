@@ -18,6 +18,7 @@
   let client, currentUser, currentProfile, permissions = new Map(), authReady = false, sessionLoginRecordedFor = null;
   let editingQuotationId = null;
   let selectedStockVehicle = null;
+  let currentStockExportRows = [];
   // Cache invalidation is used by stock and quotation workflows after imports and edits.
   const quotationStockCache = new Map();
 
@@ -1316,6 +1317,29 @@
       notify(e.message||'Tally reconciliation failed.');
     }
   };
+  window.exportStockRegisterExcel = () => {
+    try {
+      if(!window.XLSX)throw new Error('Excel export library did not load. Reload the page and try again.');
+      const rows=currentStockExportRows||[];
+      if(!rows.length)throw new Error('No Stock Register records are available to export for the current filters.');
+      const headers=['SR.NO','MODEL','VARIENTS','SEATING','COLOR','MFG YEAR','OEM INVOICE DATE','CHASSIS NUMBER','ENGINE NUMBER','STATUS','PLACE','AGEING','STAGE','SC NAME','CUSTOMER NAME','ALLOTED DATE','ALLOTED AGEING'];
+      const data=rows.map((v,index)=>[
+        v.sr_no||String(index+1),v.model||'',v.variant||'',v.seating||'',v.colour||'',
+        v.mfg_year_label||v.manufacturing_year||'',v.oem_invoice_date||'',v.chassis_number||'',
+        v.engine_number||'',v.status||'',v.place||'',v.ageing??'',v.stage||'',v.sc_name||'',
+        v.customer_name||'',v.alloted_date||'',v.alloted_ageing??''
+      ]);
+      const ws=XLSX.utils.aoa_to_sheet([headers,...data]);
+      ws['!cols']=[{wch:10},{wch:20},{wch:22},{wch:10},{wch:14},{wch:12},{wch:16},{wch:22},{wch:20},{wch:18},{wch:14},{wch:10},{wch:16},{wch:22},{wch:24},{wch:16},{wch:16}];
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'Stock Register');
+      const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Stock';
+      const safeDept=String(dept||'Stock').replace(/[^a-z0-9_-]+/gi,'-');
+      const date=new Date().toISOString().slice(0,10);
+      XLSX.writeFile(wb,'Stock-Register-'+safeDept+'-'+date+'.xlsx');
+      notify('Excel downloaded · '+rows.length+' filtered stock records.');
+    } catch(error) { notify(error.message||'Unable to export Stock Register to Excel.'); }
+  };
   window.openStockPrintPreview = () => {
     try {
       const source=$('stockTable');
@@ -1382,6 +1406,7 @@
       else if(stageFilter==='EXITED') rows=rows.filter(v=>['RETAIL','DEMO','DAMAGE','TRANSFER_OUT','OTHER'].includes(String(v.stage||'').trim().toUpperCase()));
       else if(stageFilter!=='All') rows=rows.filter(v=>String(v.stage||'').trim().toUpperCase()===stageFilter.toUpperCase());
       rows.sort((a,b)=>{const sa=Number.parseInt(String(a.sr_no??'').replace(/[^0-9-]/g,''),10),sb=Number.parseInt(String(b.sr_no??'').replace(/[^0-9-]/g,''),10);const va=Number.isFinite(sa),vb=Number.isFinite(sb);if(va&&vb)return sa-sb;if(va)return -1;if(vb)return 1;return String(a.sr_no??'').localeCompare(String(b.sr_no??''),undefined,{numeric:true,sensitivity:'base'});});
+      currentStockExportRows=rows.map(v=>({...v}));
       const body=$('stockTable').querySelector('tbody');
       const canHold=canSubmitStockHoldRole();
       body.innerHTML=rows.length?rows.map((v,index)=>'<tr data-stock-id="'+esc(v.id)+'" tabindex="0" aria-label="Select vehicle '+esc(v.chassis_number)+'" aria-selected="'+(selectedStockVehicle?.id===v.id?'true':'false')+'" class="'+(selectedStockVehicle?.id===v.id?'selected-stock-row':'')+'"><td class="stock-hold-cell">'+(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small stock-hold-btn" data-stock-hold="'+esc(v.id)+'">Hold</button>':'')+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>':'')+'</td><td>'+esc(v.sr_no||String(index+1))+'</td><td>'+esc(v.model||'—')+'</td><td>'+esc(v.variant||'—')+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.mfg_year_label||v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td><b>'+esc(v.chassis_number)+'</b></td><td>'+esc(v.engine_number||'—')+'</td><td>'+esc(v.status||'—')+'</td><td>'+esc(v.place||'—')+'</td><td>'+esc(v.ageing??'—')+'</td><td>'+esc(v.stage||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.alloted_date||'—')+'</td><td>'+esc(v.alloted_ageing??'—')+'</td></tr>').join(''):'<tr><td colspan="18" class="empty">No stock records yet.</td></tr>';
