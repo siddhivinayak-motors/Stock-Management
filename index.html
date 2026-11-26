@@ -1934,17 +1934,18 @@ td,.data-table td{font-size:13px;line-height:1.45}
   </div>
   <div class="stock-upload-pane">
    <div class="card" style="border:1px solid #d7e2f0"><div class="card-body">
-    <div class="card-title">Robin — Commercial / LLM Stock Upload</div>
-    <p class="card-desc">Robin Excel Upload. Preview and review changes before adding new Commercial and LLM stock. Personal and EV rows are excluded from this upload.</p>
-    <label for="robinStockFile" style="display:block;font-weight:700;margin:12px 0 7px">Robin Excel Upload</label>
-    <input type="file" id="robinStockFile" accept=".xlsx,.xls" class="field" style="width:100%">
+    <div class="card-title">Tally Stock Upload — Commercial / LLM</div>
+    <p class="card-desc">Select Commercial and LLM Tally Closing Stock Excel files together. Each file is identified by its worksheet and reconciled only with its own department. Personal and EV stock are not affected.</p>
+    <label for="tallyStockFiles" style="display:block;font-weight:700;margin:12px 0 7px">Select Tally Stock Excel Files</label>
+    <input type="file" id="tallyStockFiles" accept=".xlsx,.xls" multiple class="field" style="width:100%">
+    <div style="font-size:12px;color:#667085;margin-top:6px">You can select both department files in one selection. UV VEHICLES → Commercial · LMM VEHICLES → LLM.</div>
     <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px;flex-wrap:wrap">
-     <button class="btn" type="button" onclick="window.robinStockPreview()">Review &amp; Preview Changes</button>
-     <button class="btn primary" type="button" onclick="window.robinStockCommit()">Upload Commercial / LLM</button>
+     <button class="btn" type="button" onclick="window.tallyStockPreview()">Review &amp; Preview Changes</button>
+     <button class="btn primary" type="button" id="tallyStockApply" onclick="window.tallyStockCommit()" disabled>Upload Tally Stock</button>
     </div>
-    <div id="robinStockSummary" class="notice" style="display:none;margin-top:14px;white-space:pre-line"></div>
+    <div id="tallyStockSummary" class="notice" style="display:none;margin-top:14px;white-space:pre-line"></div>
    </div></div>
-   <div class="card" style="margin-top:12px"><div class="card-head"><div class="card-title">Robin — Review Changes</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Chassis</th><th>Model</th><th>Variant</th><th>Segment</th><th>Department</th><th>Status</th><th>Decision</th></tr></thead><tbody id="robinStockRows"><tr><td colspan="7" class="empty">Upload Robin Excel and select Review &amp; Preview Changes.</td></tr></tbody></table></div></div>
+   <div class="card" style="margin-top:12px"><div class="card-head"><div class="card-title">Tally Stock — Review Changes</div></div><div class="table-wrap"><table class="data-table"><thead><tr><th>Chassis</th><th>Model</th><th>Variant</th><th>Segment</th><th>Department</th><th>Status</th><th>Decision</th></tr></thead><tbody id="tallyStockRows"><tr><td colspan="7" class="empty">Select one or more Tally Excel files and review the changes.</td></tr></tbody></table></div></div>
   </div>
  </div>
  <div id="stockUploadHistoryPanel" class="card stock-upload-history" style="margin:14px 0" hidden>
