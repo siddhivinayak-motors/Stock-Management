@@ -1678,6 +1678,98 @@ td,.data-table td{font-size:13px;line-height:1.45}
   #view-stock #stockTable td{font-size:10px!important}
 }
 </style>
+
+<style id="stock-register-mobile-layout-v2">
+/* Mobile-only: remove Department filter, put Stage before Status, compact 18-column table. */
+@media(max-width:680px){
+  #view-stock .stock-filter-control:has(#stockDepartmentFilter){display:none!important}
+  #view-stock .stock-filter-grid{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:6px 7px!important;
+    align-items:start!important;
+    margin-top:0!important;
+  }
+  #view-stock .stock-filter-control:has(#stockStageFilter){order:1!important}
+  #view-stock .stock-filter-control:has(#stockStatusFilter){order:2!important}
+  #view-stock .stock-filter-control{gap:3px!important}
+  #view-stock .stock-filter-control>span{
+    font-size:10px!important;line-height:1.1!important;padding-left:1px!important;
+  }
+  #view-stock .stock-filter-control select{
+    min-height:42px!important;padding:0 20px 0 8px!important;font-size:11px!important;
+  }
+  #view-stock .stock-toolbar{gap:8px!important;margin-bottom:10px!important}
+  #view-stock .card:has(#stockTable)>.card-head{
+    min-height:54px!important;padding:9px 11px!important;gap:7px!important;
+    align-items:center!important;
+  }
+  #view-stock .card:has(#stockTable)>.card-head .card-title{
+    min-width:0!important;font-size:14px!important;line-height:1.2!important;
+  }
+  #view-stock .card:has(#stockTable)>.card-head #addVehicle{
+    min-height:38px!important;padding:7px 9px!important;font-size:11px!important;
+    white-space:nowrap!important;
+  }
+  #view-stock .card:has(#stockTable)>.table-wrap{
+    display:block!important;width:100%!important;max-width:100%!important;
+    overflow-x:auto!important;overflow-y:visible!important;
+    -webkit-overflow-scrolling:touch!important;padding:0!important;
+  }
+  #view-stock #stockTable{
+    display:table!important;width:1280px!important;min-width:1280px!important;
+    max-width:none!important;table-layout:fixed!important;
+    border-collapse:collapse!important;border-spacing:0!important;
+  }
+  #view-stock #stockTable thead{display:table-header-group!important}
+  #view-stock #stockTable tbody{display:table-row-group!important;width:auto!important}
+  #view-stock #stockTable tr[data-stock-id]{display:table-row!important;width:auto!important;margin:0!important;padding:0!important}
+  #view-stock #stockTable th,
+  #view-stock #stockTable td{
+    display:table-cell!important;position:static!important;box-sizing:border-box!important;
+    min-width:0!important;padding:3px 2px!important;margin:0!important;
+    font-size:9.5px!important;line-height:1.2!important;vertical-align:middle!important;
+    white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+    overflow-wrap:anywhere!important;word-break:normal!important;
+    border-bottom:1px solid #e5e9ef!important;
+  }
+  #view-stock #stockTable th{
+    position:sticky!important;top:0!important;z-index:15!important;
+    background:#f3f6fa!important;padding:6px 2px!important;
+    font-size:9px!important;font-weight:800!important;line-height:1.15!important;
+    text-align:left!important;vertical-align:bottom!important;
+  }
+  /* Restore columns hidden by the runtime tablet rule. */
+  #view-stock #stockTable th:nth-child(n+8),
+  #view-stock #stockTable td:nth-child(n+8){display:table-cell!important}
+  /* Fixed, matching widths keep every heading directly above its data. */
+  #view-stock #stockTable th:nth-child(1),#view-stock #stockTable td:nth-child(1){width:62px!important}
+  #view-stock #stockTable th:nth-child(2),#view-stock #stockTable td:nth-child(2){width:42px!important}
+  #view-stock #stockTable th:nth-child(3),#view-stock #stockTable td:nth-child(3){width:85px!important}
+  #view-stock #stockTable th:nth-child(4),#view-stock #stockTable td:nth-child(4){width:105px!important}
+  #view-stock #stockTable th:nth-child(5),#view-stock #stockTable td:nth-child(5){width:42px!important}
+  #view-stock #stockTable th:nth-child(6),#view-stock #stockTable td:nth-child(6){width:55px!important}
+  #view-stock #stockTable th:nth-child(7),#view-stock #stockTable td:nth-child(7){width:48px!important}
+  #view-stock #stockTable th:nth-child(8),#view-stock #stockTable td:nth-child(8){width:75px!important}
+  #view-stock #stockTable th:nth-child(9),#view-stock #stockTable td:nth-child(9){width:112px!important}
+  #view-stock #stockTable th:nth-child(10),#view-stock #stockTable td:nth-child(10){width:92px!important}
+  #view-stock #stockTable th:nth-child(11),#view-stock #stockTable td:nth-child(11){width:72px!important}
+  #view-stock #stockTable th:nth-child(12),#view-stock #stockTable td:nth-child(12){width:58px!important}
+  #view-stock #stockTable th:nth-child(13),#view-stock #stockTable td:nth-child(13){width:45px!important}
+  #view-stock #stockTable th:nth-child(14),#view-stock #stockTable td:nth-child(14){width:65px!important}
+  #view-stock #stockTable th:nth-child(15),#view-stock #stockTable td:nth-child(15){width:88px!important}
+  #view-stock #stockTable th:nth-child(16),#view-stock #stockTable td:nth-child(16){width:105px!important}
+  #view-stock #stockTable th:nth-child(17),#view-stock #stockTable td:nth-child(17){width:75px!important}
+  #view-stock #stockTable th:nth-child(18),#view-stock #stockTable td:nth-child(18){width:54px!important}
+  #view-stock #stockTable td:nth-child(1) .btn{
+    display:inline-flex!important;min-width:0!important;width:auto!important;
+    height:24px!important;min-height:24px!important;padding:3px 5px!important;
+    margin:1px!important;font-size:9px!important;line-height:1.1!important;white-space:nowrap!important;
+  }
+  #view-stock #stockTable tbody tr:not([data-stock-id]){display:table-row!important}
+  #view-stock #stockTable tbody tr:not([data-stock-id]) td{display:table-cell!important}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
