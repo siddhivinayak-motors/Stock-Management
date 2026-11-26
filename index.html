@@ -2529,9 +2529,8 @@ function printQuoteDocumentPaper(q){
  '<div class="terms"><h3>TERMS &amp; CONDITIONS</h3><ol>'+terms.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol><p style="font-size:8.5px;font-weight:800;margin:2mm 0 1mm">NOTE: This is auto generated quotation not valid for bank loan</p>'+
  '<div class="bank"><b>Payments to be made in favour of</b><br><b>Siddhivinayak Motors Pvt. Ltd.</b><br>Payable at '+esc(bank.payableAt||'Bhavnagar')+'<br><br>• Bank Name: '+esc(bank.bank||'State Bank of India')+'<br>• A/C No.: '+esc(bank.account||'33349775105')+'<br>• Branch: '+esc(bank.branch||'Chitra - Bhavnagar')+'<br>• IFSC Code: '+esc(bank.ifsc||'SBIN0060231')+(bank.micr?'<br>• MICR Code No.: '+esc(bank.micr):'')+'<br>• GSTIN No.: '+esc(q.gstin||'24AAMCS1007J1ZI')+'</div></div></section>'+
  '<section class="bottom"><div class="sales"><div><b>Sales Consultant Name</b>'+esc(q.salesPerson||'')+'</div><div><b>Mobile Number</b>'+esc(q.salesMobile||'')+'</div></div><div class="sign"><div class="stamp">AUTHORISED SIGNATORY</div>For, Siddhivinayak Motors Pvt. Ltd.</div></section>'+
- '<div class="footer">E. &amp; O. E. · Subject to availability of vehicle and applicable terms.</div></main><script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350)}<\/script>
-
-</body></html>';
+ '<div class="footer">E. &amp; O. E. · Subject to availability of vehicle and applicable terms.</div></main><script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350)}<\/script>'+
+ '</body></html>';
  w.document.open();w.document.write(html);w.document.close();
 }
 
