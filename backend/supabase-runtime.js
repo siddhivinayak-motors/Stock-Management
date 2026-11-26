@@ -1527,6 +1527,24 @@
   }
   const IMPORT_HISTORY_PAGE_SIZE=50;
   let importHistoryOffset=0,importHistoryHasMore=true,importHistoryLoading=false;
+  function canDeleteImportHistoryRow(row){
+    const designation=String(currentProfile?.designation||'').trim().toLowerCase();
+    const roleAllowed=!!currentProfile?.is_super_admin||designation==='super admin'||['admin','general manager','manager'].includes(designation);
+    return roleAllowed&&canViewStockUploadHistory()&&allowedDepartmentList().some(d=>String(d).toLowerCase()===String(row?.department||'').toLowerCase());
+  }
+  async function deleteImportHistoryRecord(id,fileName,department,button){
+    try{
+      if(!canDeleteImportHistoryRow({department}))throw new Error('Only Super Admin, Admin, General Manager or Manager with department access can delete upload history.');
+      if(!window.confirm('Delete this Excel upload history entry?\n\nFile: '+(fileName||'—')+'\nDepartment: '+(department||'—')+'\n\nImported stock vehicles will NOT be deleted.'))return;
+      if(button)button.disabled=true;
+      await call(db().rpc('delete_stock_import_batch',{p_batch_id:id}));
+      notify('Excel upload history deleted. Imported stock remains unchanged.');
+      await loadImportHistory(true);
+    }catch(error){
+      if(button)button.disabled=false;
+      notify(error.message||'Could not delete upload history.');
+    }
+  }
   function renderImportHistoryRows(rows,append=false){
     const body=$('stockUploadHistoryRows');if(!body)return;
     const html=rows.map(r=>{
@@ -1534,10 +1552,16 @@
       const department=r.department||'—';
       const status=Number(r.error_rows||0)>0?'Completed with errors':Number(r.skipped_rows||0)>0?'Completed with skipped rows':'Completed';
       const uploadedAt=new Date(r.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
-      return '<tr><td class="history-file">'+esc(r.file_name)+'</td><td class="history-dept">'+esc(department)+'</td><td class="history-user">'+esc(uploader)+'</td><td class="history-date">'+esc(uploadedAt)+'</td><td class="history-count">'+Number(r.imported_rows||0)+'</td><td class="history-count">'+Number(r.skipped_rows||0)+'</td><td class="history-count">'+Number(r.error_rows||0)+'</td><td class="history-status"><span class="pill '+(Number(r.error_rows||0)>0?'red':'green')+'">'+esc(status)+'</span></td></tr>';
+      const action=canDeleteImportHistoryRow(r)?'<button class="btn small" type="button" data-import-history-delete="'+esc(r.id)+'" data-import-file="'+esc(r.file_name)+'" data-import-department="'+esc(department)+'" style="color:#c62828;border-color:#efc3c5">Delete</button>':'—';
+      return '<tr><td class="history-file">'+esc(r.file_name)+'</td><td class="history-dept">'+esc(department)+'</td><td class="history-user">'+esc(uploader)+'</td><td class="history-date">'+esc(uploadedAt)+'</td><td class="history-count">'+Number(r.imported_rows||0)+'</td><td class="history-count">'+Number(r.skipped_rows||0)+'</td><td class="history-count">'+Number(r.error_rows||0)+'</td><td class="history-status"><span class="pill '+(Number(r.error_rows||0)>0?'red':'green')+'">'+esc(status)+'</span></td><td class="history-action">'+action+'</td></tr>';
     }).join('');
     if(append)body.insertAdjacentHTML('beforeend',html);
-    else body.innerHTML=html||'<tr><td colspan="8" class="empty">No import history yet.</td></tr>';
+    else body.innerHTML=html||'<tr><td colspan="9" class="empty">No import history yet.</td></tr>';
+    body.querySelectorAll('[data-import-history-delete]').forEach(button=>{
+      if(button.dataset.bound==='1')return;
+      button.dataset.bound='1';
+      button.addEventListener('click',()=>deleteImportHistoryRecord(button.dataset.importHistoryDelete,button.dataset.importFile,button.dataset.importDepartment,button));
+    });
   }
   function syncImportHistoryMoreButton(){
     const button=$('stockUploadHistoryMore');if(!button)return;
@@ -1551,7 +1575,7 @@
     if(reset){importHistoryOffset=0;importHistoryHasMore=true;}
     if(!importHistoryHasMore&&!reset)return;
     importHistoryLoading=true;
-    if(reset)body.innerHTML='<tr><td colspan="8" class="empty">Loading recent upload history…</td></tr>';
+    if(reset)body.innerHTML='<tr><td colspan="9" class="empty">Loading recent upload history…</td></tr>';
     syncImportHistoryMoreButton();
     try{
       const from=importHistoryOffset,to=from+IMPORT_HISTORY_PAGE_SIZE-1;
@@ -1562,7 +1586,7 @@
       importHistoryOffset+=rows.length;importHistoryHasMore=rows.length===IMPORT_HISTORY_PAGE_SIZE;
     }catch(error){
       console.error('Excel upload history load failed:',error);
-      if(reset)body.innerHTML='<tr><td colspan="8" class="empty">Unable to load upload history. Please refresh and try again.</td></tr>';
+      if(reset)body.innerHTML='<tr><td colspan="9" class="empty">Unable to load upload history. Please refresh and try again.</td></tr>';
       else notify('Could not load more upload history: '+(error.message||error));
       throw error;
     }finally{importHistoryLoading=false;syncImportHistoryMoreButton();}
@@ -2498,6 +2522,7 @@ th{background:#f0f2f4;font-weight:700}
   let otfManagementRows=[],otfEditingId=null,otfManagementDepartment='Personal';
   function canManageOtf(){return ['Super Admin','Admin','General Manager','Manager','Accountant','Accounts','HR','DMS'].includes(String(currentProfile?.designation||''))||currentProfile?.is_super_admin===true;}
   function canEditOtfExecutiveName(){return ['Super Admin','Admin','General Manager','Manager'].includes(String(currentProfile?.designation||''))||currentProfile?.is_super_admin===true;}
+  function canDeleteOtf(){return canEditOtfExecutiveName()&&has('otf_management','view');}
   async function loadOtfManagement(department=otfManagementDepartment){
     if(!has('otf_management','view'))throw new Error('OTF Management view permission required.');
     if(!allowedDepartmentList().includes(department))throw new Error('You do not have access to '+department+' OTF Management.');
@@ -2519,10 +2544,22 @@ th{background:#f0f2f4;font-weight:700}
     const term=String($('otfManagementSearch')?.value||'').trim().toLowerCase(),dept=otfManagementDepartment,status=$('otfManagementStatus')?.value||'';
     const rows=otfManagementRows.filter(r=>(!dept||r.department===dept)&&(!status||r.status===status)&&(!term||[r.order_number,r.customer_name,r.phone,r.chassis_number,r.model,r.variant].some(v=>String(v||'').toLowerCase().includes(term))));
     if($('otfManagementCount'))$('otfManagementCount').textContent=rows.length+' Records';
-    body.innerHTML=rows.length?rows.map(r=>{const created=r.created_at?new Date(r.created_at):null;const dateText=created&&!Number.isNaN(created.getTime())?created.toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}):'—';const timeText=created&&!Number.isNaN(created.getTime())?created.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Kolkata'}):'—';const executive=String(r.sales_person||'').trim();return '<tr><td><b>'+esc(r.order_number)+'</b></td><td><span>'+dateText+'</span><small style="display:block;color:#718096;margin-top:3px">'+timeText+'</small></td><td>'+(canEditOtfExecutiveName()?'<button type="button" class="otf-executive-edit" data-otf-executive-edit="'+esc(r.id)+'" title="Click to edit Executive name">'+esc(executive||'—')+' <span aria-hidden="true">✎</span></button>':'<span>'+esc(executive||'—')+'</span>')+'</td><td>'+esc(r.customer_name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc([r.model,r.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(r.chassis_number)+'</td><td>'+otfMoney(r.booking_amount)+'</td><td>'+esc(r.department)+'</td><td><select class="field" data-otf-status="'+esc(r.id)+'" style="min-width:110px;min-height:32px;padding:5px"><option '+(r.status==='BOOKED'?'selected':'')+'>BOOKED</option><option '+(r.status==='IN PROCESS'?'selected':'')+'>IN PROCESS</option><option '+(r.status==='DELIVERED'?'selected':'')+'>DELIVERED</option><option '+(r.status==='CANCELLED'?'selected':'')+'>CANCELLED</option></select></td><td><div style="display:flex;gap:5px"><button class="btn small" data-otf-mprint="'+esc(r.id)+'">Print</button><button class="btn small primary" data-otf-edit="'+esc(r.id)+'">Edit</button></div></td></tr>';}).join(''):'<tr><td colspan="11" class="empty">No OTF records found for the selected filters.</td></tr>';
+    body.innerHTML=rows.length?rows.map(r=>{const created=r.created_at?new Date(r.created_at):null;const dateText=created&&!Number.isNaN(created.getTime())?created.toLocaleDateString('en-IN',{timeZone:'Asia/Kolkata'}):'—';const timeText=created&&!Number.isNaN(created.getTime())?created.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true,timeZone:'Asia/Kolkata'}):'—';const executive=String(r.sales_person||'').trim();return '<tr><td><b>'+esc(r.order_number)+'</b></td><td><span>'+dateText+'</span><small style="display:block;color:#718096;margin-top:3px">'+timeText+'</small></td><td>'+(canEditOtfExecutiveName()?'<button type="button" class="otf-executive-edit" data-otf-executive-edit="'+esc(r.id)+'" title="Click to edit Executive name">'+esc(executive||'—')+' <span aria-hidden="true">✎</span></button>':'<span>'+esc(executive||'—')+'</span>')+'</td><td>'+esc(r.customer_name)+'</td><td>'+esc(r.phone)+'</td><td>'+esc([r.model,r.variant].filter(Boolean).join(' / '))+'</td><td>'+esc(r.chassis_number)+'</td><td>'+otfMoney(r.booking_amount)+'</td><td>'+esc(r.department)+'</td><td><select class="field" data-otf-status="'+esc(r.id)+'" style="min-width:110px;min-height:32px;padding:5px"><option '+(r.status==='BOOKED'?'selected':'')+'>BOOKED</option><option '+(r.status==='IN PROCESS'?'selected':'')+'>IN PROCESS</option><option '+(r.status==='DELIVERED'?'selected':'')+'>DELIVERED</option><option '+(r.status==='CANCELLED'?'selected':'')+'>CANCELLED</option></select></td><td><div class="'+(canDeleteOtf()&&r.status==='CANCELLED'?'has-delete':'')+'" style="display:flex;gap:5px"><button class="btn small" data-otf-mprint="'+esc(r.id)+'">Print</button><button class="btn small primary" data-otf-edit="'+esc(r.id)+'">Edit</button>'+(canDeleteOtf()&&r.status==='CANCELLED'?'<button class="btn small" style="padding:6px 4px;color:#c62828;border-color:#efc3c5" data-otf-delete="'+esc(r.id)+'">Delete</button>':'')+'</div></td></tr>';}).join(''):'<tr><td colspan="11" class="empty">No OTF records found for the selected filters.</td></tr>';
     if(!canManageOtf()||!has('otf_management','edit')){body.querySelectorAll('[data-otf-status]').forEach(sel=>sel.disabled=true);body.querySelectorAll('[data-otf-edit]').forEach(btn=>btn.hidden=true);}
     body.querySelectorAll('[data-otf-executive-edit]').forEach(btn=>btn.addEventListener('click',async()=>{try{if(!canEditOtfExecutiveName())throw new Error('Only Manager and above can change the OTF Executive name.');const record=otfManagementRows.find(x=>x.id===btn.dataset.otfExecutiveEdit);if(!record)return;const next=window.prompt('Executive name for '+record.order_number+':',record.sales_person||'');if(next===null)return;const name=next.trim();if(!name)throw new Error('Executive name cannot be empty.');if(name.length>120)throw new Error('Executive name is too long.');await call(db().rpc('update_otf_executive_name',{p_otf_id:record.id,p_sales_person:name}));await audit('otf_management','edit','Updated OTF Executive name','otf_order_book',record.id,{previous:record.sales_person||'',sales_person:name});notify('Executive name updated.');await loadOtfManagement();}catch(e){notify(e.message);}}));
     body.querySelectorAll('[data-otf-mprint]').forEach(btn=>btn.addEventListener('click',()=>{const r=otfManagementRows.find(x=>x.id===btn.dataset.otfMprint);if(r)otfPrintDocument(r);}));
+     body.querySelectorAll('[data-otf-delete]').forEach(btn=>btn.addEventListener('click',async()=>{
+       try{
+         if(!canDeleteOtf())throw new Error('Only Super Admin, Admin, General Manager or Manager can delete OTF records.');
+         const record=otfManagementRows.find(x=>x.id===btn.dataset.otfDelete);if(!record)return;
+         if(record.status!=='CANCELLED')throw new Error('Only CANCELLED OTF records can be deleted. Change the status to CANCELLED first.');
+         if(!window.confirm('Permanently delete OTF '+(record.order_number||'')+'?\n\nOnly this cancelled OTF record will be deleted. Its quotation and vehicle records will remain unchanged.'))return;
+         btn.disabled=true;
+         await call(db().rpc('delete_otf_order_book',{p_otf_id:record.id}));
+         notify('Cancelled OTF record deleted. Quotation and vehicle records remain unchanged.');
+         await loadOtfManagement();
+       }catch(error){btn.disabled=false;notify(error.message||'Could not delete OTF record.');}
+     }));
     body.querySelectorAll('[data-otf-status]').forEach(sel=>sel.addEventListener('change',async()=>{try{if(!canManageOtf()||!has('otf_management','edit'))throw new Error('OTF edit permission is required to change status.');await call(db().from('otf_order_books').update({status:sel.value,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',sel.dataset.otfStatus));await audit('otf_management','edit','Updated OTF status','otf_order_book',sel.dataset.otfStatus,{status:sel.value});notify('OTF status updated.');await loadOtfManagement();}catch(e){notify(e.message);await loadOtfManagement().catch(()=>{});}}));
     body.querySelectorAll('[data-otf-edit]').forEach(btn=>btn.addEventListener('click',()=>openOtfForEdit(btn.dataset.otfEdit)));
   }
