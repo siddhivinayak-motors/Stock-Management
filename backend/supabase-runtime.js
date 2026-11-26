@@ -2573,7 +2573,7 @@
     const retailOffer=offerAmount('retail'),exchangeOffer=offerAmount('exchange');
     const rows=regularItems.map(x=>'<tr><td>'+escHtml(x.particulars)+'</td><td class="num">'+otfMoney(x.amount)+'</td></tr>').join('');
     const paymentTotal=otfPaymentTotal(payments);
-    const payRows=(payments.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escHtml(x.type)+'</td><td>'+escHtml(x.date)+'</td><td class="num">'+otfMoney(x.amount)+'</td><td>'+escHtml(x.mode)+'</td></tr>').join('')||'<tr><td colspan="5">—</td></tr>')+'<tr class="payment-total-row"><td colspan="3" style="text-align:right;font-weight:bold">TOTAL PAYMENT RECEIVED</td><td class="num" style="font-weight:bold">'+otfMoney(paymentTotal)+'</td><td></td></tr>';
+    const payRows=Array.from({length:11},(_,i)=>{const x=payments[i];return x?'<tr><td>'+(i+1)+'</td><td>'+escHtml(x.type)+'</td><td>'+escHtml(x.date)+'</td><td class="num">'+otfMoney(x.amount)+'</td><td>'+escHtml(x.mode)+'</td></tr>':'<tr class="payment-entry-blank"><td>'+(i+1)+'</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>';}).join('')+'<tr class="payment-total-row"><td colspan="3" style="text-align:right;font-weight:bold">TOTAL PAYMENT RECEIVED</td><td class="num" style="font-weight:bold">'+(payments.length?otfMoney(paymentTotal):'&nbsp;')+'</td><td></td></tr>';
     const accRows=accessories.map((x,i)=>'<tr><td>'+(i+1)+'</td><td>'+escHtml(x.item)+'</td><td>'+escHtml(x.part_number)+'</td><td class="num">'+otfMoney(x.amount)+'</td></tr>').join('')||'<tr><td colspan="4">—</td></tr>';
     w.document.open();w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escHtml(order.order_number)}</title><style>
 @page{size:210mm 330mm;margin:7mm}
