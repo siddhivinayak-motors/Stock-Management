@@ -2584,11 +2584,11 @@ h1{font-size:18px;margin:0;text-align:center}
 h2{font-size:12.5px;margin:10px 0 5px;border-bottom:1px solid #333;padding-bottom:3px;break-after:avoid;page-break-after:avoid}
 header{border-bottom:1.5px solid #222;padding-bottom:6px;margin-bottom:7px}
 .otf-brand-row{display:grid;grid-template-columns:30mm minmax(0,1fr) 30mm;grid-template-areas:"left dealer right" "title title title";align-items:center;gap:1.5mm 3mm;width:100%;margin:0;padding:2mm 3mm;border:1px solid #333}
-.otf-brand-left{grid-area:left;display:flex;align-items:center;justify-content:center;min-width:0}
+.otf-brand-left{grid-area:left;display:flex;align-items:center;justify-content:center;min-width:0;position:relative;z-index:2}
 .otf-brand-left img{display:block;width:27mm;max-height:15mm;object-fit:contain}
-.otf-brand-right{grid-area:right;display:flex;align-items:center;justify-content:center;min-width:0}
+.otf-brand-right{grid-area:right;display:flex;align-items:center;justify-content:center;min-width:0;position:relative;z-index:2}
 .otf-brand-right img{display:block;width:auto;height:19mm;max-width:27mm;object-fit:contain}
-.otf-brand-dealer{grid-area:dealer;text-align:center;font-size:13px;font-weight:850;line-height:1.18;min-width:0;padding:0 1mm}
+.otf-brand-dealer{grid-area:auto;grid-column:1/-1;grid-row:1;text-align:center;font-size:13px;font-weight:850;line-height:1.18;min-width:0;padding:0 33mm;position:relative;z-index:1;align-self:center}
 .otf-brand-dealer small{display:block;font-size:8.5px;font-weight:500;margin-top:2px;line-height:1.25}
 .otf-brand-row h1{grid-area:title;min-width:0;text-align:center;font-size:14px;line-height:1.15;letter-spacing:.4px;font-weight:900;margin:1mm 0 0;padding:2mm 0 0;border-top:1px solid #999;white-space:nowrap}
 .meta{display:flex;justify-content:space-between;margin:7px 0;font-weight:bold;font-size:10px}
