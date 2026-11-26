@@ -1717,7 +1717,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
     -webkit-overflow-scrolling:touch!important;padding:0!important;
   }
   #view-stock #stockTable{
-    display:table!important;width:1280px!important;min-width:1280px!important;
+    display:table!important;width:1327px!important;min-width:1327px!important;
     max-width:none!important;table-layout:fixed!important;
     border-collapse:collapse!important;border-spacing:0!important;
   }
@@ -1747,20 +1747,37 @@ td,.data-table td{font-size:13px;line-height:1.45}
   #view-stock #stockTable th:nth-child(2),#view-stock #stockTable td:nth-child(2){width:42px!important}
   #view-stock #stockTable th:nth-child(3),#view-stock #stockTable td:nth-child(3){width:85px!important}
   #view-stock #stockTable th:nth-child(4),#view-stock #stockTable td:nth-child(4){width:105px!important}
-  #view-stock #stockTable th:nth-child(5),#view-stock #stockTable td:nth-child(5){width:44px!important}
+  #view-stock #stockTable th:nth-child(5),#view-stock #stockTable td:nth-child(5){width:52px!important}
   #view-stock #stockTable th:nth-child(6),#view-stock #stockTable td:nth-child(6){width:57px!important}
-  #view-stock #stockTable th:nth-child(7),#view-stock #stockTable td:nth-child(7){width:48px!important}
+  #view-stock #stockTable th:nth-child(7),#view-stock #stockTable td:nth-child(7){width:52px!important}
   #view-stock #stockTable th:nth-child(8),#view-stock #stockTable td:nth-child(8){width:75px!important}
-  #view-stock #stockTable th:nth-child(9),#view-stock #stockTable td:nth-child(9){width:112px!important}
+  #view-stock #stockTable th:nth-child(9),#view-stock #stockTable td:nth-child(9){width:120px!important}
   #view-stock #stockTable th:nth-child(10),#view-stock #stockTable td:nth-child(10){width:92px!important}
   #view-stock #stockTable th:nth-child(11),#view-stock #stockTable td:nth-child(11){width:72px!important}
-  #view-stock #stockTable th:nth-child(12),#view-stock #stockTable td:nth-child(12){width:60px!important}
-  #view-stock #stockTable th:nth-child(13),#view-stock #stockTable td:nth-child(13){width:45px!important}
-  #view-stock #stockTable th:nth-child(14),#view-stock #stockTable td:nth-child(14){width:65px!important}
+  #view-stock #stockTable th:nth-child(12),#view-stock #stockTable td:nth-child(12){width:72px!important}
+  #view-stock #stockTable th:nth-child(13),#view-stock #stockTable td:nth-child(13){width:52px!important}
+  #view-stock #stockTable th:nth-child(14),#view-stock #stockTable td:nth-child(14){width:72px!important}
   #view-stock #stockTable th:nth-child(15),#view-stock #stockTable td:nth-child(15){width:88px!important}
   #view-stock #stockTable th:nth-child(16),#view-stock #stockTable td:nth-child(16){width:105px!important}
   #view-stock #stockTable th:nth-child(17),#view-stock #stockTable td:nth-child(17){width:75px!important}
   #view-stock #stockTable th:nth-child(18),#view-stock #stockTable td:nth-child(18){width:54px!important}
+  /* Readable headings and intact place names on mobile. */
+  #view-stock #stockTable th:nth-child(5),
+  #view-stock #stockTable th:nth-child(6),
+  #view-stock #stockTable th:nth-child(7),
+  #view-stock #stockTable th:nth-child(9),
+  #view-stock #stockTable th:nth-child(12),
+  #view-stock #stockTable th:nth-child(13),
+  #view-stock #stockTable th:nth-child(14){
+    text-align:center!important;
+    word-break:normal!important;
+    overflow-wrap:normal!important;
+    letter-spacing:.05px!important;
+  }
+  #view-stock #stockTable th:nth-child(5){padding-left:4px!important;padding-right:4px!important}
+  #view-stock #stockTable td:nth-child(12){
+    white-space:nowrap!important;word-break:keep-all!important;overflow-wrap:normal!important;
+  }
   #view-stock #stockTable td:nth-child(1) .btn{
     display:inline-flex!important;min-width:0!important;width:auto!important;
     height:24px!important;min-height:24px!important;padding:3px 5px!important;
