@@ -84,6 +84,12 @@
         #stockTable th,#stockTable td{font-size:10px!important;padding:7px 4px!important}
         #stockTable .stock-hold-btn{min-width:0;padding:4px 5px!important}
       }
+      /* Commercial and LMM only: widen the model field and show its full name on up to two lines on desktop. */
+      @media(min-width:1201px){
+        #stockTable.stock-register-commercial-lmm th:nth-child(3),#stockTable.stock-register-commercial-lmm td:nth-child(3){width:16%!important}
+        #stockTable.stock-register-commercial-lmm th:nth-child(4),#stockTable.stock-register-commercial-lmm td:nth-child(4){width:11%!important}
+        #stockTable.stock-register-commercial-lmm td.stock-model-cell{white-space:normal!important;overflow-wrap:anywhere;word-break:normal;line-height:1.25;max-height:2.5em}
+      }
     `;
     document.head.appendChild(style);
   }
@@ -1348,6 +1354,7 @@
       table.querySelectorAll('tr').forEach(row=>{if(row.lastElementChild&&/^(ACTIONS|ACTION)$/i.test(row.lastElementChild.textContent.trim()))row.lastElementChild.remove();});
       table.querySelectorAll('button').forEach(button=>button.remove());
       const dept=typeof currentStockDepartment!=='undefined'?currentStockDepartment:'Personal';
+      $('stockTable').classList.toggle('stock-register-commercial-lmm',dept==='Commercial'||dept==='LMM');
       const selected=$('stockDepartmentFilter')?.value||'';
       const department=dept==='All'?(selected==='All Accessible Departments'?'All Accessible Departments':selected):dept;
       const status=$('stockStatusFilter')?.selectedOptions?.[0]?.textContent||'All Statuses';
@@ -1409,7 +1416,7 @@
       currentStockExportRows=rows.map(v=>({...v}));
       const body=$('stockTable').querySelector('tbody');
       const canHold=canSubmitStockHoldRole();
-      body.innerHTML=rows.length?rows.map((v,index)=>'<tr data-stock-id="'+esc(v.id)+'" tabindex="0" aria-label="Select vehicle '+esc(v.chassis_number)+'" aria-selected="'+(selectedStockVehicle?.id===v.id?'true':'false')+'" class="'+(selectedStockVehicle?.id===v.id?'selected-stock-row':'')+'"><td class="stock-hold-cell">'+(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small stock-hold-btn" data-stock-hold="'+esc(v.id)+'">Hold</button>':'')+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>':'')+'</td><td>'+esc(v.sr_no||String(index+1))+'</td><td>'+esc(v.model||'—')+'</td><td>'+esc(v.variant||'—')+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.mfg_year_label||v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td><b>'+esc(v.chassis_number)+'</b></td><td>'+esc(v.engine_number||'—')+'</td><td>'+esc(v.status||'—')+'</td><td>'+esc(v.place||'—')+'</td><td>'+esc(v.ageing??'—')+'</td><td>'+esc(v.stage||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.alloted_date||'—')+'</td><td>'+esc(v.alloted_ageing??'—')+'</td></tr>').join(''):'<tr><td colspan="18" class="empty">No stock records yet.</td></tr>';
+      body.innerHTML=rows.length?rows.map((v,index)=>'<tr data-stock-id="'+esc(v.id)+'" tabindex="0" aria-label="Select vehicle '+esc(v.chassis_number)+'" aria-selected="'+(selectedStockVehicle?.id===v.id?'true':'false')+'" class="'+(selectedStockVehicle?.id===v.id?'selected-stock-row':'')+'"><td class="stock-hold-cell">'+(canHold&&String(v.stage||'').toUpperCase()==='OPEN'?'<button class="btn small stock-hold-btn" data-stock-hold="'+esc(v.id)+'">Hold</button>':'')+(canEdit?'<button class="btn small" data-stock-edit="'+esc(v.id)+'">Edit</button>':'')+'</td><td>'+esc(v.sr_no||String(index+1))+'</td><td class="stock-model-cell">'+esc(v.model||'—')+'</td><td>'+esc(v.variant||'—')+'</td><td>'+esc(v.seating||'—')+'</td><td>'+esc(v.colour||'—')+'</td><td>'+esc(v.mfg_year_label||v.manufacturing_year||'—')+'</td><td>'+esc(v.oem_invoice_date||'—')+'</td><td><b>'+esc(v.chassis_number)+'</b></td><td>'+esc(v.engine_number||'—')+'</td><td>'+esc(v.status||'—')+'</td><td>'+esc(v.place||'—')+'</td><td>'+esc(v.ageing??'—')+'</td><td>'+esc(v.stage||'—')+'</td><td>'+esc(v.sc_name||'—')+'</td><td>'+esc(v.customer_name||'—')+'</td><td>'+esc(v.alloted_date||'—')+'</td><td>'+esc(v.alloted_ageing??'—')+'</td></tr>').join(''):'<tr><td colspan="18" class="empty">No stock records yet.</td></tr>';
       body.querySelectorAll('tr[data-stock-id]').forEach(row=>{
         const selectRow=()=>{
           const vehicle=rows.find(x=>String(x.id)===String(row.dataset.stockId));
