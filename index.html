@@ -1791,6 +1791,57 @@ td,.data-table td{font-size:13px;line-height:1.45}
   #view-stock #stockTable tbody tr:not([data-stock-id]) td{display:table-cell!important}
 }
 </style>
+<style id="retail-register-layout-polish-v1">
+#view-reports .retail-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:end}
+#view-reports .retail-secondary-filters{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:15px;padding-top:16px;border-top:1px solid #edf0f4}
+#view-reports .retail-field{min-width:0}
+#view-reports .retail-field>span{font-size:12px;font-weight:750;color:#526071}
+#view-reports .retail-field input,#view-reports .retail-field select{min-width:0;width:100%;height:44px}
+#view-reports .retail-period{min-height:68px;justify-content:center}
+#view-reports .retail-filter-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
+#view-reports #retailReportStatus{margin-left:auto;text-align:right}
+#view-reports .retail-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
+#view-reports .retail-register-card{min-width:0}
+#view-reports .retail-register-head{padding:16px 18px}
+#view-reports .retail-export-actions .btn{min-height:40px}
+#view-reports .retail-table-wrap{width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+#view-reports .retail-table-wrap table{min-width:1120px}
+#view-reports .retail-print-heading{display:none}
+@media(max-width:900px){
+ #view-reports .retail-secondary-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #view-reports .retail-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:600px){
+ #view-reports .retail-control-grid,#view-reports .retail-secondary-filters{grid-template-columns:1fr}
+ #view-reports .retail-filter-actions{align-items:stretch}
+ #view-reports .retail-filter-actions .btn{flex:1}
+ #view-reports #retailReportStatus{width:100%;margin:2px 0 0;text-align:left}
+ #view-reports .retail-register-head{align-items:flex-start}
+ #view-reports .retail-export-actions{width:100%}
+ #view-reports .retail-export-actions .btn{flex:1}
+ #view-reports .retail-table-wrap table{min-width:1080px}
+}
+@media print{
+ @page{size:landscape;margin:10mm}
+ body *{visibility:hidden!important}
+ #view-reports,#view-reports *{visibility:visible!important}
+ #view-reports{position:absolute;left:0;top:0;width:100%;padding:0!important;background:#fff!important}
+ #view-reports .page-head button,#view-reports .retail-filter-card,#view-reports .retail-export-actions{display:none!important}
+ #view-reports .retail-print-heading{display:block!important;margin:0 0 12px;padding:0 0 9px;border-bottom:1px solid #cfd6df;font-size:13px;font-weight:700;color:#1d2733}
+ #view-reports .retail-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:8px 0 12px}
+ #view-reports .retail-kpi{padding:8px 10px;box-shadow:none;break-inside:avoid}
+ #view-reports .retail-kpi strong{font-size:18px}
+ #view-reports .retail-register-card{box-shadow:none;border:0;margin:0}
+ #view-reports .retail-register-head{padding:0 0 8px}
+ #view-reports .retail-table-wrap{overflow:visible}
+ #view-reports .retail-table-wrap table{width:100%;min-width:0;font-size:8px;table-layout:auto}
+ #view-reports table th,#view-reports table td{padding:5px 6px;white-space:normal;overflow-wrap:anywhere}
+ #view-reports table thead{display:table-header-group}
+ #view-reports table tr{break-inside:avoid}
+ #view-reports .retail-pending-row{display:none!important}
+ #view-reports table th:last-child,#view-reports table td:last-child{display:none!important}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
@@ -2479,57 +2530,7 @@ function printQuoteDocumentPaper(q){
  '<div class="bank"><b>Payments to be made in favour of</b><br><b>Siddhivinayak Motors Pvt. Ltd.</b><br>Payable at '+esc(bank.payableAt||'Bhavnagar')+'<br><br>• Bank Name: '+esc(bank.bank||'State Bank of India')+'<br>• A/C No.: '+esc(bank.account||'33349775105')+'<br>• Branch: '+esc(bank.branch||'Chitra - Bhavnagar')+'<br>• IFSC Code: '+esc(bank.ifsc||'SBIN0060231')+(bank.micr?'<br>• MICR Code No.: '+esc(bank.micr):'')+'<br>• GSTIN No.: '+esc(q.gstin||'24AAMCS1007J1ZI')+'</div></div></section>'+
  '<section class="bottom"><div class="sales"><div><b>Sales Consultant Name</b>'+esc(q.salesPerson||'')+'</div><div><b>Mobile Number</b>'+esc(q.salesMobile||'')+'</div></div><div class="sign"><div class="stamp">AUTHORISED SIGNATORY</div>For, Siddhivinayak Motors Pvt. Ltd.</div></section>'+
  '<div class="footer">E. &amp; O. E. · Subject to availability of vehicle and applicable terms.</div></main><script>window.onload=()=>{window.focus();setTimeout(()=>window.print(),350)}<\/script>
-<style id="retail-register-layout-polish-v1">
-#view-reports .retail-control-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:end}
-#view-reports .retail-secondary-filters{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:15px;padding-top:16px;border-top:1px solid #edf0f4}
-#view-reports .retail-field{min-width:0}
-#view-reports .retail-field>span{font-size:12px;font-weight:750;color:#526071}
-#view-reports .retail-field input,#view-reports .retail-field select{min-width:0;width:100%;height:44px}
-#view-reports .retail-period{min-height:68px;justify-content:center}
-#view-reports .retail-filter-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}
-#view-reports #retailReportStatus{margin-left:auto;text-align:right}
-#view-reports .retail-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:16px 0}
-#view-reports .retail-register-card{min-width:0}
-#view-reports .retail-register-head{padding:16px 18px}
-#view-reports .retail-export-actions .btn{min-height:40px}
-#view-reports .retail-table-wrap{width:100%;overflow-x:auto;overscroll-behavior-x:contain}
-#view-reports .retail-table-wrap table{min-width:1120px}
-#view-reports .retail-print-heading{display:none}
-@media(max-width:900px){
- #view-reports .retail-secondary-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
- #view-reports .retail-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
-@media(max-width:600px){
- #view-reports .retail-control-grid,#view-reports .retail-secondary-filters{grid-template-columns:1fr}
- #view-reports .retail-filter-actions{align-items:stretch}
- #view-reports .retail-filter-actions .btn{flex:1}
- #view-reports #retailReportStatus{width:100%;margin:2px 0 0;text-align:left}
- #view-reports .retail-register-head{align-items:flex-start}
- #view-reports .retail-export-actions{width:100%}
- #view-reports .retail-export-actions .btn{flex:1}
- #view-reports .retail-table-wrap table{min-width:1080px}
-}
-@media print{
- @page{size:landscape;margin:10mm}
- body *{visibility:hidden!important}
- #view-reports,#view-reports *{visibility:visible!important}
- #view-reports{position:absolute;left:0;top:0;width:100%;padding:0!important;background:#fff!important}
- #view-reports .page-head button,#view-reports .retail-filter-card,#view-reports .retail-export-actions{display:none!important}
- #view-reports .retail-print-heading{display:block!important;margin:0 0 12px;padding:0 0 9px;border-bottom:1px solid #cfd6df;font-size:13px;font-weight:700;color:#1d2733}
- #view-reports .retail-kpi-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:8px 0 12px}
- #view-reports .retail-kpi{padding:8px 10px;box-shadow:none;break-inside:avoid}
- #view-reports .retail-kpi strong{font-size:18px}
- #view-reports .retail-register-card{box-shadow:none;border:0;margin:0}
- #view-reports .retail-register-head{padding:0 0 8px}
- #view-reports .retail-table-wrap{overflow:visible}
- #view-reports .retail-table-wrap table{width:100%;min-width:0;font-size:8px;table-layout:auto}
- #view-reports table th,#view-reports table td{padding:5px 6px;white-space:normal;overflow-wrap:anywhere}
- #view-reports table thead{display:table-header-group}
- #view-reports table tr{break-inside:avoid}
- #view-reports .retail-pending-row{display:none!important}
- #view-reports table th:last-child,#view-reports table td:last-child{display:none!important}
-}
-</style>
+
 </body></html>';
  w.document.open();w.document.write(html);w.document.close();
 }
