@@ -2041,7 +2041,7 @@
       renderRetailRows(retailReportRows);
       const fmt=x=>{const d=new Date(x+'T12:00:00');return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});};
       const period=$('retailPeriod');if(period)period.textContent=fmt(start)+' – '+fmt(end);
-      const desc=$('retailRegisterDescription');if(desc)desc.textContent=approved.length+' approved records · '+start+' to '+end+'';
+      const desc=$('retailRegisterDescription');const deptLabels={Personal:'Personal Vehicle',EV:'EV – Electric Vehicles',Commercial:'Commercial Vehicle',LMM:'LLM Vehicles'};const deptText=chosenDept?(deptLabels[chosenDept]||chosenDept):'All Accessible Departments';if(desc)desc.textContent=approved.length+' approved records · '+deptText+' · '+start+' to '+end;const printHeading=$('retailPrintHeading');if(printHeading)printHeading.textContent='SIDDHIVINAYAK MAHINDRA · RETAIL REGISTER · Department: '+deptText+' · Report Period: '+start+' to '+end;
       const status=$('retailReportStatus');if(status)status.textContent=approved.length+' approved record(s)'+(canReviewRetail()?' · '+pending.length+' awaiting approval':'');
     }catch(e){
       console.error('Retail Register load failed:',e);
@@ -2256,7 +2256,7 @@
       $('retailPrint')?.addEventListener('click',()=>{window.print();});
       ['retailCustomer','retailExecutive'].forEach(id=>$(id)?.addEventListener('keydown',e=>{if(e.key==='Enter')loadRetailReport();}));
       const today=retailDateISO(new Date());$('retailDailyDate').value=today;$('retailWeekStart').value=today;$('retailMonth').value=today.slice(0,7);$('retailFrom').value=today;$('retailTo').value=today;
-      const dept=$('retailDepartment');if(dept){const allowed=allowedDepartmentList();dept.innerHTML='<option value="">All Accessible Departments</option>'+allowed.map(d=>'<option value="'+esc(d)+'">'+esc(d)+'</option>').join('');}
+      const dept=$('retailDepartment');if(dept){const allowed=allowedDepartmentList();const deptLabels={Personal:'Personal Vehicle',EV:'EV – Electric Vehicles',Commercial:'Commercial Vehicle',LMM:'LLM Vehicles'};dept.innerHTML='<option value="">All Accessible Departments</option>'+allowed.map(d=>'<option value="'+esc(d)+'">'+esc(deptLabels[d]||d)+'</option>').join('');}
       updateRetailFilterVisibility();
     }
     $('holdStatusFilter')?.addEventListener('change',()=>window.holdRender());
