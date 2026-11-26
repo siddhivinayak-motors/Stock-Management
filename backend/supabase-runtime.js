@@ -185,8 +185,8 @@
     // Super Admin, Admin and General Manager have organization-wide department access.
     // Managers and all other employees remain limited to explicitly assigned departments.
     const role=String(currentProfile?.designation||'').trim().toLowerCase();
-    if(currentProfile?.is_super_admin||role==='super admin'||role==='admin'||role==='general manager') return ['Personal','EV','Commercial','LLM'];
-    const valid=['Personal','EV','Commercial','LLM'];
+    if(currentProfile?.is_super_admin||role==='super admin'||role==='admin'||role==='general manager') return ['Personal','EV','Commercial','LMM'];
+    const valid=['Personal','EV','Commercial','LMM'];
     const assigned=Array.isArray(currentProfile?.department_access)&&currentProfile.department_access.length
       ?currentProfile.department_access
       :[currentProfile?.department].filter(Boolean);
@@ -288,7 +288,7 @@
       try{
         if(!window.SVMBackend||typeof window.SVMBackend.loadPriceLists!=='function')throw new Error('Price List service unavailable');
         await window.SVMBackend.loadPriceLists();
-        const departments=['Personal','EV','Commercial','LLM'];
+        const departments=['Personal','EV','Commercial','LMM'];
         const rows=departments.flatMap(dept=>((window.plData&&window.plData[dept])||[]).map(row=>({...row,department:row.department||dept})));
         const tokens=query.split(/\s+/).filter(Boolean);
         const matches=rows.map(row=>{
@@ -345,7 +345,7 @@
       'view-audit':'audit_history','view-reports':'retail_reports','view-backup-restore':'backup_restore'
     };
     const allowedDepartments=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
-    const departmentKeys={personal:'Personal',ev:'EV',commercial:'Commercial',llm:'LLM'};
+    const departmentKeys={personal:'Personal',ev:'EV',commercial:'Commercial',llm:'LMM'};
     const pageModule=page=>{
       if(page.startsWith('stock-hold'))return 'stock_hold_management';
       if(page==='upload')return 'common_excel_upload';
@@ -445,7 +445,7 @@
     // Quotation users also need read access to the current published price list to prepare a quote.
     if(!has('price_list_management','view')&&!has('quotation_management','view')) return;
     const departments=allowedDepartmentList();
-    const by={Personal:[],EV:[],Commercial:[],LLM:[]};
+    const by={Personal:[],EV:[],Commercial:[],LMM:[]};
     if(!departments.length){window.plData=by;window.plHistory=[];if(typeof window.plRender==='function')window.plRender();return;}
     // Restrict at the Supabase query itself, not only after downloading rows.
     const versions=await call(db().from('price_list_versions').select('*').in('department',departments).order('published_at',{ascending:false}));
@@ -467,7 +467,7 @@
     if(!has('price_list_management','create')) throw new Error('No permission to upload price lists.');
     // Always compare against the latest published version before deciding what is new.
     await loadPriceLists();
-    const departments=['Personal','EV','Commercial','LLM'];
+    const departments=['Personal','EV','Commercial','LMM'];
     const normKey=value=>String(value==null?'':value).toUpperCase().replace(/\\bBS[\\s_.-]*6(?:\\.?2)?\\b/g,' ').replace(/\\bREFRESH\\b|\\bNEW\\b/g,' ').replace(/[^A-Z0-9]/g,'');
     const identity=(dept,row)=>[dept,normKey(row.vehicle),normKey(row.variant),normKey(row.colour)].join('|');
     const signature=row=>{
@@ -633,7 +633,7 @@
     }
     const assigned=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
     cards.forEach(card=>{card.style.display=assigned.has(String(card.dataset.department||'').toLowerCase())?'':'none';});
-    const visibleDepartments=['Personal','EV','Commercial','LLM'].filter(d=>assigned.has(d.toLowerCase()));
+    const visibleDepartments=['Personal','EV','Commercial','LMM'].filter(d=>assigned.has(d.toLowerCase()));
     if(!visibleDepartments.length)return;
     const rows=await call(db().from('vehicles').select('department,stage').in('department',visibleDepartments));
     const norm=v=>String(v||'').trim().toUpperCase();
@@ -1136,7 +1136,7 @@
       pratikStockPreviewFile=file.name;
       $('pratikStockApply').disabled=false;
       $('pratikStockSummary').style.display='block';
-      $('pratikStockSummary').textContent='Review ready — database unchanged.\nRows: '+pratikStockPreviewRows.length+'\nPersonal: '+counts.Personal+' · EV: '+counts.EV+'\nNew: '+added+' · Updated: '+updated+' · Pending Approval: '+removed+'\nStages: '+Object.entries(st).map(([k,v])=>k+': '+v).join(' · ')+'\nCommercial and LLM: untouched.';
+      $('pratikStockSummary').textContent='Review ready — database unchanged.\nRows: '+pratikStockPreviewRows.length+'\nPersonal: '+counts.Personal+' · EV: '+counts.EV+'\nNew: '+added+' · Updated: '+updated+' · Pending Approval: '+removed+'\nStages: '+Object.entries(st).map(([k,v])=>k+': '+v).join(' · ')+'\nCommercial and LMM: untouched.';
       $('pratikStockRows').innerHTML=pratikStockPreviewRows.slice(0,500).map(x=>'<tr><td>'+esc(x.sr_no??'—')+'</td><td>'+esc(x.chassis)+'</td><td>'+esc(x.model+' / '+x.variant)+'</td><td>'+esc(x.department)+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.stage)+'</td><td>'+esc(x.decision)+'</td></tr>').join('');
     } catch(e) {
       console.error(e);pratikStockPreviewRows=[];pratikStockPreviewFile=null;
@@ -1147,11 +1147,11 @@
   window.pratikStockApply = async () => {
     try {
       if(!pratikStockPreviewRows.length||!pratikStockPreviewFile)throw new Error('Review STOCK worksheet first.');
-      if(!confirm('Reconcile Personal and EV stock from '+pratikStockPreviewRows.length+' STOCK rows? Matching chassis will update, new chassis will be added, and vehicles missing from this upload will move to Pending Approval for approval. No vehicle records will be deleted. Commercial and LLM stay unchanged.'))return;
+      if(!confirm('Reconcile Personal and EV stock from '+pratikStockPreviewRows.length+' STOCK rows? Matching chassis will update, new chassis will be added, and vehicles missing from this upload will move to Pending Approval for approval. No vehicle records will be deleted. Commercial and LMM stay unchanged.'))return;
       const result=await call(db().rpc('sync_pratik_personal_ev_stock',{p_rows:pratikStockPreviewRows.map(({decision,...x})=>({...x,chassis_number:x.chassis})),p_file_name:pratikStockPreviewFile}));
       quotationStockCache.clear();pratikStockPreviewRows=[];pratikStockPreviewFile=null;
       $('pratikStockApply').disabled=true;
-      $('pratikStockSummary').textContent='Reconcile completed. Uploaded: '+result.uploaded_rows+' · New: '+result.new_rows+' · Updated: '+result.updated_rows+' · Pending Approval: '+result.pending_exit_rows+'. Commercial and LLM unchanged.';
+      $('pratikStockSummary').textContent='Reconcile completed. Uploaded: '+result.uploaded_rows+' · New: '+result.new_rows+' · Updated: '+result.updated_rows+' · Pending Approval: '+result.pending_exit_rows+'. Commercial and LMM unchanged.';
       await renderStock();await loadImportHistory();notify('Manager Personal / EV stock synchronized.');
     } catch(e) {console.error(e);notify(e.message||'Stock sync failed.');}
   };
@@ -1165,8 +1165,8 @@
     const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
     if(!wb.SheetNames||wb.SheetNames.length!==1) throw new Error('Upload one Tally department report at a time. The workbook must contain exactly one worksheet.');
     const sheetName=String(wb.SheetNames[0]||'').trim().toUpperCase();
-    const department=sheetName==='UV VEHICLES'?'Commercial':sheetName==='LMM VEHICLES'?'LLM':'';
-    if(!department) throw new Error('Wrong Tally worksheet. Use UV VEHICLES for Commercial or LMM VEHICLES for LLM.');
+    const department=sheetName==='UV VEHICLES'?'Commercial':sheetName==='LMM VEHICLES'?'LMM':'';
+    if(!department) throw new Error('Wrong Tally worksheet. Use UV VEHICLES for Commercial or LMM VEHICLES for LMM.');
     const matrix=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true});
     const headerIndex=matrix.findIndex(row=>robinCellText(row?.[0]).toUpperCase()==='PARTICULARS' && row.some(v=>robinCellText(v).toUpperCase()==='CLOSING BALANCE'));
     if(headerIndex<0) throw new Error('Tally Closing Balance header was not found. No data changed.');
@@ -1215,7 +1215,7 @@
       robinTallyPreview=null;robinStockPreviewRows=[];
       if($('tallyStockApply'))$('tallyStockApply').disabled=true;
       const files=Array.from($('tallyStockFiles')?.files||[]);
-      if(!files.length)throw new Error('Select one or more Commercial / LLM Tally Closing Stock Excel files.');
+      if(!files.length)throw new Error('Select one or more Commercial / LMM Tally Closing Stock Excel files.');
       if(!has('common_excel_upload','create'))throw new Error('Common Excel Upload permission required.');
       const parsedFiles=await Promise.all(files.map(async file=>({file,parsed:await robinTallyParse(file)})));
       const departments=parsedFiles.map(x=>x.parsed.department);
@@ -1524,7 +1524,7 @@
     wrap.style.cssText='position:fixed;inset:0;z-index:99990;background:#15202dcc;display:grid;place-items:center;padding:18px';
     const input=(name,label,value,type='text')=>'<label style="display:block;font-size:13px;font-weight:650">'+label+'<input '+(type==='tel'?'type="tel" inputmode="numeric" autocomplete="tel" maxlength="16"':'type="text"')+' name="'+name+'" class="field" value="'+esc(value||'')+'" style="width:100%;margin-top:5px"></label>';
     const selected=profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean);
-    const departments='<fieldset style="border:1px solid #dce2e9;border-radius:8px;padding:10px"><legend style="font-size:13px;font-weight:650">Department Access</legend>'+['Personal','EV','Commercial','LLM'].map(x=>'<label style="display:inline-flex;gap:5px;align-items:center;margin:5px 10px 5px 0"><input type="checkbox" name="department_access" value="'+x+'" '+(selected.includes(x)?'checked':'')+'>'+x+'</label>').join('')+'</fieldset>';
+    const departments='<fieldset style="border:1px solid #dce2e9;border-radius:8px;padding:10px"><legend style="font-size:13px;font-weight:650">Department Access</legend>'+['Personal','EV','Commercial','LMM'].map(x=>'<label style="display:inline-flex;gap:5px;align-items:center;margin:5px 10px 5px 0"><input type="checkbox" name="department_access" value="'+x+'" '+(selected.includes(x)?'checked':'')+'>'+x+'</label>').join('')+'</fieldset>';
     wrap.innerHTML='<form id="svEmployeeForm" style="width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;padding:24px;border-radius:14px;color:#253140"><div style="font-size:18px;font-weight:850;margin-bottom:14px">Edit Employee Details</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+input('full_name','Employee Name',profile.full_name)+input('phone','Mobile Number',profile.phone,'tel')+'<label style="display:block;font-size:13px;font-weight:650">New Password (leave blank to keep current)<input type="password" name="password" minlength="6" autocomplete="new-password" class="field" style="width:100%;margin-top:5px"></label><label style="display:block;font-size:13px;font-weight:650">Designation / Role<select name="designation" id="svEditRole" class="field" style="width:100%;margin-top:5px">'+Object.keys(ROLE_MODULES_UI).concat(['Super Admin']).map(x=>'<option value="'+x+'" '+(profile.designation===x?'selected':'')+'>'+x+'</option>').join('')+'</select></label>'+departments+'<label style="display:block;font-size:13px;font-weight:650">Account Status<select name="status" class="field" style="width:100%;margin-top:5px"><option value="active" '+(profile.status==='active'?'selected':'')+'>Active</option><option value="inactive" '+(profile.status!=='active'?'selected':'')+'>Inactive</option></select></label><label style="display:block;font-size:13px;font-weight:650">City<select name="city" class="field" style="width:100%;margin-top:5px"><option value="">Select City</option>'+['Bhavnagar','Amreli','Botad','Rajula'].map(x=>'<option value="'+x+'" '+(profile.city===x?'selected':'')+' >'+x+'</option>').join('')+'</select></label><label style="display:block;font-size:13px;font-weight:650">Email (read only)<input class="field" value="'+esc(profile.email||'')+'" readonly style="width:100%;margin-top:5px"></label></div><div id="svEmployeeError" style="color:#c51c2a;margin:8px 0;font-size:12px"></div><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><button type="button" id="svEmployeeDelete" class="btn" style="border-color:#efb7bc;color:#b4232c;background:#fff7f7">Delete User</button><div style="display:flex;gap:8px"><button type="button" id="svEmployeeCancel" class="btn">Cancel</button><button class="btn primary" type="submit">Save Changes</button></div></div></form>';
     document.body.appendChild(wrap);
     $('svEmployeeCancel').onclick=()=>wrap.remove();
@@ -1691,7 +1691,7 @@
     const grantable=new Set(EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])).filter(m=>m!=='audit_history'||canGrantAll).filter(m=>canGrantAll||canGrantOperational).filter(m=>m!=='employee_management'||['Admin','General Manager','Manager','HR'].includes(String(profile.designation||''))));
     const [currentRows]=await Promise.all([call(db().from('employee_permissions').select('module').eq('user_id',profile.user_id))]);
     const selected=new Set(currentRows.map(x=>x.module));
-    const departments=['Personal','EV','Commercial','LLM'];
+    const departments=['Personal','EV','Commercial','LMM'];
     const selectedDepartments=new Set(profile.department_access?.length?profile.department_access:[profile.department].filter(Boolean));
     const selectedShortcuts=new Set(Array.isArray(profile.dashboard_shortcuts)&&profile.dashboard_shortcuts.length?['quick-access']:[]);
     const wrap=document.createElement('div');wrap.id='svPermissionDialog';
@@ -1759,7 +1759,7 @@
     const table=section.querySelector('.card .table-wrap tbody');
     if(table) table.innerHTML=rows.length?rows.map(p=>{
       const designation=p.is_super_admin?'Super Admin':(p.designation||'—');
-      const access=p.is_super_admin?'Personal · EV · Commercial · LLM':((p.department_access?.length?p.department_access:[p.department].filter(Boolean)).join(' · ')||'—');
+      const access=p.is_super_admin?'Personal · EV · Commercial · LMM':((p.department_access?.length?p.department_access:[p.department].filter(Boolean)).join(' · ')||'—');
       const canEditThis=has('employee_management','edit')&&canManageEmployeeTarget(p);
       const canManageThis=has('employee_management','manage_users')&&canManageEmployeeTarget(p);
       return '<tr><td>'+(canEditThis?'<button type="button" class="btn small" data-edit="'+esc(p.user_id)+'" style="padding:2px 0;background:transparent;border:0;color:#26384d;text-decoration:underline;font-weight:750">'+esc(p.full_name||'—')+'</button>':esc(p.full_name||'—'))+'</td><td>'+esc(p.email||'—')+'</td><td>'+esc(p.phone||'—')+'</td><td>'+esc(designation==='Reception'?'Receptionist':designation)+'</td><td>'+esc(p.city||'—')+'</td><td>'+esc(access)+'</td><td><span class="pill '+(p.status==='active'?'green':'red')+'">'+esc(p.status||'inactive')+'</span></td><td>'+(canManageThis?'<button type="button" class="btn small" data-permissions="'+esc(p.user_id)+'">Permissions</button>':'—')+'</td></tr>';
@@ -1865,7 +1865,7 @@
     'personal.stock':'Personal · Stock Register','personal.holds':'Personal · Stock Hold Management','personal.quotations':'Personal · Quotations','personal.price_list':'Personal · Price List','personal.excel_upload':'Personal · Excel Upload History',
     'ev.stock':'EV · Stock Register','ev.holds':'EV · Stock Hold Management','ev.quotations':'EV · Quotations','ev.price_list':'EV · Price List','ev.excel_upload':'EV · Excel Upload History',
     'commercial.stock':'Commercial · Stock Register','commercial.holds':'Commercial · Stock Hold Management','commercial.quotations':'Commercial · Quotations','commercial.price_list':'Commercial · Price List','commercial.excel_upload':'Commercial · Excel Upload History',
-    'llm.stock':'LLM · Stock Register','llm.holds':'LLM · Stock Hold Management','llm.quotations':'LLM · Quotations','llm.price_list':'LLM · Price List','llm.excel_upload':'LLM · Excel Upload History',
+    'llm.stock':'LMM · Stock Register','llm.holds':'LMM · Stock Hold Management','llm.quotations':'LMM · Quotations','llm.price_list':'LMM · Price List','llm.excel_upload':'LMM · Excel Upload History',
     'workspace.price_list_imports':'Workspace · Price List Import History','workspace.common_excel_upload':'Workspace · Common Excel Upload History','workspace.audit_history':'Workspace · Audit History','workspace.retail_reports':'Workspace · Retail Reports'
   };
   const RESET_OWNER_UID='236565a9-1892-41ee-b54a-c81bde3b9b01';
@@ -2263,7 +2263,7 @@
         if(p.startsWith('stock-hold-')||p==='stock-hold-central')window.holdRender();
         if(p==='reports')loadRetailReport();
         if(p.startsWith('otf-management-')){
-          const otfDeptByPage={'otf-management-personal':'Personal','otf-management-ev':'EV','otf-management-commercial':'Commercial','otf-management-llm':'LLM'};
+          const otfDeptByPage={'otf-management-personal':'Personal','otf-management-ev':'EV','otf-management-commercial':'Commercial','otf-management-llm':'LMM'};
           const department=otfDeptByPage[p]||otfManagementDepartment;
           otfManagementDepartment=department;
           if($('otfManagementDepartment'))$('otfManagementDepartment').value=department;
@@ -2317,7 +2317,7 @@
   const otfNumber=id=>Math.max(0,Number($(id)?.value||0)||0);
   const otfMoney=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   function otfQuotationAmounts(q={}){const subtotal=Math.max(0,Number(q.subtotal)||0),items=q.quotation_items||q.items||[];const itemDiscount=items.filter(x=>(!!x.is_discount||/retail offer|exchange offer/i.test(String(x.particulars||x.name||'')))).reduce((sum,x)=>sum+Math.abs(Number(x.amount)||0),0);const discount=itemDiscount>0?itemDiscount:Math.max(0,Number(q.discount)||0);const total=Math.max(0,subtotal-discount);return {...q,subtotal,discount,total,amountWords:numberWordsIndian(total)||''};}
-  const otfDeptCode={Personal:'PV',EV:'EV',Commercial:'CV',LLM:'LV'};
+  const otfDeptCode={Personal:'PV',EV:'EV',Commercial:'CV',LMM:'LV'};
   function otfSetStatus(message,isError=false){const el=$('otfFormStatus');if(el){el.textContent=message;el.style.color=isError?'#b4232c':'#64748b';}}
   function otfResetSelection(){
     otfSelectedQuote=null;otfVerifiedVehicle=null;otfImportedVehicleId=null;
@@ -2326,7 +2326,7 @@
     if($('otfPrintPreview'))$('otfPrintPreview').disabled=true;
   }
   window.otfOpenDepartment=async function(department){
-    if(!['Personal','EV','Commercial','LLM'].includes(department))return;
+    if(!['Personal','EV','Commercial','LMM'].includes(department))return;
     if(!has('otf_management','view')){notify('Quotation / OTF permission required.');return;}
     if(!allowedDepartmentList().includes(department)){notify('You do not have access to '+department+'.');return;}
     otfDepartment=department;otfResetSelection();otfMatches=[];
@@ -2448,7 +2448,7 @@
     if(!otfSelectedQuote)throw new Error('Select a quotation first.');
     const chassis=otfValue('otfChassisInput').toUpperCase().replace(/\\s+/g,'');
     if(chassis.length<5)throw new Error('Enter the complete chassis number.');
-    // Search the employee's accessible departments so a chassis from EV/Commercial/LLM
+    // Search the employee's accessible departments so a chassis from EV/Commercial/LMM
     // cannot be accidentally booked under the currently open department.
     const accessible=allowedDepartmentList();
     const matches=otfImportedVehicleId
@@ -2608,7 +2608,7 @@ th{background:#f0f2f4;font-weight:700}
     renderOtfManagement();
   }
   window.otfOpenManagement=async function(department){
-    if(!['Personal','EV','Commercial','LLM'].includes(department))return;
+    if(!['Personal','EV','Commercial','LMM'].includes(department))return;
     if(!has('otf_management','view')){notify('OTF Management permission required.');return;}
     if(!allowedDepartmentList().includes(department)&&!canManageOtf()){notify('You do not have access to '+department+'.');return;}
     otfManagementDepartment=department;
