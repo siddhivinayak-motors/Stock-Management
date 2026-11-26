@@ -1598,6 +1598,78 @@ td,.data-table td{font-size:13px;line-height:1.45}
 #view-quotation .quote-charge-heading h3{font-size:15px!important}
 #view-quotation .quote-number-strip strong{font-size:14px!important}
 </style>
+<style id="audit-history-print-v1">
+/* Audit History only: dedicated clean print layout; screen UI remains unchanged. */
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  html, body { background:#fff!important; height:auto!important; }
+  body * { visibility:hidden!important; }
+  #view-audit, #view-audit * { visibility:visible!important; }
+  #view-audit {
+    display:block!important;
+    position:absolute!important;
+    inset:0 auto auto 0!important;
+    width:100%!important;
+    margin:0!important;
+    padding:0!important;
+    background:#fff!important;
+    color:#111827!important;
+  }
+  #view-audit .page-head {
+    display:flex!important;
+    align-items:flex-start!important;
+    margin:0 0 8mm!important;
+    padding:0!important;
+  }
+  #view-audit .page-head button,
+  #view-audit .toolbar,
+  #view-audit .breadcrumb,
+  #view-audit .subtitle { display:none!important; }
+  #view-audit .eyebrow { color:#414348!important; font-size:8pt!important; }
+  #view-audit .page-head h1 { margin:0!important; font-size:19pt!important; color:#082d6b!important; }
+  #view-audit .card {
+    display:block!important;
+    width:100%!important;
+    margin:0!important;
+    border:0!important;
+    border-radius:0!important;
+    box-shadow:none!important;
+    overflow:visible!important;
+  }
+  #view-audit .card-head { padding:0 0 3mm!important; }
+  #view-audit .card-desc { color:#4b5563!important; font-size:8pt!important; }
+  #view-audit .table-wrap { width:100%!important; overflow:visible!important; }
+  #view-audit table {
+    width:100%!important;
+    min-width:0!important;
+    border-collapse:collapse!important;
+    table-layout:auto!important;
+    font-size:7.5pt!important;
+  }
+  #view-audit thead { display:table-header-group!important; }
+  #view-audit tfoot { display:table-footer-group!important; }
+  #view-audit th, #view-audit td {
+    padding:5px 6px!important;
+    border:1px solid #cbd5e1!important;
+    color:#111827!important;
+    background:#fff!important;
+    text-align:left!important;
+    vertical-align:top!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+  }
+  #view-audit th {
+    background:#eef2f7!important;
+    color:#082d6b!important;
+    font-weight:700!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  #view-audit tr { break-inside:avoid!important; page-break-inside:avoid!important; }
+  #view-audit .pill { border:1px solid #94a3b8!important; background:#fff!important; color:#111827!important; }
+}
+</style>
 </head>
 <body>
 <header class="topbar">
