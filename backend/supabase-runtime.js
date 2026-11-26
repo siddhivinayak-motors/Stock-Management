@@ -1210,90 +1210,109 @@
     if(modelTotals.reduce((n,x)=>n+x.quantity,0)!==reportTotal) throw new Error('Model quantities do not match Grand Total. Upload blocked.');
     return {department,sheetName,dateRange,reportTotal,rows,modelTotals};
   };
-  window.robinStockPreview = async () => {
+  window.tallyStockPreview = async () => {
     try{
       robinTallyPreview=null;robinStockPreviewRows=[];
-      if($('robinStockApply'))$('robinStockApply').disabled=true;
-      const file=$('robinStockFile')?.files?.[0];
-      if(!file)throw new Error('Select the Commercial UV or LMM Tally Closing Stock Excel file.');
+      if($('tallyStockApply'))$('tallyStockApply').disabled=true;
+      const files=Array.from($('tallyStockFiles')?.files||[]);
+      if(!files.length)throw new Error('Select one or more Commercial / LLM Tally Closing Stock Excel files.');
       if(!has('common_excel_upload','create'))throw new Error('Common Excel Upload permission required.');
-      const parsed=await robinTallyParse(file);
+      const parsedFiles=await Promise.all(files.map(async file=>({file,parsed:await robinTallyParse(file)})));
+      const departments=parsedFiles.map(x=>x.parsed.department);
+      if(new Set(departments).size!==departments.length)throw new Error('Only one complete Tally report per department can be selected in one upload. Remove the duplicate department file and select its latest complete report.');
       const allowed=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
-      if(!allowed.has(parsed.department.toLowerCase()))throw new Error('Your employee account does not have '+parsed.department+' department access.');
-      const existing=[];
-      for(let from=0;;from+=1000){
-        const part=await call(db().from('vehicles').select('id,chassis_number,stage,status,model,variant').eq('department',parsed.department).range(from,from+999));
-        existing.push(...part);if(part.length<1000)break;
+      const plans=[];
+      for(const item of parsedFiles){
+        const parsed=item.parsed,file=item.file;
+        if(!allowed.has(parsed.department.toLowerCase()))throw new Error('Your employee account does not have '+parsed.department+' department access.');
+        const existing=[];
+        for(let from=0;;from+=1000){
+          const part=await call(db().from('vehicles').select('id,chassis_number,stage,status,model,variant').eq('department',parsed.department).range(from,from+999));
+          existing.push(...part);if(part.length<1000)break;
+        }
+        const existingByChassis=new Map(existing.map(v=>[String(v.chassis_number||'').trim().toUpperCase(),v]));
+        const incoming=new Set(parsed.rows.map(x=>x.chassis_number));
+        const alreadyRetail=parsed.rows.filter(x=>existingByChassis.get(x.chassis_number)?.stage==='RETAIL');
+        if(alreadyRetail.length)throw new Error(parsed.department+' file contains '+alreadyRetail.length+' chassis already marked Retail. Resolve them before upload. Example: '+alreadyRetail[0].chassis_number);
+        const newRows=parsed.rows.filter(x=>!existingByChassis.has(x.chassis_number));
+        const keptRows=parsed.rows.filter(x=>existingByChassis.has(x.chassis_number));
+        const missing=existing.filter(v=>robinActiveStages.has(String(v.stage||'').toUpperCase())&&!incoming.has(String(v.chassis_number||'').trim().toUpperCase()));
+        const protectedRows=existing.filter(v=>!robinActiveStages.has(String(v.stage||'').toUpperCase())&&String(v.stage||'').toUpperCase()!=='RETAIL'&&!incoming.has(String(v.chassis_number||'').trim().toUpperCase()));
+        plans.push({...parsed,fileName:file.name,fileSignature:robinFileSignature(file),newCount:newRows.length,keptCount:keptRows.length,retailCount:missing.length,protectedCount:protectedRows.length});
+        robinStockPreviewRows.push(
+          ...parsed.rows.map(x=>({...x,department:parsed.department,decision:existingByChassis.has(x.chassis_number)?'Keep in Main Stock':'Add to Main Stock'})),
+          ...missing.map(v=>({chassis_number:v.chassis_number,model:v.model||'',colour:'',department:parsed.department,decision:'Move to Retail'})),
+          ...protectedRows.map(v=>({chassis_number:v.chassis_number,model:v.model||'',colour:'',department:parsed.department,decision:'Protected — No Auto Move ('+String(v.stage||'')+')'}))
+        );
       }
-      const existingByChassis=new Map(existing.map(v=>[String(v.chassis_number||'').trim().toUpperCase(),v]));
-      const incoming=new Set(parsed.rows.map(x=>x.chassis_number));
-      const alreadyRetail=parsed.rows.filter(x=>existingByChassis.get(x.chassis_number)?.stage==='RETAIL');
-      if(alreadyRetail.length)throw new Error('This Tally file contains '+alreadyRetail.length+' chassis already marked Retail. Resolve them before upload. Example: '+alreadyRetail[0].chassis_number);
-      const newRows=parsed.rows.filter(x=>!existingByChassis.has(x.chassis_number));
-      const keptRows=parsed.rows.filter(x=>existingByChassis.has(x.chassis_number));
-      const missing=existing.filter(v=>robinActiveStages.has(String(v.stage||'').toUpperCase())&&!incoming.has(String(v.chassis_number||'').trim().toUpperCase()));
-      const protectedRows=existing.filter(v=>!robinActiveStages.has(String(v.stage||'').toUpperCase())&&String(v.stage||'').toUpperCase()!=='RETAIL'&&!incoming.has(String(v.chassis_number||'').trim().toUpperCase()));
-      robinStockPreviewRows=[
-        ...parsed.rows.map(x=>({...x,decision:existingByChassis.has(x.chassis_number)?'Keep in Main Stock':'Add to Main Stock'})),
-        ...missing.map(v=>({chassis_number:v.chassis_number,model:v.model||'',colour:'',decision:'Move to Retail'})),
-        ...protectedRows.map(v=>({chassis_number:v.chassis_number,model:v.model||'',colour:'',decision:'Protected — No Auto Move ('+String(v.stage||'')+')'}))
-      ];
-      robinTallyPreview={...parsed,fileSignature:robinFileSignature(file),newCount:newRows.length,keptCount:keptRows.length,retailCount:missing.length,protectedCount:protectedRows.length};
-      $('robinStockSummary').style.display='block';
-      $('robinStockSummary').textContent=
-        parsed.department+' · '+parsed.sheetName+' · '+parsed.dateRange+
-        '\nTally total: '+parsed.reportTotal+
-        '\nAlready in Main Stock: '+keptRows.length+
-        '\nNew vehicles to add: '+newRows.length+
-        '\nMissing active stock to move to Retail: '+missing.length+
-        '\nSpecial stages protected from auto-move: '+protectedRows.length+
-        '\nValidation: PASSED · Review below, then Confirm & Reconcile.';
-      $('robinStockRows').innerHTML=robinStockPreviewRows.slice(0,1000).map(x=>'<tr><td>'+esc(x.chassis_number||'—')+'</td><td>'+esc(x.model||'')+'</td><td>'+esc(x.colour||'—')+'</td><td>'+esc(parsed.department)+'</td><td>'+esc(x.decision)+'</td><td>—</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No rows found.</td></tr>';
-      const apply=$('robinStockApply');
-      if(apply){apply.disabled=false;apply.textContent='Confirm & Reconcile '+parsed.department;}
-      notify('Tally validation passed. Review the stock changes before confirming.');
+      robinTallyPreview=plans;
+      const summary=plans.map(p=>p.department+' · '+p.sheetName+' · '+p.dateRange+
+        '\nFile: '+p.fileName+
+        '\nTally total: '+p.reportTotal+
+        '\nAlready in Main Stock: '+p.keptCount+
+        '\nNew vehicles to add: '+p.newCount+
+        '\nMissing active stock to move to Retail: '+p.retailCount+
+        '\nSpecial stages protected from auto-move: '+p.protectedCount).join('\n\n');
+      $('tallyStockSummary').style.display='block';
+      $('tallyStockSummary').textContent=summary+'\n\nAll selected files validated. Review the combined list, then select Upload Tally Stock.';
+      $('tallyStockRows').innerHTML=robinStockPreviewRows.slice(0,1500).map(x=>'<tr><td>'+esc(x.chassis_number||'—')+'</td><td>'+esc(x.model||'')+'</td><td>'+esc(x.colour||'—')+'</td><td>—</td><td>'+esc(x.department)+'</td><td>—</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No rows found.</td></tr>';
+      if($('tallyStockApply'))$('tallyStockApply').disabled=false;
+      notify('All selected Tally files validated. Review the combined department-wise changes.');
     }catch(e){
       console.error(e);robinTallyPreview=null;robinStockPreviewRows=[];
-      if($('robinStockSummary')){$('robinStockSummary').style.display='block';$('robinStockSummary').textContent='UPLOAD BLOCKED\n'+(e.message||'Tally validation failed.');}
-      if($('robinStockRows'))$('robinStockRows').innerHTML='<tr><td colspan="7" class="empty">Validation failed. No data changed.</td></tr>';
-      if($('robinStockApply'))$('robinStockApply').disabled=true;
+      if($('tallyStockSummary')){$('tallyStockSummary').style.display='block';$('tallyStockSummary').textContent='UPLOAD BLOCKED\n'+(e.message||'Tally validation failed.');}
+      if($('tallyStockRows'))$('tallyStockRows').innerHTML='<tr><td colspan="7" class="empty">Validation failed. No data changed.</td></tr>';
+      if($('tallyStockApply'))$('tallyStockApply').disabled=true;
       notify(e.message||'Tally validation failed.');
     }
   };
-  window.robinStockCommit = async () => {
+  window.tallyStockCommit = async () => {
     try{
-      const preview=robinTallyPreview,file=$('robinStockFile')?.files?.[0];
-      if(!preview||!file)throw new Error('Generate and review the Tally preview first.');
-      if(robinFileSignature(file)!==preview.fileSignature)throw new Error('The selected file changed after preview. Run Review & Preview Changes again.');
+      const plans=robinTallyPreview,files=Array.from($('tallyStockFiles')?.files||[]);
+      if(!plans?.length||!files.length)throw new Error('Generate and review the Tally preview first.');
+      const currentSignature=files.map(robinFileSignature).sort().join('||');
+      const previewSignature=plans.map(p=>p.fileSignature).sort().join('||');
+      if(currentSignature!==previewSignature)throw new Error('The selected files changed after preview. Run Review & Preview Changes again.');
       if(!has('common_excel_upload','create'))throw new Error('Common Excel Upload permission required.');
-      if(!allowedDepartmentList().some(d=>String(d).toLowerCase()===preview.department.toLowerCase()))throw new Error('Department access changed. Refresh and preview again.');
-      const confirmText='Reconcile '+preview.department+' stock from '+file.name+'?\n\nKeep in Main Stock: '+preview.keptCount+'\nAdd new: '+preview.newCount+'\nMove to Retail: '+preview.retailCount+'\nProtected from auto-move: '+preview.protectedCount+'\n\nOnly active OPEN / ALLOTED / DEALER / HOLD vehicles missing from this complete Tally report will move to Retail. Continue?';
+      if(!plans.every(p=>allowedDepartmentList().some(d=>String(d).toLowerCase()===p.department.toLowerCase())))throw new Error('Department access changed. Refresh and preview again.');
+      const confirmText='Upload and reconcile all selected Tally files?\n\n'+plans.map(p=>p.department+' — '+p.fileName+
+        '\nKeep: '+p.keptCount+' · Add: '+p.newCount+' · Move to Retail: '+p.retailCount+' · Protected: '+p.protectedCount).join('\n\n')+
+        '\n\nEach report will update only its own department. Missing OPEN / ALLOTED / DEALER / HOLD vehicles in each complete report will move to that department Retail. Continue?';
       if(!confirm(confirmText))return;
-      const payload=preview.rows;
-      const result=await call(db().rpc('reconcile_tally_stock',{
-        p_department:preview.department,
-        p_rows:payload,
-        p_file_name:file.name,
-        p_expected_total:preview.reportTotal,
-        p_model_totals:preview.modelTotals
-      }));
-      await audit('common_excel_upload','create','Reconciled '+preview.department+' stock from complete Tally Closing Balance report','stock_import_batch',null,{
-        file:file.name,report_total:preview.reportTotal,inserted:result.inserted,unchanged:result.unchanged,
-        retailed:result.retailed,protected_not_moved:result.protected_not_moved,date_range:preview.dateRange
-      });
+      const completed=[];
+      for(const preview of plans){
+        try{
+          const result=await call(db().rpc('reconcile_tally_stock',{
+            p_department:preview.department,p_rows:preview.rows,p_file_name:preview.fileName,
+            p_expected_total:preview.reportTotal,p_model_totals:preview.modelTotals
+          }));
+          await audit('common_excel_upload','create','Reconciled '+preview.department+' stock from complete Tally Closing Balance report','stock_import_batch',null,{
+            file:preview.fileName,report_total:preview.reportTotal,inserted:result.inserted,unchanged:result.unchanged,
+            retailed:result.retailed,protected_not_moved:result.protected_not_moved,date_range:preview.dateRange
+          });
+          completed.push({department:preview.department,file:preview.fileName,result});
+        }catch(error){
+          const done=completed.map(x=>x.department+' completed').join(', ');
+          throw new Error((done?done+'. ':'')+preview.department+' failed: '+(error.message||'reconciliation failed')+'. Re-run Preview for all selected files before retrying.');
+        }
+      }
       quotationStockCache.clear();robinTallyPreview=null;robinStockPreviewRows=[];
       await renderStock();await loadImportHistory();
-      $('robinStockSummary').textContent=
-        'RECONCILIATION COMPLETE · '+result.department+
-        '\nTally total: '+result.total_rows+
-        '\nAdded to Main Stock: '+result.inserted+
-        '\nAlready present: '+result.unchanged+
-        '\nMoved to Retail with history: '+result.retailed+
-        '\nProtected special-stage records: '+result.protected_not_moved;
-      if($('robinStockApply'))$('robinStockApply').disabled=true;
-      if($('robinStockRows'))$('robinStockRows').innerHTML='<tr><td colspan="7" class="empty">Reconciliation completed. Run a new preview for the next Tally file.</td></tr>';
-      notify(preview.department+' Tally stock reconciliation completed.');
-    }catch(e){console.error(e);notify(e.message||'Tally reconciliation failed.');}
+      $('tallyStockSummary').textContent='TALLY STOCK UPLOAD COMPLETE\n\n'+completed.map(x=>x.department+' · '+x.file+
+        '\nTally total: '+x.result.total_rows+
+        '\nAdded to Main Stock: '+x.result.inserted+
+        '\nAlready present: '+x.result.unchanged+
+        '\nMoved to Retail with history: '+x.result.retailed+
+        '\nProtected special-stage records: '+x.result.protected_not_moved).join('\n\n');
+      if($('tallyStockFiles'))$('tallyStockFiles').value='';
+      if($('tallyStockApply'))$('tallyStockApply').disabled=true;
+      if($('tallyStockRows'))$('tallyStockRows').innerHTML='<tr><td colspan="7" class="empty">Reconciliation completed. Select new Tally files for the next upload.</td></tr>';
+      notify('All selected Tally department files reconciled successfully.');
+    }catch(e){
+      console.error(e);
+      if($('tallyStockSummary')){$('tallyStockSummary').style.display='block';$('tallyStockSummary').textContent='UPLOAD RESULT\n'+(e.message||'Tally reconciliation failed.');}
+      notify(e.message||'Tally reconciliation failed.');
+    }
   };
   window.openStockPrintPreview = () => {
     try {
