@@ -1645,6 +1645,39 @@ td,.data-table td{font-size:13px;line-height:1.45}
 }
 </style>
 <style id="quotation-header-order-v1">@media print{.top .dealer{grid-area:dealer!important;border-top:0!important;border-bottom:1px solid #ddd!important;padding:0 0 1.5mm!important}.top .quote-tag{grid-area:title!important;margin-top:1mm!important;font-size:14px!important}}</style>
+
+<style id="stock-register-mobile-final-refinement">
+/* Mobile-only Stock Register refinements: compact filters, persistent headings, tighter cells. */
+@media(max-width:680px){
+  /* When only the default department option exists, remove its empty grid slot. */
+  #view-stock .stock-filter-control:has(#stockDepartmentFilter option:only-child){display:none!important}
+  #view-stock .stock-filter-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px 7px!important;
+    align-items:start!important;
+  }
+  #view-stock .stock-filter-control{min-width:0!important}
+  #view-stock .stock-filter-control select{
+    min-height:44px!important;
+    padding-left:8px!important;
+    padding-right:20px!important;
+    font-size:11.5px!important;
+  }
+  #view-stock .stock-toolbar{gap:9px!important;margin-bottom:12px!important}
+  #view-stock #stockTable th,
+  #view-stock #stockTable td{
+    padding:4px 3px!important;
+  }
+  #view-stock #stockTable thead th{
+    position:sticky!important;
+    top:0!important;
+    z-index:15!important;
+    background:#f3f6fa!important;
+  }
+  #view-stock #stockTable th{padding:6px 3px!important}
+  #view-stock #stockTable td{font-size:10px!important}
+}
+</style>
 </head>
 <body>
 <header class="topbar">
