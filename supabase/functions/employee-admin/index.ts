@@ -141,7 +141,7 @@ Deno.serve(async (req: Request) => {
     if(body.phone&&phone.length!==10)return json({error:"Mobile number must be 10 digits. +91 or a leading 0 is accepted."},400);
     if(city&&!allowedCities.has(city))return json({error:"Select a valid city"},400);
     if(callerRole==="Manager"&&(!profile.city||city!==profile.city))return json({error:"A Manager can create employees only in their own city."},403);
-    const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
+    const allowedDepartments = new Set(["Personal","EV","Commercial","LMM"]);
     if (!email || !fullName || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: "Valid email and full name are required" }, 400);
     if (password.length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
     if (!roles.includes(role)) return json({ error: "Select a valid designation / role" }, 400);
@@ -224,10 +224,10 @@ Deno.serve(async (req: Request) => {
     }
     if (typeof patch.city === "string" && patch.city && !["Bhavnagar","Amreli","Botad","Rajula"].includes(patch.city)) return json({error:"Select a valid city"},400);
     if(callerRole==="Manager"&&Object.prototype.hasOwnProperty.call(patch,"city")&&String(patch.city||"").trim()!==String(profile.city||"").trim())return json({error:"A Manager can assign employees only within their own city."},403);
-    if (typeof patch.department === "string" && patch.department && !["Personal","EV","Commercial","LLM"].includes(patch.department)) return json({ error: "Invalid department" }, 400);
+    if (typeof patch.department === "string" && patch.department && !["Personal","EV","Commercial","LMM"].includes(patch.department)) return json({ error: "Invalid department" }, 400);
     if (body.department_access !== undefined) {
       const access = Array.isArray(body.department_access) ? body.department_access.map(String) : [];
-      const allowedDepartments = new Set(["Personal","EV","Commercial","LLM"]);
+      const allowedDepartments = new Set(["Personal","EV","Commercial","LMM"]);
       if (access.some((d: string) => !allowedDepartments.has(d))) return json({ error: "Invalid department access" }, 400);
       const finalAccess = [...new Set(access)];
       if (!finalAccess.length) return json({error:"Select at least one department"},400);
@@ -297,7 +297,7 @@ Deno.serve(async (req: Request) => {
     if(targetError||!target||target.deleted_at) return json({error:"Active employee not found"},404);
     if(target.is_super_admin) return json({error:"Super Admin permissions cannot be changed"},403);
     const requestedDepartments=Array.isArray(body.departments)?[...new Set(body.departments.map(String))]:[];
-    const validDepartments=new Set(["Personal","EV","Commercial","LLM"]);
+    const validDepartments=new Set(["Personal","EV","Commercial","LMM"]);
     if(requestedDepartments.some((d:string)=>!validDepartments.has(d)))return json({error:"Invalid department selection"},400);
     if(!isOrgAdmin&&requestedDepartments.some((d:string)=>!canManageDepartment(d)))return json({error:"You cannot assign departments outside your own access."},403);
     if(callerRole==="Manager"&&requestedDepartments.some((d:string)=>!canManageDepartment(d)))return json({error:"A Manager can assign only departments in their own Department Access."},403);
