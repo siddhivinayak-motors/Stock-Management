@@ -1464,62 +1464,66 @@ td,.data-table td{font-size:13px;line-height:1.45}
 @media(max-width:680px){#view-otf-management table{min-width:1380px}}
 </style>
 
-<style id="stock-register-mobile-compact-table-v2">
-/* Mobile Stock Register uses the same complete table and column order as desktop.
-   Only mobile sizing/scrolling is adjusted; desktop styles remain untouched. */
+<style id="stock-register-mobile-compact-table-v3">
+/* Mobile Stock Register: exact 18-column alignment with renderStock() output.
+   All columns stay visible; compact spacing and horizontal scrolling prevent clipping. */
 @media(max-width:680px){
   #view-stock .card:has(#stockTable)>.table-wrap{
-    width:100%!important;max-width:100%!important;
+    display:block!important;width:100%!important;max-width:100%!important;
     overflow-x:auto!important;overflow-y:visible!important;
     -webkit-overflow-scrolling:touch!important;
-    padding:6px!important;
+    padding:4px!important;
   }
   #view-stock #stockTable{
-    display:table!important;width:100%!important;min-width:1480px!important;
-    max-width:none!important;table-layout:fixed!important;
+    display:table!important;width:max-content!important;min-width:1680px!important;
+    max-width:none!important;table-layout:auto!important;
     border-collapse:collapse!important;border-spacing:0!important;
   }
   #view-stock #stockTable thead{display:table-header-group!important}
   #view-stock #stockTable tbody{display:table-row-group!important;width:auto!important}
-  #view-stock #stockTable tr[data-stock-id]{
-    display:table-row!important;width:auto!important;margin:0!important;
-    padding:0!important;overflow:visible!important;
-    border:0!important;box-shadow:none!important;
-  }
+  #view-stock #stockTable tr[data-stock-id]{display:table-row!important;width:auto!important;margin:0!important;padding:0!important;overflow:visible!important}
   #view-stock #stockTable th,
   #view-stock #stockTable td{
-    display:table-cell!important;position:static!important;
-    box-sizing:border-box!important;min-width:0!important;
-    padding:6px 5px!important;margin:0!important;
-    font-size:10.5px!important;line-height:1.25!important;
-    vertical-align:middle!important;white-space:nowrap!important;
+    display:table-cell!important;position:static!important;box-sizing:border-box!important;
+    min-width:0!important;padding:5px 5px!important;margin:0!important;
+    font-size:10.5px!important;line-height:1.25!important;vertical-align:middle!important;
+    white-space:normal!important;overflow:visible!important;text-overflow:clip!important;
+    overflow-wrap:anywhere!important;word-break:normal!important;
     border-bottom:1px solid #e5e9ef!important;
-    overflow:hidden!important;text-overflow:ellipsis!important;
   }
   #view-stock #stockTable th{
-    font-size:10px!important;font-weight:800!important;
-    padding-top:8px!important;padding-bottom:8px!important;
-    white-space:normal!important;
+    padding:7px 5px!important;font-size:9.5px!important;font-weight:800!important;
+    line-height:1.2!important;text-align:left!important;vertical-align:bottom!important;
   }
-  #view-stock #stockTable td:nth-child(1){min-width:104px!important}
-  #view-stock #stockTable td:nth-child(9){min-width:145px!important}
-  #view-stock #stockTable td:nth-child(15),
-  #view-stock #stockTable td:nth-child(16){min-width:125px!important}
-  #view-stock #stockTable td:nth-child(17),
-  #view-stock #stockTable td:nth-child(18){min-width:100px!important}
+  /* Undo the runtime's tablet rule that hides columns 8 onward. */
+  #view-stock #stockTable th:nth-child(n+8),
+  #view-stock #stockTable td:nth-child(n+8){display:table-cell!important}
+  #view-stock #stockTable th:nth-child(1),#view-stock #stockTable td:nth-child(1){min-width:88px!important}
+  #view-stock #stockTable th:nth-child(2),#view-stock #stockTable td:nth-child(2){min-width:48px!important}
+  #view-stock #stockTable th:nth-child(3),#view-stock #stockTable td:nth-child(3){min-width:105px!important}
+  #view-stock #stockTable th:nth-child(4),#view-stock #stockTable td:nth-child(4){min-width:120px!important}
+  #view-stock #stockTable th:nth-child(5),#view-stock #stockTable td:nth-child(5){min-width:58px!important}
+  #view-stock #stockTable th:nth-child(6),#view-stock #stockTable td:nth-child(6){min-width:75px!important}
+  #view-stock #stockTable th:nth-child(7),#view-stock #stockTable td:nth-child(7){min-width:68px!important}
+  #view-stock #stockTable th:nth-child(8),#view-stock #stockTable td:nth-child(8){min-width:100px!important}
+  #view-stock #stockTable th:nth-child(9),#view-stock #stockTable td:nth-child(9){min-width:150px!important}
+  #view-stock #stockTable th:nth-child(10),#view-stock #stockTable td:nth-child(10){min-width:120px!important}
+  #view-stock #stockTable th:nth-child(11),#view-stock #stockTable td:nth-child(11){min-width:90px!important}
+  #view-stock #stockTable th:nth-child(12),#view-stock #stockTable td:nth-child(12){min-width:80px!important}
+  #view-stock #stockTable th:nth-child(13),#view-stock #stockTable td:nth-child(13){min-width:55px!important}
+  #view-stock #stockTable th:nth-child(14),#view-stock #stockTable td:nth-child(14){min-width:82px!important}
+  #view-stock #stockTable th:nth-child(15),#view-stock #stockTable td:nth-child(15){min-width:135px!important}
+  #view-stock #stockTable th:nth-child(16),#view-stock #stockTable td:nth-child(16){min-width:165px!important}
+  #view-stock #stockTable th:nth-child(17),#view-stock #stockTable td:nth-child(17){min-width:105px!important}
+  #view-stock #stockTable th:nth-child(18),#view-stock #stockTable td:nth-child(18){min-width:82px!important}
   #view-stock #stockTable td:nth-child(1) .btn{
     display:inline-flex!important;min-width:0!important;width:auto!important;
-    height:27px!important;min-height:27px!important;
-    padding:4px 7px!important;margin:1px 2px 1px 0!important;
-    font-size:10px!important;line-height:1.1!important;
+    height:26px!important;min-height:26px!important;padding:4px 6px!important;
+    margin:1px 2px 1px 0!important;font-size:9.5px!important;line-height:1.1!important;
     white-space:nowrap!important;
   }
-  #view-stock #stockTable tbody tr:not([data-stock-id]){
-    display:table-row!important;
-  }
-  #view-stock #stockTable tbody tr:not([data-stock-id]) td{
-    display:table-cell!important;
-  }
+  #view-stock #stockTable tbody tr:not([data-stock-id]){display:table-row!important}
+  #view-stock #stockTable tbody tr:not([data-stock-id]) td{display:table-cell!important}
 }
 </style>
 
@@ -1864,7 +1868,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
  <div class="page-head stock-page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1 id="stockPageTitle">Personal — Stock Register</h1><div class="subtitle" id="stockPageSubtitle">Personal · Live operational workspace</div></div><div class="stock-page-actions"><button class="btn stock-refresh-button" type="button" onclick="toast('Stock refreshed')">⟳ &nbsp;Refresh</button><button class="btn" type="button" id="stockPrintPdfButton" onclick="window.openStockPrintPreview?.()">Print / PDF</button></div></div>
  <div class="toolbar stock-toolbar"><div class="search stock-search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input placeholder="Search chassis, model, variant, colour, customer..." id="stockSearch"></div><div class="stock-filter-grid"><label class="stock-filter-control"><span>Department</span><select id="stockDepartmentFilter"><option>All Accessible Departments</option></select></label><label class="stock-filter-control"><span>Stock Status</span><select id="stockStatusFilter"><option value="All">All Statuses</option><option value="In Transit">In Transit</option><option value="Received / In Stock">Received / In Stock</option><option value="Delivered">Delivered</option></select></label><label class="stock-filter-control"><span>Stock Stage</span><select id="stockStageFilter"><option value="ACTIVE" selected>Active Stock</option><option value="All">All Records</option><option value="EXITED">Exited Vehicles</option><option value="OPEN">OPEN</option><option value="ALLOTED">ALLOTED</option><option value="HOLD">HOLD</option><option value="DAMAGE">DAMAGE</option><option value="RETAIL">RETAIL</option><option value="DEMO">DEMO</option><option value="TRANSFER_OUT">TRANSFER OUT</option><option value="OTHER">OTHER</option><option value="BILLING DONE">BILLING DONE</option><option value="DEALER">DEALER</option><option value="DAMO">DAMO</option></select></label></div></div>
  <div class="card"><div class="card-head"><div class="card-title">0 records · Add or import stock to begin</div><button class="btn primary small" id="addVehicle">＋ Add Vehicle</button></div><div class="card-body" id="vehicleForm" style="display:none"><div class="form-grid"><div class="field" id="stockNewVehicleDepartmentWrap"><label>Department</label><select id="stockDepartmentForNewVehicle" class="field"></select></div><div class="field"><label>Chassis Number</label><input placeholder="Enter chassis number"></div><div class="field"><label>Excel Number</label><input></div><div class="field"><label>Model</label><input></div><div class="field"><label>Variant</label><input></div><div class="field"><label>Seating</label><input></div><div class="field"><label>Colour</label><input></div><div class="field"><label>Manufacturing Year</label><input></div><div class="field"><label>OEM Invoice Date</label><input type="date"></div><div class="field"><label>Engine Number</label><input></div><div class="field"><label>SC Name</label><input></div><div class="field"><label>Customer Name</label><input></div><div class="field"><label>Status</label><select><option>Received / In Stock</option><option>Delivered</option></select></div><div class="field"><label>Stage</label><select><option>OPEN</option><option>HOLD</option><option>ALLOTED</option></select></div><div class="field"><label>Place</label><input></div></div><div style="text-align:right;margin-top:14px"><button class="btn primary" onclick="toast('Demo only — connect database to save')">Save Vehicle</button></div></div>
- <div class="table-wrap"><table id="stockTable"><thead><tr><th>HOLD</th><th>SR.NO</th><th>MODEL</th><th>VARIENTS</th><th>SEATING</th><th>COLOR</th><th>MFG YEAR</th><th>OEM INVOICE DATE</th><th>CHASSIS NUMBER</th><th>ENGINE NUMBER</th><th>STATUS</th><th>PLACE</th><th>AGEING</th><th>STAGE</th><th>SC NAME</th><th>CUSTOMER NAME</th><th>ALLOTED DATE</th><th>ALLOTED AGEING</th><th>ACTIONS</th></tr></thead><tbody><tr><td colspan="19" class="empty">No stock records yet. Import the STOCK worksheet to begin.</td></tr></tbody></table></div></div>
+ <div class="table-wrap"><table id="stockTable"><thead><tr><th>HOLD / ACTIONS</th><th>SR.NO</th><th>MODEL</th><th>VARIENTS</th><th>SEATING</th><th>COLOR</th><th>MFG YEAR</th><th>OEM INVOICE DATE</th><th>CHASSIS NUMBER</th><th>ENGINE NUMBER</th><th>STATUS</th><th>PLACE</th><th>AGEING</th><th>STAGE</th><th>SC NAME</th><th>CUSTOMER NAME</th><th>ALLOTED DATE</th><th>ALLOTED AGEING</th></tr></thead><tbody><tr><td colspan="19" class="empty">No stock records yet. Import the STOCK worksheet to begin.</td></tr></tbody></table></div></div>
 </section>
 <section class="view" id="view-employees">
  <div class="page-head"><div><div class="breadcrumb">← Dashboard</div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1>Employee Management</h1><div class="subtitle">Live operational workspace</div></div><button class="btn" onclick="window.SVMBackend?.refreshEmployees?.()">⟳ &nbsp;Refresh</button></div>
