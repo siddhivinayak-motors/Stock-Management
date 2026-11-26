@@ -839,7 +839,9 @@ td,.data-table td{font-size:13px;line-height:1.45}
 
 /* V26 — Stock Register filters and action hierarchy (Personal + General/other departments) */
 #view-stock .stock-page-head{align-items:flex-start;gap:18px}
-#view-stock .stock-page-actions{display:flex;flex-direction:row;align-items:stretch;gap:9px;flex:0 0 286px}
+#view-stock .stock-page-actions{display:grid;grid-template-columns:1fr 1fr;align-items:stretch;gap:9px;flex:0 0 286px}
+ #view-stock .stock-page-actions .stock-refresh-button{grid-column:1/-1}
+ #view-stock .stock-page-actions .btn{width:100%;min-width:0}
 #view-stock .stock-page-actions .btn{width:100%;min-height:54px;justify-content:center;border-radius:13px;font-size:14px;font-weight:800}
 #view-stock #stockPrintPdfButton{background:#c92535!important;border:1px solid #b51e2c!important;color:#fff!important;box-shadow:0 4px 11px rgba(201,37,53,.17)}
 #view-stock #stockPrintPdfButton:hover{background:#ad1d2b!important}
@@ -858,7 +860,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
 }
 @media(max-width:680px){
  #view-stock .stock-page-head{display:flex;align-items:flex-start;gap:12px}
- #view-stock .stock-page-actions{flex:0 0 100%;gap:8px;max-width:100%}
+ #view-stock .stock-page-actions{flex:0 0 100%;gap:8px;max-width:100%;grid-template-columns:1fr 1fr}
  #view-stock .stock-page-actions .btn{flex:1;min-width:0;min-height:48px;padding:8px 6px;font-size:12px;border-radius:11px;white-space:nowrap}
  #view-stock .stock-toolbar{gap:12px}
  #view-stock .stock-search{min-height:54px}
