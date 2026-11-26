@@ -1156,87 +1156,144 @@
     } catch(e) {console.error(e);notify(e.message||'Stock sync failed.');}
   };
   let robinStockPreviewRows = [];
+  let robinTallyPreview = null;
+  const robinActiveStages = new Set(['OPEN','ALLOTED','ALLOTTED','DEALER','HOLD']);
+  const robinFileSignature = file => [file?.name||'',file?.size||0,file?.lastModified||0].join('|');
+  const robinCellText = value => String(value??'').replace(/\u00a0/g,' ').trim();
+  const robinTallyParse = async file => {
+    if(!window.XLSX) throw new Error('Excel reader did not load. Reload the page.');
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
+    if(!wb.SheetNames||wb.SheetNames.length!==1) throw new Error('Upload one Tally department report at a time. The workbook must contain exactly one worksheet.');
+    const sheetName=String(wb.SheetNames[0]||'').trim().toUpperCase();
+    const department=sheetName==='UV VEHICLES'?'Commercial':sheetName==='LMM VEHICLES'?'LLM':'';
+    if(!department) throw new Error('Wrong Tally worksheet. Use UV VEHICLES for Commercial or LMM VEHICLES for LLM.');
+    const matrix=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true});
+    const headerIndex=matrix.findIndex(row=>robinCellText(row?.[0]).toUpperCase()==='PARTICULARS' && row.some(v=>robinCellText(v).toUpperCase()==='CLOSING BALANCE'));
+    if(headerIndex<0) throw new Error('Tally Closing Balance header was not found. No data changed.');
+    const dateRange=matrix.slice(0,headerIndex).flat().map(robinCellText).find(x=>/\d{1,2}-[A-Za-z]{3}-\d{2}\s+to\s+\d{1,2}-[A-Za-z]{3}-\d{2}/i.test(x));
+    if(!dateRange) throw new Error('Tally report period is missing. No data changed.');
+    const grand=matrix.find(row=>robinCellText(row?.[0]).toUpperCase()==='GRAND TOTAL');
+    if(!grand) throw new Error('Grand Total row is missing. This file may be incomplete.');
+    const reportTotal=Number(grand[2]);
+    if(!Number.isInteger(reportTotal)||reportTotal<1) throw new Error('Grand Total quantity is invalid.');
+    const rows=[], modelTotals=[];
+    let currentModel='';
+    for(let i=headerIndex+1;i<matrix.length;i++){
+      const row=matrix[i]||[];
+      const first=robinCellText(row[0]), colour=robinCellText(row[1]), quantity=Number(row[2]);
+      if(!first) continue;
+      if(first.toUpperCase()==='GRAND TOTAL') break;
+      const chassis=first.toUpperCase();
+      if(/^[A-Z0-9]{17}$/.test(chassis)){
+        if(!currentModel) throw new Error('A chassis row appears before its model heading at Excel row '+(i+1)+'.');
+        if(!colour) throw new Error('Colour is missing for chassis '+chassis+'.');
+        if(quantity!==1) throw new Error('Chassis '+chassis+' must have quantity 1.');
+        rows.push({chassis_number:chassis,model:currentModel,colour});
+      } else if(/^MA[A-Z0-9\s./+-]*$/i.test(first) && Number.isInteger(quantity) && quantity>0){
+        currentModel=first;
+        modelTotals.push({model:currentModel,quantity});
+      } else {
+        throw new Error('Unrecognised or malformed Tally row at Excel row '+(i+1)+': '+first+'. No data changed.');
+      }
+    }
+    if(rows.length!==reportTotal) throw new Error('Grand Total is '+reportTotal+' but only '+rows.length+' chassis rows were read. Upload blocked.');
+    const seen=new Set();
+    for(const row of rows){
+      if(seen.has(row.chassis_number)) throw new Error('Duplicate chassis number in Tally file: '+row.chassis_number);
+      seen.add(row.chassis_number);
+    }
+    const actualByModel=new Map();
+    for(const row of rows) actualByModel.set(row.model,(actualByModel.get(row.model)||0)+1);
+    if(modelTotals.length!==actualByModel.size || modelTotals.some(x=>actualByModel.get(x.model)!==x.quantity)){
+      throw new Error('Model-wise quantities do not match the chassis rows. Upload blocked.');
+    }
+    if(modelTotals.reduce((n,x)=>n+x.quantity,0)!==reportTotal) throw new Error('Model quantities do not match Grand Total. Upload blocked.');
+    return {department,sheetName,dateRange,reportTotal,rows,modelTotals};
+  };
   window.robinStockPreview = async () => {
     try{
-      const file=$('robinStockFile')?.files?.[0];if(!file)throw new Error('Select the Robin Commercial / LLM stock report Excel file.');
-      if(!has('common_excel_upload','create'))throw new Error('You do not have Excel Upload permission.');
-      const rows=await readWorkbook(file);
+      robinTallyPreview=null;robinStockPreviewRows=[];
+      if($('robinStockApply'))$('robinStockApply').disabled=true;
+      const file=$('robinStockFile')?.files?.[0];
+      if(!file)throw new Error('Select the Commercial UV or LMM Tally Closing Stock Excel file.');
+      if(!has('common_excel_upload','create'))throw new Error('Common Excel Upload permission required.');
+      const parsed=await robinTallyParse(file);
+      const allowed=new Set(allowedDepartmentList().map(x=>String(x).toLowerCase()));
+      if(!allowed.has(parsed.department.toLowerCase()))throw new Error('Your employee account does not have '+parsed.department+' department access.');
       const existing=[];
-      for(let from=0;;from+=1000){const part=await call(db().from('vehicles').select('chassis_number,excel_number').range(from,from+999));existing.push(...part);if(part.length<1000)break;}
-      const seenChassis=new Set(existing.map(x=>String(x.chassis_number||'').trim().toUpperCase()).filter(Boolean));
-      const seenVin=new Set(existing.map(x=>String(x.excel_number||'').trim().toUpperCase()).filter(Boolean));
-      const allowedDepartments=new Set((canUploadAllCommonExcelDepartments()?['Personal','EV','Commercial','LLM']:allowedDepartmentList()).map(x=>String(x).toLowerCase()));
-      const mapSegment=segment=>{
-        if(segment==='PERSONAL'||segment.startsWith('PERSONAL'))return 'Personal';
-        if(segment==='BEV'||segment==='EV'||segment.includes('ELECTRIC'))return 'EV';
-        if(segment==='PROSPER'||segment.includes('PROSPER'))return 'Commercial';
-        if(segment==='LMM'||segment.startsWith('LMM'))return 'LLM';
-        return '';
-      };
-      const toDateValue=value=>{
-        if(value instanceof Date&&!isNaN(value))return value;
-        if(typeof value==='number'&&window.XLSX){const z=XLSX.SSF.parse_date_code(value);if(z)return new Date(z.y,z.m-1,z.d);}
-        if(value){const d=new Date(value);if(!isNaN(d))return d;}
-        return null;
-      };
-      robinStockPreviewRows=rows.filter(r=>Object.values(r||{}).some(v=>v!==null&&v!==undefined&&String(v).trim()!=='')).map(r=>{
-        const segment=String(plHeader(r,['segmentcode','segment'])||'').trim().toUpperCase();
-        const department=mapSegment(segment);
-        const chassis=String(plHeader(r,['chassisnumber','chassis'])||'').trim().toUpperCase();
-        const vin=String(plHeader(r,['vin'])||'').trim().toUpperCase();
-        const date=plHeader(r,['oeminvoicedate','invoicedate']);
-        const invoiceDate=toDateValue(date);
-        let decision='Import';
-        if(!department)decision='Review: Unknown Segment';
-        else if(!['Commercial','LLM'].includes(department))decision='Skip: Manager handles Personal / EV';
-        else if(!allowedDepartments.has(String(department).toLowerCase()))decision='Review: Outside your department';
-        else if(!chassis)decision='Review: Missing Chassis Number';
-        else if(!invoiceDate)decision='Review: Missing Invoice Date';
-        else if(invoiceDate.getFullYear()<2025)decision='Skip: Before 2025';
-        else if(seenChassis.has(chassis))decision='Duplicate Chassis — Skip';
-        else if(vin&&seenVin.has(vin))decision='Duplicate VIN — Skip';
-        else {seenChassis.add(chassis);if(vin)seenVin.add(vin);}
-        return {chassis,vin,model:String(plHeader(r,['model'])||''),variant:String(plHeader(r,['variantdesc','variant'])||''),segment,department,status:String(plHeader(r,['vehiclestatus','status'])||'Received'),stockType:String(plHeader(r,['stocktype'])||''),date,raw:r,decision};
-      });
-      const count=k=>robinStockPreviewRows.filter(x=>x.decision===k).length;
-      const review=robinStockPreviewRows.filter(x=>x.decision.startsWith('Review')).length;
-      const duplicates=robinStockPreviewRows.filter(x=>x.decision.startsWith('Duplicate')||x.decision.startsWith('Skip:')).length;
+      for(let from=0;;from+=1000){
+        const part=await call(db().from('vehicles').select('id,chassis_number,stage,status,model,variant').eq('department',parsed.department).range(from,from+999));
+        existing.push(...part);if(part.length<1000)break;
+      }
+      const existingByChassis=new Map(existing.map(v=>[String(v.chassis_number||'').trim().toUpperCase(),v]));
+      const incoming=new Set(parsed.rows.map(x=>x.chassis_number));
+      const alreadyRetail=parsed.rows.filter(x=>existingByChassis.get(x.chassis_number)?.stage==='RETAIL');
+      if(alreadyRetail.length)throw new Error('This Tally file contains '+alreadyRetail.length+' chassis already marked Retail. Resolve them before upload. Example: '+alreadyRetail[0].chassis_number);
+      const newRows=parsed.rows.filter(x=>!existingByChassis.has(x.chassis_number));
+      const keptRows=parsed.rows.filter(x=>existingByChassis.has(x.chassis_number));
+      const missing=existing.filter(v=>robinActiveStages.has(String(v.stage||'').toUpperCase())&&!incoming.has(String(v.chassis_number||'').trim().toUpperCase()));
+      const protectedRows=existing.filter(v=>!robinActiveStages.has(String(v.stage||'').toUpperCase())&&String(v.stage||'').toUpperCase()!=='RETAIL'&&!incoming.has(String(v.chassis_number||'').trim().toUpperCase()));
+      robinStockPreviewRows=[
+        ...parsed.rows.map(x=>({...x,decision:existingByChassis.has(x.chassis_number)?'Keep in Main Stock':'Add to Main Stock'})),
+        ...missing.map(v=>({chassis_number:v.chassis_number,model:v.model||'',colour:'',decision:'Move to Retail'})),
+        ...protectedRows.map(v=>({chassis_number:v.chassis_number,model:v.model||'',colour:'',decision:'Protected — No Auto Move ('+String(v.stage||'')+')'}))
+      ];
+      robinTallyPreview={...parsed,fileSignature:robinFileSignature(file),newCount:newRows.length,keptCount:keptRows.length,retailCount:missing.length,protectedCount:protectedRows.length};
       $('robinStockSummary').style.display='block';
-      $('robinStockSummary').textContent='Rows: '+rows.length+' · Importable: '+count('Import')+' · Duplicates skipped: '+duplicates+' · Needs review: '+review+' · Department: Personal '+robinStockPreviewRows.filter(x=>x.department==='Personal'&&x.decision==='Import').length+' / Commercial '+robinStockPreviewRows.filter(x=>x.department==='Commercial'&&x.decision==='Import').length+' / EV '+robinStockPreviewRows.filter(x=>x.department==='EV'&&x.decision==='Import').length+' / LLM '+robinStockPreviewRows.filter(x=>x.department==='LLM'&&x.decision==='Import').length;
-      $('robinStockRows').innerHTML=robinStockPreviewRows.slice(0,500).map(x=>'<tr><td>'+esc(x.chassis||'—')+'</td><td>'+esc(x.model)+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.segment)+'</td><td>'+esc(x.department||'Review')+'</td><td>'+esc(x.status)+'</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No valid rows found.</td></tr>';
-    }catch(e){console.error(e);notify(e.message);}
+      $('robinStockSummary').textContent=
+        parsed.department+' · '+parsed.sheetName+' · '+parsed.dateRange+
+        '\nTally total: '+parsed.reportTotal+
+        '\nAlready in Main Stock: '+keptRows.length+
+        '\nNew vehicles to add: '+newRows.length+
+        '\nMissing active stock to move to Retail: '+missing.length+
+        '\nSpecial stages protected from auto-move: '+protectedRows.length+
+        '\nValidation: PASSED · Review below, then Confirm & Reconcile.';
+      $('robinStockRows').innerHTML=robinStockPreviewRows.slice(0,1000).map(x=>'<tr><td>'+esc(x.chassis_number||'—')+'</td><td>'+esc(x.model||'')+'</td><td>'+esc(x.colour||'—')+'</td><td>'+esc(parsed.department)+'</td><td>'+esc(x.decision)+'</td><td>—</td><td>'+esc(x.decision)+'</td></tr>').join('')||'<tr><td colspan="7">No rows found.</td></tr>';
+      const apply=$('robinStockApply');
+      if(apply){apply.disabled=false;apply.textContent='Confirm & Reconcile '+parsed.department;}
+      notify('Tally validation passed. Review the stock changes before confirming.');
+    }catch(e){
+      console.error(e);robinTallyPreview=null;robinStockPreviewRows=[];
+      if($('robinStockSummary')){$('robinStockSummary').style.display='block';$('robinStockSummary').textContent='UPLOAD BLOCKED\n'+(e.message||'Tally validation failed.');}
+      if($('robinStockRows'))$('robinStockRows').innerHTML='<tr><td colspan="7" class="empty">Validation failed. No data changed.</td></tr>';
+      if($('robinStockApply'))$('robinStockApply').disabled=true;
+      notify(e.message||'Tally validation failed.');
+    }
   };
   window.robinStockCommit = async () => {
     try{
-      if(!Array.isArray(robinStockPreviewRows)||!robinStockPreviewRows.length)throw new Error('Generate Preview before uploading.');
-      if(!has('common_excel_upload','create'))throw new Error('You do not have Excel Upload permission.');
-      const file=$('robinStockFile')?.files?.[0];
-      const ready=robinStockPreviewRows.filter(x=>x.decision==='Import'&&['Commercial','LLM'].includes(x.department));
-      if(!ready.length)throw new Error('No new Commercial / LLM vehicles to import.');
-      if(!confirm('Upload '+ready.length+' new vehicles? Existing chassis numbers and duplicate rows will be skipped.'))return;
-      const records=ready.map(x=>{
-        const r=x.raw||{},inv=x.date;
-        let invoice=null;
-        if(inv instanceof Date)invoice=inv.toISOString().slice(0,10);
-        else if(typeof inv==='number'&&window.XLSX){const z=XLSX.SSF.parse_date_code(inv);if(z)invoice=new Date(Date.UTC(z.y,z.m-1,z.d)).toISOString().slice(0,10);}
-        else if(inv&&!isNaN(Date.parse(inv)))invoice=new Date(inv).toISOString().slice(0,10);
-        const stockType=String(x.stockType||'').trim().toUpperCase();
-        return {department:x.department,chassis_number:x.chassis,excel_number:x.vin||null,model:x.model||'Unknown',variant:x.variant||null,seating:String(plHeader(r,['seating','seat'])||'')||null,colour:String(plHeader(r,['colour','color'])||'')||null,oem_invoice_date:invoice,engine_number:String(plHeader(r,['enginenumber','engine'])||'')||null,sc_name:String(plHeader(r,['scname','salesconsultant'])||'')||null,customer_name:String(plHeader(r,['customername','customer'])||'')||null,status:x.status||'Received',stage:stockType==='ALLOTED'||stockType==='ALLOTTED'?'ALLOTED':'OPEN',place:String(plHeader(r,['physicallocation','dealerlocationname'])||'')||null,source:'robin_commercial_llm_stock_report',imported_at:new Date().toISOString(),created_by:currentUser.id};
+      const preview=robinTallyPreview,file=$('robinStockFile')?.files?.[0];
+      if(!preview||!file)throw new Error('Generate and review the Tally preview first.');
+      if(robinFileSignature(file)!==preview.fileSignature)throw new Error('The selected file changed after preview. Run Review & Preview Changes again.');
+      if(!has('common_excel_upload','create'))throw new Error('Common Excel Upload permission required.');
+      if(!allowedDepartmentList().some(d=>String(d).toLowerCase()===preview.department.toLowerCase()))throw new Error('Department access changed. Refresh and preview again.');
+      const confirmText='Reconcile '+preview.department+' stock from '+file.name+'?\n\nKeep in Main Stock: '+preview.keptCount+'\nAdd new: '+preview.newCount+'\nMove to Retail: '+preview.retailCount+'\nProtected from auto-move: '+preview.protectedCount+'\n\nOnly active OPEN / ALLOTED / DEALER / HOLD vehicles missing from this complete Tally report will move to Retail. Continue?';
+      if(!confirm(confirmText))return;
+      const payload=preview.rows;
+      const result=await call(db().rpc('reconcile_tally_stock',{
+        p_department:preview.department,
+        p_rows:payload,
+        p_file_name:file.name,
+        p_expected_total:preview.reportTotal,
+        p_model_totals:preview.modelTotals
+      }));
+      await audit('common_excel_upload','create','Reconciled '+preview.department+' stock from complete Tally Closing Balance report','stock_import_batch',null,{
+        file:file.name,report_total:preview.reportTotal,inserted:result.inserted,unchanged:result.unchanged,
+        retailed:result.retailed,protected_not_moved:result.protected_not_moved,date_range:preview.dateRange
       });
-      const imported=await call(db().rpc('import_stock_vehicles',{p_rows:records,p_file_name:file?.name||'Stock Report'}));
-      const skipped=robinStockPreviewRows.filter(x=>x.decision!=='Import').length;
-      const byDepartment=['Commercial','LLM'];
-      for(const dept of byDepartment){
-        const deptRows=robinStockPreviewRows.filter(x=>x.department===dept);
-        if(!deptRows.length)continue;
-        const deptImported=records.filter(x=>x.department===dept).length;
-        await call(db().from('stock_import_batches').insert({file_name:file?.name||'Stock Report',department:dept,imported_rows:deptImported,skipped_rows:deptRows.length-deptImported,error_rows:0,created_by:currentUser.id}));
-      }
-      await audit('common_excel_upload','create','Uploaded Robin Commercial / LLM stock report','stock_import_batch',null,{imported,skipped,file:file?.name||'',departments:['Commercial','LLM'].filter(d=>records.some(x=>x.department===d))});
-      quotationStockCache.clear();robinStockPreviewRows=[];await renderStock();await loadImportHistory();
-      $('robinStockSummary').textContent='Upload complete · Imported '+imported+' · Skipped '+skipped+'.';
-      notify(imported+' vehicles imported; '+skipped+' duplicates or review rows skipped.');
-    }catch(e){console.error(e);notify(e.message);}
+      quotationStockCache.clear();robinTallyPreview=null;robinStockPreviewRows=[];
+      await renderStock();await loadImportHistory();
+      $('robinStockSummary').textContent=
+        'RECONCILIATION COMPLETE · '+result.department+
+        '\nTally total: '+result.total_rows+
+        '\nAdded to Main Stock: '+result.inserted+
+        '\nAlready present: '+result.unchanged+
+        '\nMoved to Retail with history: '+result.retailed+
+        '\nProtected special-stage records: '+result.protected_not_moved;
+      if($('robinStockApply'))$('robinStockApply').disabled=true;
+      if($('robinStockRows'))$('robinStockRows').innerHTML='<tr><td colspan="7" class="empty">Reconciliation completed. Run a new preview for the next Tally file.</td></tr>';
+      notify(preview.department+' Tally stock reconciliation completed.');
+    }catch(e){console.error(e);notify(e.message||'Tally reconciliation failed.');}
   };
   window.openStockPrintPreview = () => {
     try {
