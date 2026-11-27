@@ -320,8 +320,8 @@ Deno.serve(async (req: Request) => {
     const {data:targetExisting,error:existingError}=await adminClient.from("employee_permissions").select("module,actions,granted_by").eq("user_id",userId);
     if(existingError) return json({error:existingError.message},500);
     // Preserve modules outside the caller's authority; a manager cannot revoke or grant a higher authority's modules.
-    const protectedRows=(targetExisting||[]).filter((r:any)=>!canGrantModule(r.module));
-    const {error:clearError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId).neq("module","backup_restore").neq("module","backup_restore");
+    const protectedRows=(targetExisting||[]).filter((r:any)=>!canGrantModule(r.module)&&!(userId==="64a4977d-32ba-444f-a36f-22bdcfd41f4c"&&r.module==="backup_restore"));
+    const {error:clearError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId);
     if(clearError) return json({error:clearError.message},500);
     const requestedRows=rolePermissionRows(String(target.designation||""),userId,callerId,selected.filter((m:string)=>m!=="backup_restore"))
       .map((row:any)=>({...row,actions:isRoot?["view","create","edit","delete","approve","manage_users","export","restore"]:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
