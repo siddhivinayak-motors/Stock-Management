@@ -2624,7 +2624,7 @@ th{background:#f0f2f4;font-weight:700}
 .payment-details-table th:nth-child(3),.payment-details-table td:nth-child(3){width:18%;white-space:normal}
 .payment-details-table th:nth-child(4),.payment-details-table td:nth-child(4){width:24%;text-align:right;white-space:nowrap}
 .payment-details-table th:nth-child(5),.payment-details-table td:nth-child(5){width:30%;white-space:normal;overflow-wrap:anywhere}
-.otf-payment-notes{margin-top:5px;font-family:Arial,'Nirmala UI','Noto Sans Gujarati',sans-serif;font-size:9px;line-height:1.28;color:#18212b;break-inside:avoid;page-break-inside:avoid}.otf-payment-notes ol{margin:0;padding-left:17px}.otf-payment-notes li{padding:1.5px 0 2px 1px;overflow-wrap:anywhere}.otf-payment-notes li+li{margin-top:2px}
+.otf-payment-notes{margin-top:5px;font-family:Arial,'Nirmala UI','Noto Sans Gujarati',sans-serif;font-size:10.5px;line-height:1.35;color:#18212b;break-inside:avoid;page-break-inside:avoid}.otf-payment-notes ol{margin:0;padding-left:17px}.otf-payment-notes li{padding:1.5px 0 2px 1px;overflow-wrap:anywhere}.otf-payment-notes li+li{margin-top:2px}
 .quote-payment-layout .totals div{display:grid;grid-template-columns:minmax(0,1fr) auto;justify-content:stretch;column-gap:4mm;padding:2.5px 0}
 .totals .discount-line{color:#087b42}
 .totals .grand-total{color:#087b42;font-size:14px;font-weight:900;border-top:1.5px solid #087b42;padding-top:5px;margin-top:3px}
