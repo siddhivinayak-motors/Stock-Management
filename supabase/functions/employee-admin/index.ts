@@ -323,7 +323,7 @@ Deno.serve(async (req: Request) => {
     const protectedRows=(targetExisting||[]).filter((r:any)=>!canGrantModule(r.module));
     const {error:clearError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId).neq("module","backup_restore").neq("module","backup_restore");
     if(clearError) return json({error:clearError.message},500);
-    const requestedRows=rolePermissionRows(String(target.designation||""),userId,callerId,selected)
+    const requestedRows=rolePermissionRows(String(target.designation||""),userId,callerId,selected.filter((m:string)=>m!=="backup_restore"))
       .map((row:any)=>({...row,actions:isRoot?["view","create","edit","delete","approve","manage_users","export","restore"]:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
       .filter((row:any)=>row.actions.length>0);
     const rows=[...protectedRows,...requestedRows,...(isPratikBackupException?[{user_id:userId,module:"backup_restore",actions:["view","export","restore"],granted_by:callerId}]:[])];
