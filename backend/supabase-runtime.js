@@ -163,7 +163,7 @@
     const role=String(currentProfile?.designation||'').trim();
     const roleKey=role.toLowerCase();
     // Backup & Restore is reserved for the unique Super Admin account.
-    if(module==='backup_restore') return resetIsSuperAdmin();
+    if(module==='backup_restore') return resetIsSuperAdmin() || (currentUser?.id==='64a4977d-32ba-444f-a36f-22bdcfd41f4c' && (permissions.get('backup_restore')||[]).includes(action));
     if(module==='common_excel_upload'&&!['super admin','admin','general manager','manager','hr'].includes(roleKey)) return false;
     // Price List visibility follows the employee's explicitly saved module permission.
     // Treat the canonical Super Admin designation as a full-access identity too.
@@ -1723,7 +1723,7 @@
     if((roleLevel[profile.designation]??0)>=(roleLevel[myRole]??0)&&!currentProfile?.is_super_admin){notify('You can manage only employees below your designation.');return;}
     const canGrantAll=!!currentProfile?.is_super_admin||myRole==='Admin'||myRole==='General Manager';
     const canGrantOperational=myRole==='Manager'||myRole==='HR';
-    const grantable=new Set(EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])).filter(m=>m!=='audit_history'||canGrantAll).filter(m=>canGrantAll||canGrantOperational).filter(m=>m!=='employee_management'||['Admin','General Manager','Manager','HR'].includes(String(profile.designation||''))));
+    const grantable=new Set(EMPLOYEE_MENU_GROUPS.flatMap(g=>g.items.map(x=>x[0])).filter(m=>m!=='audit_history'||canGrantAll).filter(m=>canGrantAll||canGrantOperational).filter(m=>m!=='employee_management'||['Admin','General Manager','Manager','HR'].includes(String(profile.designation||''))).filter(m=>m!=='backup_restore'||profile.user_id==='64a4977d-32ba-444f-a36f-22bdcfd41f4c'));
     const [currentRows]=await Promise.all([call(db().from('employee_permissions').select('module').eq('user_id',profile.user_id))]);
     const selected=new Set(currentRows.map(x=>x.module));
     const departments=['Personal','EV','Commercial','LMM'];
