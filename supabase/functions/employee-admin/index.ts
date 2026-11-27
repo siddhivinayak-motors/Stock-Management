@@ -21,7 +21,7 @@ const ROLE_MODULES: Record<string,string[]> = {
   "Reception": ["dashboard","stock_register","stock_hold_management","quotation_management","retail_reports","otf_management"],
   "Driver": ["stock_register","stock_hold_management","quotation_management","otf_management"]
 };
-const ALL_MODULES = ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","audit_history","retail_reports"];
+const ALL_MODULES = ["dashboard","stock_register","stock_hold_management","price_list_management","quotation_management","otf_management","employee_management","common_excel_upload","backup_restore","audit_history","retail_reports"];
 function rolePermissionRows(role: string, userId: string, grantedBy: string, selectedModules?: string[]) {
   const employeeManagementRoles = new Set(["Admin","General Manager","Manager","HR"]);
   const selected = [...new Set([...(selectedModules || []), ...(employeeManagementRoles.has(role) ? ["employee_management"] : [])])];
@@ -313,18 +313,20 @@ Deno.serve(async (req: Request) => {
     if (requestedModules.includes("employee_management") && !employeeManagementRoles.has(String(target.designation||""))) return json({error:"Employee Management is not available to this designation."},403);
     const selected = [...new Set([...requestedModules,...(employeeManagementRoles.has(String(target.designation||""))?["employee_management"]:[]),...(requestedDepartments.length?["stock_register","stock_hold_management","quotation_management","otf_management"]:[]),...(requestedDepartments.length&&canGrantModule("dashboard")?["dashboard"]:[])])];
     if(selected.some(m=>!ALL_MODULES.includes(m))) return json({error:"Invalid module selected"},400);
-    const forbidden=selected.filter((m:string)=>!canGrantModule(m));
+    const isPratikBackupException=userId==="64a4977d-32ba-444f-a36f-22bdcfd41f4c" && requestedModules.includes("backup_restore");
+    const forbidden=selected.filter((m:string)=>m!=="backup_restore"&&!canGrantModule(m));
+    if(requestedModules.includes("backup_restore")&&!isPratikBackupException)return json({error:"Backup & Restore can be assigned only to the authorized Manager account."},403);
     if(forbidden.length) return json({error:"You cannot grant permissions you do not have: "+forbidden.join(", ")},403);
     const {data:targetExisting,error:existingError}=await adminClient.from("employee_permissions").select("module,actions,granted_by").eq("user_id",userId);
     if(existingError) return json({error:existingError.message},500);
     // Preserve modules outside the caller's authority; a manager cannot revoke or grant a higher authority's modules.
     const protectedRows=(targetExisting||[]).filter((r:any)=>!canGrantModule(r.module));
-    const {error:clearError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId);
+    const {error:clearError}=await adminClient.from("employee_permissions").delete().eq("user_id",userId).neq("module","backup_restore").neq("module","backup_restore");
     if(clearError) return json({error:clearError.message},500);
     const requestedRows=rolePermissionRows(String(target.designation||""),userId,callerId,selected)
       .map((row:any)=>({...row,actions:isRoot?["view","create","edit","delete","approve","manage_users","export","restore"]:row.actions.filter((a:string)=>(callerActions.get(row.module)||[]).includes(a))}))
       .filter((row:any)=>row.actions.length>0);
-    const rows=[...protectedRows,...requestedRows];
+    const rows=[...protectedRows,...requestedRows,...(isPratikBackupException?[{user_id:userId,module:"backup_restore",actions:["view","export","restore"],granted_by:callerId}]:[])];
     if(rows.length){
       const {error:saveError}=await adminClient.from("employee_permissions").upsert(rows,{onConflict:"user_id,module"});
       if(saveError) return json({error:saveError.message},500);
