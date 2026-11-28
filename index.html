@@ -1861,6 +1861,38 @@ td,.data-table td{font-size:13px;line-height:1.45}
  #view-reports table th:last-child,#view-reports table td:last-child{display:none!important}
 }
 </style>
+
+<style id="quotation-number-full-visibility-final">
+/* Final override: keep complete quotation IDs readable at every screen width. */
+#view-quotation-management .table-wrap>table{
+  min-width:1640px!important;
+}
+#view-quotation-management .table-wrap>table th:nth-child(1),
+#view-quotation-management .table-wrap>table td:nth-child(1){
+  box-sizing:border-box!important;
+  width:210px!important;
+  min-width:210px!important;
+  max-width:210px!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  line-height:1.4!important;
+  vertical-align:middle!important;
+}
+#view-quotation-management .table-wrap>table th:nth-child(1){
+  white-space:normal!important;
+}
+#quoteManagementRows td:first-child{
+  white-space:normal!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:anywhere!important;
+  word-break:normal!important;
+  line-height:1.4!important;
+}
+</style>
 </head>
 <body>
 <header class="topbar">
