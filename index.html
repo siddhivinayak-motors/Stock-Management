@@ -1972,7 +1972,7 @@ td,.data-table td{font-size:13px;line-height:1.45}
 <section class="view" id="view-quotation">
  <div class="page-head"><div><div class="eyebrow">SIDDHIVINAYAK MAHINDRA</div><h1 id="quotationPageTitle">Personal — Quotation</h1><div class="subtitle">Quotation layout matching the Siddhivinayak Motors printed quotation format</div></div><button class="btn" onclick="resetQuotationForm()">＋ &nbsp;New Quotation</button></div>
  <div class="card quote-create-card">
-  <div class="card-head"><div><div class="card-title">Create New Quotation</div><div class="card-desc">Save to update the latest matching customer and vehicle quotation. Print opens the latest saved version.</div></div><span class="pill red">NEW</span></div>
+  <div class="card-head"><div><div class="card-title">Create New Quotation</div><div class="card-desc">Every Save creates a new quotation with a unique SVM number. Print opens the saved quotation.</div></div><span class="pill red">NEW</span></div>
   <div class="card-body">
    <div class="quote-number-strip"><span>Quotation Number</span><strong id="quoteNumber">PV-20261120-AUTO</strong><span class="auto-tag">AUTO GENERATED</span></div>
    <div class="q-section-heading">01 · CUSTOMER DETAILS</div>
@@ -2425,8 +2425,8 @@ const demoQuotes=[];
 let quoteRecords;
 try{quoteRecords=JSON.parse(localStorage.getItem(quoteStoreKey)||'null')||demoQuotes.map(x=>({...x}));}catch(e){quoteRecords=demoQuotes.map(x=>({...x}));}
 function money(n){return '₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}
-function nextQuoteNumber(){const prefix=({Personal:'PV',EV:'EV',Commercial:'CV',LMM:'LV'}[currentQuoteDepartment]||'PV');const now=new Date(),pad=n=>String(n).padStart(2,'0'),dateKey=now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate());return prefix+'-'+dateKey+'-AUTO'}
-function updateQuoteNumber(){const el=document.getElementById('quoteNumber');if(el)el.textContent=nextQuoteNumber()}
+function nextQuoteNumber(){const customer=String(document.getElementById('qCustomer')?.value||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('en-IN');return (customer||'CUSTOMER NAME')+' - SVM AUTO'}
+function updateQuoteNumber(){const el=document.getElementById('quoteNumber');if(!el)return;const customer=String(document.getElementById('qCustomer')?.value||'').trim().replace(/\s+/g,' ').toLocaleUpperCase('en-IN');const editing=document.querySelector('#view-quotation .card-head .pill')?.textContent?.trim()==='EDIT MODE';if(editing){const serial=String(el.textContent||'').match(/SVM\d+$/i)?.[0];if(serial&&customer)el.textContent=customer+' - '+serial.toUpperCase();return;}if(el.dataset.saved==='true')return;el.textContent=(customer||'CUSTOMER NAME')+' - SVM AUTO'}
 function isDiscountChargeRow(r){
  const name=(r?.querySelector('.q-charge-name')?.textContent||r?.querySelector('.q-charge-name')?.value||r?.querySelector('select')?.value||r?.querySelector('.q-charge-editable')?.value||r?.querySelector('.amount')?.dataset?.charge||'').trim();
  return !!r?.classList?.contains('discount-charge') || /\\bdiscount\\b|\\bless\\b/i.test(name);
@@ -2980,6 +2980,9 @@ document.getElementById('qColour').addEventListener('change',quoteAutoFillPrice)
 refreshQuotePriceSuggestions();
 loadDepartmentQuotes();
 setQuotationDateTime();
+const quoteCustomerInput=document.getElementById('qCustomer');
+if(quoteCustomerInput)quoteCustomerInput.addEventListener('input',()=>{const numberEl=document.getElementById('quoteNumber');if(numberEl&&document.querySelector('#view-quotation .card-head .pill')?.textContent?.trim()!=='EDIT MODE')numberEl.dataset.saved='false';updateQuoteNumber();});
+updateQuoteNumber();
 document.getElementById('charges').addEventListener('input',calc);
 document.getElementById('charges').addEventListener('change',calc);
 quoteDiscounts.addEventListener('input',calc);
