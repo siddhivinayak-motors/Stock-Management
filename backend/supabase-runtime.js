@@ -970,10 +970,18 @@
     department:typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'',
     fields:[...document.querySelectorAll('#view-quotation input, #view-quotation textarea, #view-quotation select')].map(el=>[el.id||el.name||el.className||el.tagName,String(el.value??'')])
   });
+  async function resolveQuotationSalesMobile(userId, fallback='') {
+    const existing=String(fallback||'').trim();
+    if(existing) return existing;
+    if(!userId) return '';
+    const profile=await call(db().from('profiles').select('phone').eq('user_id',userId).maybeSingle());
+    return String(profile?.phone||'').trim();
+  }
   window.saveQuote = async (printAfter=false) => {
     try {
       const rawQuote=getQuotePayload(); if(!rawQuote) return;
       const q=quotationFinalAmounts(rawQuote);
+      q.salesMobile=await resolveQuotationSalesMobile(q.salesConsultantId||currentUser.id,q.salesMobile);
       const formSnapshot=captureQuotationForm();
       const submittedFingerprint=quotationFormFingerprint();
       const dept=typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal';
@@ -1060,6 +1068,7 @@
   window.printSavedQuote = async (i) => {
     try{
       const q=quoteRecords[i];if(!q) return;
+      q.salesMobile=await resolveQuotationSalesMobile(q.salesConsultantId||q.createdBy,q.salesMobile);
       if(q.id){
         q.prints=Number(await call(db().rpc('increment_quotation_print_count',{p_quotation_id:q.id}))||0);
         if(typeof renderQuoteManagement==='function') renderQuoteManagement();
