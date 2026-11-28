@@ -2583,7 +2583,7 @@ function printQuoteDocumentPaper(q){
  '<div class="meta"><span>Date &amp; Time: '+esc(dateText+(timeText?' · '+timeText:''))+'</span><span>Quotation No.: '+esc(q.no)+'</span></div>'+
  '<div class="intro">Dear Sir,<br>We are pleased to offer best quote for Mahindra passenger vehicle as per details below.</div>'+
  '<section class="customer"><div class="cust-row"><div><div class="label">Customer Name</div><div class="value">'+esc(q.customer)+'</div></div><div><div class="label">Mobile Number</div><div class="value">'+esc(q.phone||'')+'</div></div><div><div class="label">Address</div><div class="value">'+esc(q.address||'')+'</div></div></div>'+
- '"+customerTaxRow+"</section>'+
+ customerTaxRow+'</section>'+
  '<section class="vehicle-head"><div><b>Model</b><span>'+esc(q.model||'')+'</span></div><div><b>Variant</b><span>'+esc(q.variant||'')+'</span></div><div><b>Colour</b><span>'+esc(q.colour||'')+'</span></div></section>'+
  '<section class="content"><div class="price"><table><thead><tr><th class="sl">SL</th><th>DETAILS</th><th class="amt">AMOUNT</th></tr></thead><tbody>'+rows+sumRows+'</tbody></table></div>'+
  '<div class="terms"><h3>TERMS &amp; CONDITIONS</h3><ol>'+terms.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ol>'+
