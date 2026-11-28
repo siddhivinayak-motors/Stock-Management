@@ -898,7 +898,7 @@
       set('qContactPerson',q.contactPerson);set('qContactMobile',q.contactMobile);
       set('qEmail',q.email);set('qBranchAddress',q.branchAddress);set('qHelpline',q.helpline);
       set('qPan',q.pan);set('qGstin',q.gstin);
-      if($('quoteNumber'))$('quoteNumber').textContent=q.no;
+      if($('quoteNumber')){$('quoteNumber').textContent=q.no;$('quoteNumber').dataset.saved='true';}
       document.querySelectorAll('#view-quotation details').forEach(d=>d.open=false);
       const escAttr=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       const allItems=q.items||[];
@@ -985,7 +985,7 @@
         const id=editingQuotationId;
         if(quoteRecords.some(other=>other.id!==id&&sameQuoteKey(q,other))) throw new Error('આ જ ગ્રાહક, મોબાઇલ નંબર, ગાડી અને Grand Totalનું બીજું quotation પહેલેથી નોંધાયેલું છે. Duplicate quotation તરીકે ફેરફાર સેવ નહીં થાય.');
         const payload={
-          quote_date:q.date||new Date().toISOString().slice(0,10),
+          quote_number:q.no||existing?.no,quote_date:q.date||new Date().toISOString().slice(0,10),
           customer_name:q.customer,phone:q.phone,address:q.address,customer_gstin:q.customerGstin||null,sales_mobile:q.salesMobile||null,vehicle_count:Number(q.vehicleNos||1),
           hypo:q.hypo,model,variant,colour:q.colour,
           sales_person:q.salesPerson,created_by:canChangeQuotationSalesConsultant()?(q.salesConsultantId||currentUser.id):(q.createdBy||currentUser.id),created_by_name:q.salesPerson,contact_person:q.contactPerson,contact_mobile:q.contactMobile,
@@ -1014,8 +1014,7 @@
       }
       const phoneKey=String(q.phone||'').replace(/\D/g,'');
       if(phoneKey.length!==10) throw new Error('Enter a valid 10-digit mobile number.');
-      // Reuse the latest visible quotation for this department + mobile + model + variant.
-      // The database function preserves its quotation number and refreshes all price/charge rows.
+      // Every Save creates a new quotation record. The database allocates the next global SVM number.
       const {data:upsertResult,error:upsertError}=await db().rpc('upsert_customer_vehicle_quotation',{p_quote:{...q,total:q.total,amountWords:q.amountWords},p_items:q.items||[]});
       if(upsertError)throw upsertError;
       const saved=upsertResult?.row;
@@ -1023,13 +1022,13 @@
       const activated=await call(db().from('quotations').update({status:'Approved',approved_by:null,approved_at:null,updated_by:currentUser.id,updated_at:new Date().toISOString()}).eq('id',saved.id).select('id').single());
       if(!activated?.id)throw new Error('Quotation saved but could not be activated. Refresh and retry before using it in OTF.');
       q.no=saved.quote_number;
-      if($('quoteNumber'))$('quoteNumber').textContent=saved.quote_number;
+      if($('quoteNumber')){$('quoteNumber').textContent=saved.quote_number;$('quoteNumber').dataset.saved='true';}
       const updatedExisting=!!upsertResult.updated_existing;
       await audit('quotation_management',updatedExisting?'edit':'create',updatedExisting?'Updated latest quotation for customer and vehicle':'Saved quotation','quotation',saved.id,{quote_number:saved.quote_number,phone:phoneKey,model,variant});
       await reloadQuoteList();
       // Keep the just-saved quotation on screen; only New Quotation clears it.
       restoreQuotationForm(formSnapshot);
-      if($('quoteNumber'))$('quoteNumber').textContent=saved.quote_number;
+      if($('quoteNumber')){$('quoteNumber').textContent=saved.quote_number;$('quoteNumber').dataset.saved='true';}
       savedQuotationFormFingerprint=quotationFormFingerprint();
       notify(updatedExisting?'Existing quotation updated. Same quotation number retained.':'New quotation saved to Supabase.');
       if(printAfter) {
@@ -1055,7 +1054,7 @@
     if(index<0){notify('This quotation is not saved yet. Click Save Quotation first.');return;}
     window.printSavedQuote(index);
   };
-  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; savedQuotationFormFingerprint=null; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Save updates the latest matching customer and vehicle quotation. Print opens the latest saved version.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('printQuote'))$('printQuote').textContent='Print Quotation';})(window.resetQuotationForm);
+  window.resetQuotationForm = ((original)=>function(){ editingQuotationId=null; savedQuotationFormFingerprint=null; if($('quoteNumber'))$('quoteNumber').dataset.saved='false'; if(typeof original==='function')original(); document.querySelectorAll('#view-quotation details.quote-more').forEach(d=>d.open=false); if($('quotationPageTitle'))$('quotationPageTitle').textContent=(typeof currentQuoteDepartment!=='undefined'?currentQuoteDepartment:'Personal')+' — Quotation'; const h=document.querySelector('#view-quotation .card-title');if(h)h.textContent='Create New Quotation';const d=document.querySelector('#view-quotation .card-desc');if(d)d.textContent='Every Save creates a new quotation with a unique SVM number. Print opens the saved quotation.';const tag=document.querySelector('#view-quotation .card-head .pill');if(tag){tag.textContent='NEW';tag.className='pill red';}if($('saveQuote'))$('saveQuote').textContent='Save Quotation';if($('printQuote'))$('printQuote').textContent='Print Quotation';if($('quoteNumber'))$('quoteNumber').dataset.saved='false';if(typeof updateQuoteNumber==='function')updateQuoteNumber();})(window.resetQuotationForm);
   window.saveRecords = () => {}; // Quotation records now live in Supabase, not localStorage.
   window.loadDepartmentQuotes = () => { reloadQuoteList().catch(e=>{console.error(e);notify(e.message);}); };
   window.printSavedQuote = async (i) => {
